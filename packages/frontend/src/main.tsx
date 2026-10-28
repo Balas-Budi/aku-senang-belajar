@@ -1,5 +1,6 @@
 import React from 'react';
 import { createRoot } from 'react-dom/client';
+import './styles.css';
 import { BrowserRouter, Routes, Route, Link } from 'react-router';
 import {
     QueryClient,
