@@ -1,0 +1,6 @@
+---
+description: Shared team instructions and project layers
+alwaysApply: true
+---
+
+Read and follow `AGENTS.md` at the repository root, including its private instruction references. For work touching `packages/backend/` or `packages/frontend/`, also read the corresponding layer's `AGENTS.md` and its referenced private instructions.

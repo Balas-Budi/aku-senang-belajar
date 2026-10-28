@@ -1,0 +1,3 @@
+# Layer instructions
+
+@AGENTS.md

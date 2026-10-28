@@ -1,0 +1,68 @@
+{
+    "name": "@aku-senang-belajar/backend",
+    "private": true,
+    "type": "module",
+    "nx": {
+        "name": "backend",
+        "targets": {
+            "build": {
+                "command": "tsc -p packages/backend/tsconfig.json",
+                "outputs": [
+                    "{workspaceRoot}/dist/backend"
+                ],
+                "cache": true
+            },
+            "serve": {
+                "command": "tsx watch --env-file-if-exists=.env packages/backend/src/main.ts",
+                "continuous": true,
+                "cache": false
+            },
+            "dev": {
+                "command": "tsx watch --env-file-if-exists=.env packages/backend/src/main.ts",
+                "continuous": true,
+                "cache": false
+            },
+            "typecheck": {
+                "executor": "nx:run-commands",
+                "options": {
+                    "cwd": "{workspaceRoot}",
+                    "command": "tsc -p packages/backend/tsconfig.json --noEmit"
+                },
+                "cache": true,
+                "inputs": [
+                    "default"
+                ],
+                "outputs": [],
+                "syncGenerators": []
+            },
+            "format": {
+                "command": "prettier --write packages/backend",
+                "cache": false
+            },
+            "format-check": {
+                "command": "prettier --check packages/backend",
+                "cache": true,
+                "inputs": [
+                    "default"
+                ],
+                "outputs": []
+            },
+            "start": {
+                "command": "node --env-file-if-exists=.env dist/backend/main.js",
+                "dependsOn": [
+                    "build"
+                ],
+                "continuous": true,
+                "cache": false
+            },
+            "db-generate": {
+                "command": "node --env-file-if-exists=.env node_modules/drizzle-kit/bin.cjs generate",
+                "cache": false
+            },
+            "db-migrate": {
+                "command": "node --env-file-if-exists=.env node_modules/drizzle-kit/bin.cjs migrate",
+                "cache": false
+            }
+        }
+    }
+}

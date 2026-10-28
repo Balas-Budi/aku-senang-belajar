@@ -1,0 +1,60 @@
+{
+    "name": "@aku-senang-belajar/frontend",
+    "private": true,
+    "type": "module",
+    "nx": {
+        "name": "frontend",
+        "targets": {
+            "build": {
+                "command": "tsc -p packages/frontend/tsconfig.json && vite build packages/frontend",
+                "outputs": [
+                    "{workspaceRoot}/dist/frontend"
+                ],
+                "cache": true
+            },
+            "serve": {
+                "command": "vite packages/frontend",
+                "continuous": true,
+                "cache": false
+            },
+            "dev": {
+                "command": "vite packages/frontend",
+                "continuous": true,
+                "cache": false
+            },
+            "typecheck": {
+                "executor": "nx:run-commands",
+                "options": {
+                    "cwd": "{workspaceRoot}",
+                    "command": "tsc -p packages/frontend/tsconfig.json --noEmit"
+                },
+                "cache": true,
+                "inputs": [
+                    "default"
+                ],
+                "outputs": [],
+                "syncGenerators": []
+            },
+            "format": {
+                "command": "prettier --write packages/frontend",
+                "cache": false
+            },
+            "format-check": {
+                "command": "prettier --check packages/frontend",
+                "cache": true,
+                "inputs": [
+                    "default"
+                ],
+                "outputs": []
+            },
+            "preview": {
+                "command": "vite preview packages/frontend --port 4300",
+                "dependsOn": [
+                    "build"
+                ],
+                "continuous": true,
+                "cache": false
+            }
+        }
+    }
+}
