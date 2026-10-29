@@ -35,6 +35,17 @@
                 "outputs": [],
                 "syncGenerators": []
             },
+            "test": {
+                "command": "node --test \"src/**/*.test.ts\"",
+                "options": {
+                    "cwd": "packages/backend"
+                },
+                "cache": true,
+                "inputs": [
+                    "default"
+                ],
+                "outputs": []
+            },
             "format": {
                 "command": "prettier --write packages/backend",
                 "cache": false

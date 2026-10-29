@@ -12,7 +12,8 @@
         "typecheck": "nx run-many -t typecheck --projects=backend,frontend",
         "format": "nx run-many -t format --projects=backend,frontend",
         "format:check": "nx run-many -t format-check --projects=backend,frontend",
-        "check": "npm run format:check && npm run typecheck && npm run build",
+        "test": "nx run backend:test",
+        "check": "npm run format:check && npm run typecheck && npm run test && npm run build",
         "start": "nx run backend:start",
         "preview": "nx run frontend:preview",
         "db:generate": "nx run backend:db-generate",
@@ -52,6 +53,9 @@
     "workspaces": [
         "packages/*"
     ],
-    "packageManager": "npm@11.6.2",
+    "engines": {
+        "node": ">=26"
+    },
+    "packageManager": "npm@11.20.0",
     "type": "module"
 }
