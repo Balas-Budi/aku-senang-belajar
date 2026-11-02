@@ -1,23 +1,21 @@
 import { existsSync } from 'node:fs';
-import Fastify from 'fastify';
-import { createDatabase } from './db/index.ts';
+import { buildApp } from './app.ts';
+import { loadEnv } from './env.ts';
 
 if (existsSync('.env')) process.loadEnvFile('.env');
 
-const app = Fastify({ logger: true });
-const database = process.env.DATABASE_URL
-    ? createDatabase(process.env.DATABASE_URL)
-    : undefined;
+const env = loadEnv();
+const app = await buildApp(env);
 
-app.addHook('onClose', async () => {
-    await database?.pool.end();
-});
+for (const signal of ['SIGINT', 'SIGTERM'] as const) {
+    process.once(signal, async () => {
+        await app.close();
+        process.exit(0);
+    });
+}
 
 try {
-    await app.listen({
-        port: Number(process.env.PORT ?? 3000),
-        host: '127.0.0.1',
-    });
+    await app.listen({ port: env.PORT, host: env.HOST });
 } catch (error) {
     app.log.error(error);
     process.exit(1);
