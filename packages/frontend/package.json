@@ -6,34 +6,41 @@
         "name": "frontend",
         "targets": {
             "build": {
-                "command": "tsc -p packages/frontend/tsconfig.json && vite build packages/frontend",
+                "command": "react-router build",
+                "options": {
+                    "cwd": "packages/frontend"
+                },
                 "outputs": [
                     "{workspaceRoot}/dist/frontend"
                 ],
                 "cache": true
             },
             "serve": {
-                "command": "vite packages/frontend",
+                "command": "react-router dev",
+                "options": {
+                    "cwd": "packages/frontend"
+                },
                 "continuous": true,
                 "cache": false
             },
             "dev": {
-                "command": "vite packages/frontend",
+                "command": "react-router dev",
+                "options": {
+                    "cwd": "packages/frontend"
+                },
                 "continuous": true,
                 "cache": false
             },
             "typecheck": {
-                "executor": "nx:run-commands",
+                "command": "react-router typegen && tsc --noEmit",
                 "options": {
-                    "cwd": "{workspaceRoot}",
-                    "command": "tsc -p packages/frontend/tsconfig.json --noEmit"
+                    "cwd": "packages/frontend"
                 },
                 "cache": true,
                 "inputs": [
                     "default"
                 ],
-                "outputs": [],
-                "syncGenerators": []
+                "outputs": []
             },
             "format": {
                 "command": "prettier --write packages/frontend",
@@ -48,7 +55,10 @@
                 "outputs": []
             },
             "preview": {
-                "command": "vite preview packages/frontend --port 4300",
+                "command": "HOST=127.0.0.1 PORT=4300 react-router-serve ../../dist/frontend/server/index.js",
+                "options": {
+                    "cwd": "packages/frontend"
+                },
                 "dependsOn": [
                     "build"
                 ],
@@ -56,5 +66,8 @@
                 "cache": false
             }
         }
+    },
+    "dependencies": {
+        "isbot": "^5.2.2"
     }
 }

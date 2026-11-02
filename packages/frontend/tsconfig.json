@@ -8,7 +8,9 @@
         "strict": true,
         "skipLibCheck": true,
         "noEmit": true,
-        "types": ["vite/client"]
+        "verbatimModuleSyntax": true,
+        "types": ["vite/client", "node"],
+        "rootDirs": [".", "./.react-router/types"]
     },
-    "include": ["src"]
+    "include": ["src", ".react-router/types/**/*", "*.ts"]
 }

@@ -54,3 +54,6 @@ Thumbs.db
 
 # Private team instructions
 /.private/
+
+# React Router generated route types
+.react-router/
