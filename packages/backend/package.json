@@ -6,7 +6,7 @@
         "name": "backend",
         "targets": {
             "build": {
-                "command": "tsc -p packages/backend/tsconfig.json",
+                "command": "tsc -p packages/backend/tsconfig.build.json",
                 "outputs": [
                     "{workspaceRoot}/dist/backend"
                 ],
@@ -26,7 +26,7 @@
                 "executor": "nx:run-commands",
                 "options": {
                     "cwd": "{workspaceRoot}",
-                    "command": "tsc -p packages/backend/tsconfig.json --noEmit"
+                    "command": "tsc -p packages/backend/tsconfig.json"
                 },
                 "cache": true,
                 "inputs": [
@@ -36,15 +36,11 @@
                 "syncGenerators": []
             },
             "test": {
-                "command": "node --test \"src/**/*.test.ts\"",
+                "command": "node --env-file-if-exists=../../.env --test --test-global-setup=tests/setup.ts \"tests/**/*.test.ts\"",
                 "options": {
                     "cwd": "packages/backend"
                 },
-                "cache": true,
-                "inputs": [
-                    "default"
-                ],
-                "outputs": []
+                "cache": false
             },
             "format": {
                 "command": "prettier --write packages/backend",
@@ -72,6 +68,10 @@
             },
             "db-migrate": {
                 "command": "node --env-file-if-exists=.env node_modules/drizzle-kit/bin.cjs migrate",
+                "cache": false
+            },
+            "create-admin": {
+                "command": "node --env-file-if-exists=.env packages/backend/src/scripts/create-admin.ts",
                 "cache": false
             }
         }
