@@ -12,6 +12,21 @@ permissions:
 jobs:
     check:
         runs-on: ubuntu-latest
+        services:
+            postgres:
+                image: postgres:18-alpine
+                env:
+                    POSTGRES_PASSWORD: postgres
+                    POSTGRES_DB: aku_senang_belajar_test
+                ports:
+                    - 5432:5432
+                options: >-
+                    --health-cmd "pg_isready -U postgres"
+                    --health-interval 5s
+                    --health-timeout 5s
+                    --health-retries 10
+        env:
+            TEST_DATABASE_URL: postgresql://postgres:postgres@localhost:5432/aku_senang_belajar_test
         steps:
             - uses: actions/checkout@v5
             - uses: actions/setup-node@v5
