@@ -1,1 +1,526 @@
 @import 'tailwindcss';
+@theme {
+    --color-background: #ffffff;
+    --color-foreground: #171629;
+    --color-muted: #f2f2f2;
+    --color-muted-foreground: #535267;
+    --color-border: #827e96;
+    --color-primary: #4c42cf;
+    --color-primary-deep: #1f1976;
+    --color-primary-foreground: #ffffff;
+    --color-secondary: #e4e2f8;
+    --color-destructive: #a31c38;
+    --color-ring: #4c42cf;
+    --color-activity-orange: #f46800;
+    --color-activity-blue: #0099f3;
+    --color-activity-green: #34bd43;
+    --color-activity-pink: #e11970;
+    --color-student-accent-soft: #fff0df;
+    --color-student-accent-ink: #8f3b00;
+    --color-student-surface: #f6f4ff;
+    --color-student-skin: #f7c7a6;
+    --color-panda-fur: #2c2585;
+    --color-panda-ink: #1c1660;
+    --color-panda-ear: #5b4fe0;
+    --color-panda-blush: #f7b394;
+    --color-panda-mouth: #f2876a;
+}
+.student-space {
+    background-color: var(--color-student-surface);
+    background-image: url('/student-doodles.svg');
+    background-size: 560px 520px;
+}
+.student-welcome {
+    background: var(--color-secondary);
+}
+.buddy-bubble {
+    transform-origin: 75% 100%;
+    animation: student-pop 180ms ease-out both;
+}
+.student-menu {
+    transform-origin: top right;
+    animation: student-pop 150ms ease-out both;
+}
+.code-character {
+    display: inline-block;
+    animation: student-pop 160ms ease-out both;
+}
+.code-caret {
+    animation: code-caret 1s steps(1) infinite;
+}
+@keyframes student-pop {
+    from {
+        opacity: 0;
+        transform: scale(0.85);
+    }
+}
+@keyframes code-caret {
+    50% {
+        opacity: 0;
+    }
+}
+@media (prefers-reduced-motion: reduce) {
+    .code-caret {
+        animation: none;
+    }
+}
+.sticker {
+    transform: rotate(var(--tilt, 0deg));
+    animation: sticker-float 6s ease-in-out infinite;
+}
+.welcome-stickers--hop .sticker {
+    animation: sticker-hop 800ms ease-out;
+}
+@keyframes sticker-float {
+    0%,
+    100% {
+        transform: translateY(0) rotate(var(--tilt, 0deg));
+    }
+    50% {
+        transform: translateY(-6px) rotate(calc(var(--tilt, 0deg) + 6deg));
+    }
+}
+@keyframes sticker-hop {
+    0%,
+    100% {
+        transform: translateY(0) rotate(var(--tilt, 0deg)) scale(1);
+    }
+    35% {
+        transform: translateY(-14px) rotate(calc(var(--tilt, 0deg) - 10deg))
+            scale(1.15);
+    }
+    70% {
+        transform: translateY(2px) rotate(var(--tilt, 0deg)) scale(0.95);
+    }
+}
+.toast {
+    animation: toast-in 220ms ease-out both;
+}
+.toast-timer {
+    animation: toast-timer 6s linear forwards;
+}
+@keyframes toast-in {
+    from {
+        opacity: 0;
+        transform: translateY(-8px) scale(0.98);
+    }
+}
+@keyframes toast-timer {
+    to {
+        transform: scaleX(0);
+    }
+}
+.student-action {
+    box-shadow: 0 4px 0 var(--color-primary-deep);
+}
+.student-action:active {
+    transform: translateY(3px);
+    box-shadow: 0 1px 0 var(--color-primary-deep);
+}
+.buddy-body {
+    transform-origin: 150px 150px;
+    animation: buddy-float 4s ease-in-out infinite;
+}
+.buddy-chest {
+    transform-origin: 150px 140px;
+    animation: buddy-breathe 3s ease-in-out infinite;
+}
+.buddy-arm-left {
+    transform-origin: 50px 130px;
+    animation: buddy-sway 4s ease-in-out infinite;
+}
+.buddy-arm-right {
+    transform-origin: 248px 130px;
+    animation: buddy-sway 4s ease-in-out infinite reverse;
+}
+.buddy-happy {
+    opacity: 0;
+}
+.buddy--excited .buddy-happy {
+    opacity: 1;
+}
+.buddy--excited .buddy-calm {
+    opacity: 0;
+}
+.buddy--excited .buddy-body {
+    animation: buddy-joy 550ms ease-in-out infinite;
+}
+.buddy--excited .buddy-chest {
+    animation: buddy-cheer 450ms ease-in-out infinite;
+}
+.buddy--excited .buddy-arm-left {
+    animation: buddy-sway 450ms ease-in-out infinite;
+}
+.buddy--excited .buddy-arm-right {
+    animation: buddy-sway 450ms ease-in-out infinite reverse;
+}
+@keyframes buddy-float {
+    0%,
+    100% {
+        transform: translateY(0) rotate(-1deg);
+    }
+    50% {
+        transform: translateY(-5px) rotate(1deg);
+    }
+}
+@keyframes buddy-breathe {
+    0%,
+    100% {
+        transform: scale(1);
+    }
+    50% {
+        transform: scale(1.015, 1.02);
+    }
+}
+@keyframes buddy-cheer {
+    0%,
+    100% {
+        transform: scale(1);
+    }
+    50% {
+        transform: scale(1.04, 1.06);
+    }
+}
+@keyframes buddy-joy {
+    0%,
+    100% {
+        transform: translateY(0) rotate(-2deg);
+    }
+    50% {
+        transform: translateY(-7px) rotate(2deg);
+    }
+}
+@keyframes buddy-sway {
+    0%,
+    100% {
+        transform: rotate(-5deg);
+    }
+    50% {
+        transform: rotate(8deg);
+    }
+}
+@media (prefers-reduced-motion: reduce) {
+    .buddy-scene *,
+    .sitting-friend *,
+    .welcome-stickers *,
+    .empty-class-art * {
+        animation: none !important;
+        transition: none !important;
+    }
+}
+.buddy-eyes {
+    transform-origin: 145px 119px;
+    animation: buddy-blink 5s ease-in-out infinite;
+}
+@keyframes buddy-blink {
+    0%,
+    92%,
+    100% {
+        transform: scaleY(1);
+    }
+    96% {
+        transform: scaleY(0.12);
+    }
+}
+.sitting-friend {
+    --panda-rise: 0;
+    --panda-hop: 0;
+    --panda-body: 0;
+    --panda-drop: 0;
+    --panda-turn: 0;
+    --panda-eyes: 1;
+    --panda-look-x: 0;
+    --panda-look-y: 0;
+    --panda-arm-a: 0;
+    --panda-arm-b: 0;
+    --panda-wave: 0;
+}
+@media (prefers-reduced-motion: reduce) {
+    .sitting-friend {
+        --panda-rise: 1;
+        --panda-body: 1;
+        --panda-drop: 1;
+        --panda-eyes: 0;
+        --panda-arm-a: 1;
+        --panda-arm-b: 1;
+    }
+}
+.panda-rise {
+    transform: translateY(
+        calc((1 - var(--panda-rise)) * 215px - var(--panda-hop) * 12px)
+    );
+}
+.panda-breath {
+    transform-origin: 300px 260px;
+    animation: panda-breath 3.4s ease-in-out infinite;
+}
+.panda-body {
+    transform: translateY(calc((1 - var(--panda-body)) * 150px));
+}
+.panda-leg {
+    opacity: calc((var(--panda-body) - 0.95) * 20);
+}
+.panda-head {
+    transform-origin: 200px 160px;
+    transform: translateY(
+            calc(var(--panda-drop) * 10px + (1 - var(--panda-body)) * 26px)
+        )
+        rotate(calc(var(--panda-drop) * -4deg + var(--panda-turn) * 1deg));
+}
+.panda-face {
+    transform: translate(
+        calc(var(--panda-look-x) * 6px),
+        calc(var(--panda-look-y) * 4px)
+    );
+}
+.panda-eyes {
+    transform-origin: 200px 162px;
+    transform: scaleY(clamp(0, var(--panda-eyes), 1));
+}
+.panda-blink {
+    transform-origin: 200px 160px;
+    animation: panda-blink 4s infinite;
+}
+.panda-pupils {
+    transform: translate(
+        calc(var(--panda-look-x) * 4px),
+        calc(var(--panda-look-y) * 4px)
+    );
+}
+.panda-eyes-closed {
+    opacity: calc(1 - var(--panda-eyes) * 2.5);
+}
+.panda-mouth-asleep {
+    opacity: calc(1 - var(--panda-eyes) * 2);
+}
+.panda-mouth-awake {
+    opacity: calc(var(--panda-eyes) * 2 - 1);
+}
+.panda-arm-a {
+    transform-origin: 300px 242px;
+    transform: rotate(calc((1 - var(--panda-arm-a)) * 35deg));
+}
+.panda-arm-rest {
+    opacity: calc((var(--panda-arm-b) - 0.5) * 2);
+}
+.panda-arm-b {
+    transform: translateY(calc(var(--panda-arm-b) * 160px));
+}
+.panda-wave {
+    transform-origin: 326px 204px;
+    transform: rotate(calc(var(--panda-wave) * 1deg));
+}
+.panda-awake-marks {
+    opacity: calc((var(--panda-eyes) * 2 - 1) * var(--panda-rise));
+}
+.panda-tail-marks {
+    opacity: calc((var(--panda-eyes) * 2 - 1) * var(--panda-body));
+}
+.panda-sleep-marks {
+    opacity: calc((1 - var(--panda-eyes) * 2) * var(--panda-body));
+}
+.panda-twinkle {
+    animation: panda-twinkle 1.6s ease-in-out infinite;
+}
+.panda-float {
+    animation: panda-float 3s ease-in-out infinite;
+}
+@keyframes panda-breath {
+    50% {
+        transform: scaleY(1.025);
+    }
+}
+@keyframes panda-blink {
+    0%,
+    92%,
+    100% {
+        transform: scaleY(1);
+    }
+    95% {
+        transform: scaleY(0.1);
+    }
+}
+@keyframes panda-twinkle {
+    50% {
+        opacity: 0.3;
+    }
+}
+@keyframes panda-float {
+    50% {
+        transform: translateY(-6px);
+        opacity: 0.6;
+    }
+}
+.class-plane {
+    animation: class-plane 5s ease-in-out infinite;
+}
+.class-flag {
+    transform-origin: 118px 18px;
+    animation: class-flag 4s ease-in-out infinite;
+}
+@keyframes class-plane {
+    0%,
+    100% {
+        transform: translate(0, 0);
+    }
+    50% {
+        transform: translate(5px, -5px);
+    }
+}
+@keyframes class-flag {
+    0%,
+    100% {
+        transform: skewY(-3deg);
+    }
+    50% {
+        transform: skewY(4deg);
+    }
+}
+.school-door {
+    transform-origin: 103px 136px;
+}
+.school-visitor {
+    opacity: 0;
+    transform-origin: 118px 156px;
+}
+.school--greeting .school-door {
+    animation: school-door 4.2s ease-in-out both;
+}
+.school--greeting .school-visitor {
+    animation: school-visit 4.2s ease-in-out both;
+}
+.school--greeting .school-visitor-hand {
+    transform-origin: 126px 140px;
+    animation: school-wave 4.2s ease-in-out both;
+}
+@keyframes school-door {
+    0%,
+    100% {
+        transform: scaleX(1);
+    }
+    12%,
+    85% {
+        transform: scaleX(0.12);
+    }
+}
+@keyframes school-visit {
+    0%,
+    9%,
+    100% {
+        opacity: 0;
+        transform: translateY(-4px) scale(0.6);
+    }
+    24%,
+    74% {
+        opacity: 1;
+        transform: translateY(5px) scale(1.15);
+    }
+    88% {
+        opacity: 0;
+        transform: translateY(-4px) scale(0.6);
+    }
+}
+@keyframes school-wave {
+    0%,
+    25%,
+    75%,
+    100% {
+        transform: rotate(0);
+    }
+    35%,
+    51%,
+    67% {
+        transform: rotate(-18deg);
+    }
+    43%,
+    59% {
+        transform: rotate(18deg);
+    }
+}
+@media (prefers-reduced-motion: reduce) {
+    .school--greeting .school-door {
+        transform: scaleX(0.12);
+    }
+    .school--greeting .school-visitor {
+        opacity: 1;
+    }
+}
+.crying-tear {
+    animation: crying-tear 1.2s ease-in infinite;
+}
+.crying-tear-right {
+    animation-delay: -0.6s;
+}
+@keyframes crying-tear {
+    0% {
+        opacity: 0;
+        transform: translateY(-2px) scaleY(0.7);
+    }
+    20% {
+        opacity: 1;
+    }
+    85%,
+    100% {
+        opacity: 0;
+        transform: translateY(9px) scaleY(1);
+    }
+}
+@media (prefers-reduced-motion: reduce) {
+    .crying-face * {
+        animation: none !important;
+    }
+}
+.login-page {
+    --login-gradient-angle: 180deg;
+    background-image:
+        url('/learning-doodles.svg'),
+        linear-gradient(
+            var(--login-gradient-angle),
+            var(--color-primary-deep) 0%,
+            var(--color-primary) 52%,
+            var(--color-secondary) 100%
+        );
+    background-size:
+        420px 420px,
+        cover;
+    background-position: center, center;
+    background-repeat: repeat, no-repeat;
+}
+@media (min-width: 640px) {
+    .login-page {
+        --login-gradient-angle: 135deg;
+        background-size:
+            560px 560px,
+            cover;
+    }
+}
+@media (min-width: 1024px) {
+    .login-page {
+        --login-gradient-angle: 110deg;
+    }
+}
+@media (prefers-reduced-motion: reduce) {
+    *,
+    *::before,
+    *::after {
+        animation-duration: 0.01ms !important;
+        transition-duration: 0.01ms !important;
+    }
+}
+@media print {
+    body * {
+        visibility: hidden;
+    }
+    .credential-sheet,
+    .credential-sheet * {
+        visibility: visible;
+    }
+    .credential-sheet {
+        position: absolute;
+        inset: 0;
+        padding: 24px;
+    }
+    .credential-sheet button {
+        display: none;
+    }
+}

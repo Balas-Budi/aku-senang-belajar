@@ -1,0 +1,301 @@
+import { useQuery } from '@tanstack/react-query';
+import { useRef, useState } from 'react';
+import { studentClassQuery, useJoinClass, useLeaveClass } from './queries';
+import { ClassCodeField, inviteCodeMessages } from './class-code-field';
+import { meQuery } from '../auth/queries';
+import { Confetti } from '../student/confetti';
+import { LearningBuddy } from '../student/learning-buddy';
+import { LoungingPanda } from '../student/lounging-panda';
+import { EmptyClassIllustration } from '../student/empty-class-illustration';
+import { WelcomeStickers } from '../student/welcome-stickers';
+import { Button } from '../../components/ui/button';
+import { useErrorToast } from '../../components/ui/toast';
+import {
+    RequestError,
+    requestErrorMessage,
+} from '../../components/request-error';
+export function StudentClass() {
+    const query = useQuery(studentClassQuery());
+    const { data: user } = useQuery(meQuery());
+    const join = useJoinClass();
+    const leave = useLeaveClass();
+    const [confirmLeave, setConfirmLeave] = useState(false);
+    const [typing, setTyping] = useState(false);
+    const [cheers, setCheers] = useState(0);
+    const [schoolGreets, setSchoolGreets] = useState(0);
+    const codeSlots = useRef<HTMLDivElement>(null);
+    const showError = useErrorToast();
+    if (query.isPending)
+        return (
+            <p role="status" className="rounded-[20px] bg-white p-8">
+                Sebentar, kita buka kelasmu…
+            </p>
+        );
+    if (query.isError)
+        return (
+            <div className="space-y-4 rounded-[20px] bg-white p-6">
+                <RequestError error={query.error} />
+                <Button
+                    onClick={() => {
+                        void query.refetch();
+                    }}
+                >
+                    Muat ulang kelas
+                </Button>
+            </div>
+        );
+    const classroom = query.data.classroom;
+    return (
+        <div className="space-y-6">
+            <section
+                className="student-welcome relative grid grid-cols-[minmax(0,1fr)_auto] items-center gap-4 rounded-[20px] px-5 pt-6 pb-16 sm:gap-8 sm:px-8 sm:pt-8 sm:pb-14 lg:pb-8"
+                aria-labelledby="student-welcome-title"
+            >
+                <WelcomeStickers cheers={cheers} />
+                <div className="relative">
+                    <h1
+                        id="student-welcome-title"
+                        className="text-primary-deep text-2xl leading-tight font-extrabold break-words sm:text-4xl"
+                    >
+                        Halo{user ? `, ${user.name.split(' ')[0]}` : ''}!
+                    </h1>
+                    <p className="text-muted-foreground mt-2 max-w-md text-lg leading-relaxed text-pretty">
+                        {classroom
+                            ? 'Kelasmu sudah siap. Tunggu sesi pertama dari gurumu, ya.'
+                            : 'Masukkan kode kelas dari gurumu untuk mulai belajar.'}
+                    </p>
+                </div>
+                <LearningBuddy
+                    cheers={cheers}
+                    className="w-24 sm:w-40 lg:w-52"
+                />
+            </section>
+            <section
+                className="border-primary/10 relative rounded-[20px] border bg-white"
+                aria-labelledby="student-class-title"
+            >
+                <LoungingPanda
+                    watching={typing}
+                    lookAt={codeSlots}
+                    cheers={cheers}
+                />
+                {cheers > 0 && <Confetti key={cheers} />}
+                <div className="flex items-center gap-3 px-5 pt-8 pb-4 sm:px-7">
+                    <span
+                        aria-hidden="true"
+                        className="bg-secondary text-primary-deep flex size-11 items-center justify-center rounded-xl"
+                    >
+                        <svg
+                            viewBox="0 0 24 24"
+                            fill="none"
+                            stroke="currentColor"
+                            strokeWidth="1.8"
+                            className="size-7"
+                        >
+                            <path
+                                d="m3 10 9-7 9 7v11H3V10Z"
+                                strokeLinejoin="round"
+                            />
+                            <path d="M9 21v-7h6v7M9 9h6" />
+                        </svg>
+                    </span>
+                    <h2
+                        id="student-class-title"
+                        className="text-primary-deep text-xl font-bold"
+                    >
+                        Kelas belajarku
+                    </h2>
+                </div>
+                <div className="border-primary/10 border-t p-5 sm:p-7">
+                    {classroom ? (
+                        <div className="space-y-5">
+                            <div className="flex flex-wrap items-start justify-between gap-3">
+                                <div className="min-w-0">
+                                    <h3 className="text-primary-deep text-2xl font-extrabold break-words">
+                                        {classroom.name}
+                                    </h3>
+                                    <p className="text-muted-foreground mt-1 text-base break-words">
+                                        Bersama {classroom.teacherName}
+                                    </p>
+                                </div>
+                                <p className="text-primary bg-secondary inline-flex items-center gap-2 rounded-xl px-3 py-2 text-sm font-bold">
+                                    <svg
+                                        aria-hidden="true"
+                                        viewBox="0 0 20 20"
+                                        className="size-5"
+                                        fill="none"
+                                        stroke="currentColor"
+                                        strokeWidth="2.5"
+                                    >
+                                        <path
+                                            d="m4 10 4 4 8-8"
+                                            strokeLinecap="round"
+                                            strokeLinejoin="round"
+                                        />
+                                    </svg>
+                                    Sudah bergabung
+                                </p>
+                            </div>
+                            <div className="bg-student-accent-soft flex items-start gap-4 rounded-2xl p-4 sm:p-5">
+                                <svg
+                                    aria-hidden="true"
+                                    viewBox="0 0 48 48"
+                                    className="text-student-accent-ink size-12 shrink-0"
+                                    fill="none"
+                                    stroke="currentColor"
+                                    strokeWidth="2.3"
+                                    strokeLinecap="round"
+                                    strokeLinejoin="round"
+                                >
+                                    <path d="M11 8h28v33H11z" fill="white" />
+                                    <path d="M9 8H6v33h5M18 17h14m-14 7h14m-14 7h8" />
+                                    <path
+                                        d="m34 4 7 5-13 18-8 3 1-8L34 4Z"
+                                        fill="var(--color-activity-orange)"
+                                    />
+                                </svg>
+                                <div>
+                                    <h4 className="text-primary-deep font-bold">
+                                        Belum ada sesi belajar
+                                    </h4>
+                                    <p className="text-muted-foreground mt-1 text-base leading-relaxed">
+                                        Saat {classroom.teacherName} membagikan
+                                        sesi, kamu bisa mulai dari sini.
+                                    </p>
+                                </div>
+                            </div>
+                            <details className="text-base">
+                                <summary className="text-muted-foreground focus-visible:outline-ring min-h-12 cursor-pointer rounded-lg py-3 underline underline-offset-4 focus-visible:outline-3">
+                                    Ingin pindah kelas?
+                                </summary>
+                                <p className="my-3 leading-relaxed">
+                                    Keluar dari kelas ini, lalu masukkan kode
+                                    kelas baru dari guru.
+                                </p>
+                                {!confirmLeave ? (
+                                    <Button
+                                        variant="outline"
+                                        onClick={() => setConfirmLeave(true)}
+                                    >
+                                        Keluar dari kelas
+                                    </Button>
+                                ) : (
+                                    <div className="space-y-3">
+                                        <p>
+                                            Yakin ingin keluar dari{' '}
+                                            {classroom.name}?
+                                        </p>
+                                        <div className="flex flex-wrap gap-3">
+                                            <Button
+                                                disabled={leave.isPending}
+                                                onClick={() =>
+                                                    leave.mutate(undefined, {
+                                                        onSuccess: () =>
+                                                            setConfirmLeave(
+                                                                false,
+                                                            ),
+                                                        onError: (error) =>
+                                                            showError(
+                                                                requestErrorMessage(
+                                                                    error,
+                                                                ),
+                                                            ),
+                                                    })
+                                                }
+                                            >
+                                                {leave.isPending
+                                                    ? 'Sedang keluar…'
+                                                    : 'Ya, keluar dari kelas'}
+                                            </Button>
+                                            <Button
+                                                variant="outline"
+                                                onClick={() =>
+                                                    setConfirmLeave(false)
+                                                }
+                                            >
+                                                Tetap di kelas
+                                            </Button>
+                                        </div>
+                                    </div>
+                                )}
+                            </details>
+                        </div>
+                    ) : (
+                        <div className="grid items-center gap-6 md:grid-cols-[13rem_minmax(0,1fr)] md:gap-10">
+                            <div className="relative mx-auto w-40 md:w-full">
+                                <span
+                                    aria-hidden="true"
+                                    className="bg-secondary/70 absolute top-1/2 left-1/2 aspect-square w-[82%] -translate-x-1/2 -translate-y-1/2 rounded-full"
+                                />
+                                <EmptyClassIllustration
+                                    greets={schoolGreets}
+                                    className="relative"
+                                />
+                            </div>
+                            <div>
+                                <h3 className="text-primary-deep text-2xl font-extrabold">
+                                    Belum ada kelas, nih!
+                                </h3>
+                                <p className="text-muted-foreground mt-2 text-base leading-relaxed">
+                                    Minta kode kelas ke gurumu, lalu ketik di
+                                    kotak ini.
+                                </p>
+                                <form
+                                    className="mt-5 space-y-4"
+                                    onSubmit={(event) => {
+                                        event.preventDefault();
+                                        join.mutate(
+                                            String(
+                                                new FormData(
+                                                    event.currentTarget,
+                                                ).get('inviteCode') ?? '',
+                                            ),
+                                            {
+                                                onSuccess: () =>
+                                                    setCheers(
+                                                        (count) => count + 1,
+                                                    ),
+                                                onError: (error) =>
+                                                    showError(
+                                                        inviteCodeMessages(
+                                                            error,
+                                                        ).join(' ') ||
+                                                            requestErrorMessage(
+                                                                error,
+                                                            ),
+                                                    ),
+                                            },
+                                        );
+                                    }}
+                                >
+                                    <ClassCodeField
+                                        error={join.error}
+                                        slotsRef={codeSlots}
+                                        onFocusChange={setTyping}
+                                        onComplete={() =>
+                                            setSchoolGreets(
+                                                (count) => count + 1,
+                                            )
+                                        }
+                                        onEdit={() => {
+                                            if (join.isError) join.reset();
+                                        }}
+                                    />
+                                    <Button
+                                        type="submit"
+                                        disabled={join.isPending}
+                                        className="student-action min-h-14 w-full px-8 sm:w-auto"
+                                    >
+                                        {join.isPending
+                                            ? 'Menghubungkan…'
+                                            : 'Gabung ke kelas'}
+                                    </Button>
+                                </form>
+                            </div>
+                        </div>
+                    )}
+                </div>
+            </section>
+        </div>
+    );
+}
