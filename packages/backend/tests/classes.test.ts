@@ -236,7 +236,7 @@ test("a teacher cannot see another teacher's class (AT-11)", async (t) => {
     assert.deepEqual(list.json(), []);
 });
 
-test('a student cannot reach teacher or admin routes, or change a password or the account', async (t) => {
+test('a student cannot reach teacher or admin routes or delete the account', async (t) => {
     const app = await testApp(t);
     const student = await signedInStudent(app);
     const call = (
@@ -260,15 +260,6 @@ test('a student cannot reach teacher or admin routes, or change a password or th
     );
     assert.equal(
         (await call('GET', '/api/admin/users?role=student')).statusCode,
-        403,
-    );
-    assert.equal(
-        (
-            await call('PUT', '/api/auth/password', {
-                currentPassword: TEST_STUDENT_PASSWORD,
-                newPassword: 'a long enough passphrase',
-            })
-        ).statusCode,
         403,
     );
     assert.equal((await call('DELETE', '/api/users/me')).statusCode, 403);

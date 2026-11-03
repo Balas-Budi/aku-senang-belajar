@@ -11,10 +11,14 @@ const HOUR = 60 * 60 * 1000;
 const DAY = 24 * HOUR;
 
 export const SESSION_LIFETIME = 30 * DAY;
+export const SHORT_SESSION_LIFETIME = DAY;
 export const IDLE_TIMEOUT = 7 * DAY;
 const TOUCH_INTERVAL = HOUR;
 
-export function sessionCookie(env: Env): {
+export function sessionCookie(
+    env: Env,
+    expiresAt = new Date(Date.now() + SHORT_SESSION_LIFETIME),
+): {
     name: string;
     options: CookieSerializeOptions;
 } {
@@ -27,7 +31,10 @@ export function sessionCookie(env: Env): {
             sameSite: 'lax',
             path: '/',
             secure: production,
-            maxAge: SESSION_LIFETIME / 1000,
+            maxAge: Math.max(
+                0,
+                Math.floor((expiresAt.getTime() - Date.now()) / 1000),
+            ),
         },
     };
 }
@@ -36,8 +43,9 @@ export function setSessionCookie(
     reply: FastifyReply,
     env: Env,
     token: string,
+    expiresAt: Date,
 ): void {
-    const { name, options } = sessionCookie(env);
+    const { name, options } = sessionCookie(env, expiresAt);
 
     reply.setCookie(name, token, options);
 }
@@ -61,6 +69,7 @@ export async function createSession(
     db: Queryable,
     userId: number,
     userAgent: string | undefined,
+    expiresAt = new Date(Date.now() + SHORT_SESSION_LIFETIME),
 ): Promise<string> {
     const token = randomBytes(32).toString('base64url');
 
@@ -68,7 +77,7 @@ export async function createSession(
         id: hashToken(token),
         userId,
         userAgent,
-        expiresAt: new Date(Date.now() + SESSION_LIFETIME),
+        expiresAt,
     });
 
     return token;
@@ -82,6 +91,7 @@ export async function findSession(
     const [row] = await db
         .select({
             sessionId: sessions.id,
+            sessionExpiresAt: sessions.expiresAt,
             lastSeenAt: sessions.lastSeenAt,
             id: users.id,
             role: users.role,
@@ -117,6 +127,7 @@ export async function findSession(
         name: row.name,
         username: row.username,
         sessionId: row.sessionId,
+        sessionExpiresAt: row.sessionExpiresAt,
     };
 }
 

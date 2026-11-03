@@ -1,14 +1,10 @@
 import { z } from 'zod';
-import { personName, username } from '../auth/schema.ts';
+import { PASSWORD_MIN, personName, username } from '../auth/schema.ts';
 import { classroom } from '../student/schema.ts';
 
 export const managedRole = z.enum(['teacher', 'student']);
 export type ManagedRole = z.infer<typeof managedRole>;
 
-export const PASSWORD_MIN: Record<ManagedRole, number> = {
-    teacher: 15,
-    student: 8,
-};
 export const GENERATED_PASSWORD_LENGTH: Record<ManagedRole, number> = {
     teacher: 16,
     student: 8,
