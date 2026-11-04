@@ -430,6 +430,10 @@
     body * {
         visibility: hidden;
     }
+    body
+        *:not(:has(.credential-sheet), .credential-sheet, .credential-sheet *) {
+        display: none;
+    }
     .credential-sheet,
     .credential-sheet * {
         visibility: visible;
