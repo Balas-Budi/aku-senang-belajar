@@ -1,8 +1,10 @@
 import {
     index,
     integer,
+    jsonb,
     pgEnum,
     pgTable,
+    primaryKey,
     text,
     timestamp,
     unique,
@@ -18,6 +20,14 @@ export const subject = pgEnum('subject', [
 export const learningSessionStatus = pgEnum('learning_session_status', [
     'draft',
     'ready',
+]);
+export const blockKind = pgEnum('block_kind', [
+    'brain_game',
+    'hook',
+    'story',
+    'check',
+    'challenge',
+    'reflection',
 ]);
 
 export const users = pgTable('users', {
@@ -76,6 +86,24 @@ export const modules = pgTable(
     (table) => [index('modules_material_id_idx').on(table.materialId)],
 );
 
+export const competencies = pgTable(
+    'competencies',
+    {
+        id: integer().primaryKey().generatedAlwaysAsIdentity(),
+        moduleId: integer()
+            .notNull()
+            .references(() => modules.id, { onDelete: 'cascade' }),
+        code: text().notNull(),
+        description: text().notNull(),
+    },
+    (table) => [
+        unique('competencies_module_id_code_unique').on(
+            table.moduleId,
+            table.code,
+        ),
+    ],
+);
+
 export const learningSessions = pgTable(
     'learning_sessions',
     {
@@ -88,6 +116,44 @@ export const learningSessions = pgTable(
         status: learningSessionStatus().notNull().default('draft'),
     },
     (table) => [index('learning_sessions_module_id_idx').on(table.moduleId)],
+);
+
+export const sessionBlocks = pgTable(
+    'session_blocks',
+    {
+        id: integer().primaryKey().generatedAlwaysAsIdentity(),
+        learningSessionId: integer()
+            .notNull()
+            .references(() => learningSessions.id, { onDelete: 'cascade' }),
+        position: integer().notNull(),
+        kind: blockKind().notNull(),
+        content: jsonb().notNull(),
+    },
+    (table) => [
+        unique('session_blocks_learning_session_id_position_unique').on(
+            table.learningSessionId,
+            table.position,
+        ),
+    ],
+);
+
+export const blockCompetencies = pgTable(
+    'block_competencies',
+    {
+        blockId: integer()
+            .notNull()
+            .references(() => sessionBlocks.id, { onDelete: 'cascade' }),
+        competencyId: integer()
+            .notNull()
+            .references(() => competencies.id, { onDelete: 'cascade' }),
+    },
+    (table) => [
+        primaryKey({
+            name: 'block_competencies_block_id_competency_id_pk',
+            columns: [table.blockId, table.competencyId],
+        }),
+        index('block_competencies_competency_id_idx').on(table.competencyId),
+    ],
 );
 
 export const assignments = pgTable(

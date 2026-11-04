@@ -15,6 +15,13 @@
             "when": 1793755879734,
             "tag": "0001_open_ultimates",
             "breakpoints": true
+        },
+        {
+            "idx": 2,
+            "version": "7",
+            "when": 1793770382193,
+            "tag": "0002_empty_stranger",
+            "breakpoints": true
         }
     ]
 }

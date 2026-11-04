@@ -77,6 +77,10 @@
             "seed-sample-sessions": {
                 "command": "node --env-file-if-exists=.env packages/backend/src/scripts/seed-sample-sessions.ts",
                 "cache": false
+            },
+            "seed-demo-module": {
+                "command": "node --env-file-if-exists=.env packages/backend/src/scripts/seed-demo-module.ts",
+                "cache": false
             }
         }
     }
