@@ -43,16 +43,14 @@ export function useJoinClass() {
                 method: 'POST',
                 body: JSON.stringify({ inviteCode }),
             }),
-        onSuccess: () =>
-            client.invalidateQueries({ queryKey: ['student', 'class'] }),
+        onSuccess: () => client.invalidateQueries({ queryKey: ['student'] }),
     });
 }
 export function useLeaveClass() {
     const client = useQueryClient();
     return useMutation({
         mutationFn: () => api('/api/student/class', { method: 'DELETE' }),
-        onSuccess: () =>
-            client.invalidateQueries({ queryKey: ['student', 'class'] }),
+        onSuccess: () => client.invalidateQueries({ queryKey: ['student'] }),
     });
 }
 export function useCreateClass() {

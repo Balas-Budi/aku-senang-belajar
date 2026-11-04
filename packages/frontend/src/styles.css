@@ -1,15 +1,21 @@
 @import 'tailwindcss';
 @theme {
+    --font-display:
+        'Fredoka Variable', 'Nunito Variable', ui-rounded, system-ui, sans-serif;
+    --font-rounded: 'Nunito Variable', ui-rounded, system-ui, sans-serif;
     --color-background: #ffffff;
     --color-foreground: #171629;
     --color-muted: #f2f2f2;
     --color-muted-foreground: #535267;
     --color-border: #827e96;
     --color-primary: #4c42cf;
+    --color-primary-shade: #352cae;
     --color-primary-deep: #1f1976;
     --color-primary-foreground: #ffffff;
     --color-secondary: #e4e2f8;
+    --color-paper-edge: #dcd9f2;
     --color-destructive: #a31c38;
+    --color-destructive-shade: #761026;
     --color-ring: #4c42cf;
     --color-activity-orange: #f46800;
     --color-activity-blue: #0099f3;
@@ -19,13 +25,14 @@
     --color-student-accent-ink: #8f3b00;
     --color-student-surface: #f6f4ff;
     --color-student-skin: #f7c7a6;
-    --color-panda-fur: #2c2585;
-    --color-panda-ink: #1c1660;
-    --color-panda-ear: #5b4fe0;
-    --color-panda-blush: #f7b394;
-    --color-panda-mouth: #f2876a;
+    --color-jalak-ink: #1c1660;
+    --color-jalak-beak: #ffc65c;
+    --color-jalak-legs: #8a9bd0;
+    --color-jalak-blush: #f7b394;
+    --color-jalak-mouth: #f2876a;
 }
-.student-space {
+.student-space,
+.login-page {
     background-color: var(--color-student-surface);
     background-image: url('/student-doodles.svg');
     background-size: 560px 520px;
@@ -33,8 +40,8 @@
 .student-welcome {
     background: var(--color-secondary);
 }
-.buddy-bubble {
-    transform-origin: 75% 100%;
+.jalak-bubble {
+    transform-origin: 0% 100%;
     animation: student-pop 180ms ease-out both;
 }
 .student-menu {
@@ -93,6 +100,22 @@
         transform: translateY(2px) rotate(var(--tilt, 0deg)) scale(0.95);
     }
 }
+.school-bag--hop {
+    transform-origin: 50% 100%;
+    animation: school-bag-hop 900ms ease-out;
+}
+@keyframes school-bag-hop {
+    0%,
+    100% {
+        transform: translateY(0) rotate(0) scale(1);
+    }
+    30% {
+        transform: translateY(-16px) rotate(-6deg) scale(1.06);
+    }
+    60% {
+        transform: translateY(2px) rotate(3deg) scale(0.97);
+    }
+}
 .toast {
     animation: toast-in 220ms ease-out both;
 }
@@ -102,7 +125,7 @@
 @keyframes toast-in {
     from {
         opacity: 0;
-        transform: translateY(-8px) scale(0.98);
+        transform: translateY(12px) scale(0.98);
     }
 }
 @keyframes toast-timer {
@@ -110,245 +133,149 @@
         transform: scaleX(0);
     }
 }
-.student-action {
-    box-shadow: 0 4px 0 var(--color-primary-deep);
+.jalak {
+    --jalak-rise: 1;
+    --jalak-hop: 0;
+    --jalak-body: 1;
+    --jalak-drop: 0;
+    --jalak-turn: 0;
+    --jalak-eyes: 1;
+    --jalak-look-x: 0;
+    --jalak-look-y: 0;
+    --jalak-wing: 0;
+    --jalak-flap: 0;
+    --jalak-wave: 0;
+    --jalak-beak: 0;
+    --jalak-crest: 0.7;
+    --jalak-cover: 0;
 }
-.student-action:active {
-    transform: translateY(3px);
-    box-shadow: 0 1px 0 var(--color-primary-deep);
+.jalak--perched {
+    --jalak-rise: 0;
+    --jalak-body: 0;
 }
-.buddy-body {
-    transform-origin: 150px 150px;
-    animation: buddy-float 4s ease-in-out infinite;
-}
-.buddy-chest {
-    transform-origin: 150px 140px;
-    animation: buddy-breathe 3s ease-in-out infinite;
-}
-.buddy-arm-left {
-    transform-origin: 50px 130px;
-    animation: buddy-sway 4s ease-in-out infinite;
-}
-.buddy-arm-right {
-    transform-origin: 248px 130px;
-    animation: buddy-sway 4s ease-in-out infinite reverse;
-}
-.buddy-happy {
-    opacity: 0;
-}
-.buddy--excited .buddy-happy {
-    opacity: 1;
-}
-.buddy--excited .buddy-calm {
-    opacity: 0;
-}
-.buddy--excited .buddy-body {
-    animation: buddy-joy 550ms ease-in-out infinite;
-}
-.buddy--excited .buddy-chest {
-    animation: buddy-cheer 450ms ease-in-out infinite;
-}
-.buddy--excited .buddy-arm-left {
-    animation: buddy-sway 450ms ease-in-out infinite;
-}
-.buddy--excited .buddy-arm-right {
-    animation: buddy-sway 450ms ease-in-out infinite reverse;
-}
-@keyframes buddy-float {
-    0%,
-    100% {
-        transform: translateY(0) rotate(-1deg);
-    }
-    50% {
-        transform: translateY(-5px) rotate(1deg);
-    }
-}
-@keyframes buddy-breathe {
-    0%,
-    100% {
-        transform: scale(1);
-    }
-    50% {
-        transform: scale(1.015, 1.02);
-    }
-}
-@keyframes buddy-cheer {
-    0%,
-    100% {
-        transform: scale(1);
-    }
-    50% {
-        transform: scale(1.04, 1.06);
-    }
-}
-@keyframes buddy-joy {
-    0%,
-    100% {
-        transform: translateY(0) rotate(-2deg);
-    }
-    50% {
-        transform: translateY(-7px) rotate(2deg);
-    }
-}
-@keyframes buddy-sway {
-    0%,
-    100% {
-        transform: rotate(-5deg);
-    }
-    50% {
-        transform: rotate(8deg);
-    }
+.jalak--sad {
+    --jalak-drop: 0.6;
+    --jalak-crest: 0.1;
 }
 @media (prefers-reduced-motion: reduce) {
-    .buddy-scene *,
-    .sitting-friend *,
-    .welcome-stickers *,
-    .empty-class-art * {
-        animation: none !important;
-        transition: none !important;
+    .jalak--perched {
+        --jalak-rise: 1;
+        --jalak-body: 1;
+        --jalak-drop: 1;
+        --jalak-eyes: 0;
+        --jalak-crest: 0.25;
     }
 }
-.buddy-eyes {
-    transform-origin: 145px 119px;
-    animation: buddy-blink 5s ease-in-out infinite;
+.jalak-rise {
+    transform: translateY(
+        calc((1 - var(--jalak-rise)) * 170px - var(--jalak-hop) * 26px)
+    );
 }
-@keyframes buddy-blink {
+.jalak-body {
+    transform: translateY(calc((1 - var(--jalak-body)) * 96px));
+}
+.jalak-breath {
+    transform-origin: 120px 224px;
+    animation: jalak-breath 3.2s ease-in-out infinite;
+}
+.jalak-head {
+    transform-origin: 120px 100px;
+    transform: translate(
+            calc(var(--jalak-look-x) * 4px),
+            calc(var(--jalak-drop) * 5px + var(--jalak-look-y) * 3px)
+        )
+        rotate(calc(var(--jalak-turn) * 1deg - var(--jalak-drop) * 5deg));
+}
+.jalak-crest {
+    transform-origin: 116px 48px;
+    transform: rotate(calc((1 - var(--jalak-crest)) * -26deg));
+}
+.jalak-crest-sway {
+    transform-origin: 116px 48px;
+    animation: jalak-crest 3.6s ease-in-out infinite;
+}
+.jalak-eyes-open {
+    transform-origin: 120px 94px;
+    transform: scaleY(clamp(0, var(--jalak-eyes), 1));
+}
+.jalak-blink {
+    transform-origin: 120px 94px;
+    animation: jalak-blink 4.5s infinite;
+}
+.jalak-pupils {
+    transform: translate(
+        calc(var(--jalak-look-x) * 5px),
+        calc(var(--jalak-look-y) * 4px)
+    );
+}
+.jalak-eyes-closed {
+    opacity: calc(1 - var(--jalak-eyes) * 2.5);
+}
+.jalak-beak-lower {
+    transform: translateY(calc(var(--jalak-beak) * 6px));
+}
+.jalak-mouth {
+    opacity: var(--jalak-beak);
+}
+.jalak-wing-right {
+    transform-origin: 174px 136px;
+    transform: rotate(
+        calc(
+            var(--jalak-wing) * -128deg + var(--jalak-wave) * 1deg +
+                var(--jalak-cover) * 149deg
+        )
+    );
+}
+.jalak-wing-left {
+    transform-origin: 66px 136px;
+    transform: rotate(
+        calc(
+            var(--jalak-flap) * 128deg - var(--jalak-wave) * 1deg -
+                var(--jalak-cover) * 149deg
+        )
+    );
+}
+.jalak-front {
+    opacity: calc((var(--jalak-body) - 0.95) * 20);
+}
+.jalak-sleep-marks {
+    opacity: calc((1 - var(--jalak-eyes) * 2) * var(--jalak-body));
+}
+.jalak-float {
+    animation: jalak-float 3s ease-in-out infinite;
+}
+@keyframes jalak-breath {
+    50% {
+        transform: scale(1.012, 1.025);
+    }
+}
+@keyframes jalak-crest {
+    50% {
+        transform: rotate(-6deg);
+    }
+}
+@keyframes jalak-blink {
     0%,
-    92%,
+    93%,
     100% {
         transform: scaleY(1);
     }
     96% {
-        transform: scaleY(0.12);
-    }
-}
-.sitting-friend {
-    --panda-rise: 0;
-    --panda-hop: 0;
-    --panda-body: 0;
-    --panda-drop: 0;
-    --panda-turn: 0;
-    --panda-eyes: 1;
-    --panda-look-x: 0;
-    --panda-look-y: 0;
-    --panda-arm-a: 0;
-    --panda-arm-b: 0;
-    --panda-wave: 0;
-}
-@media (prefers-reduced-motion: reduce) {
-    .sitting-friend {
-        --panda-rise: 1;
-        --panda-body: 1;
-        --panda-drop: 1;
-        --panda-eyes: 0;
-        --panda-arm-a: 1;
-        --panda-arm-b: 1;
-    }
-}
-.panda-rise {
-    transform: translateY(
-        calc((1 - var(--panda-rise)) * 215px - var(--panda-hop) * 12px)
-    );
-}
-.panda-breath {
-    transform-origin: 300px 260px;
-    animation: panda-breath 3.4s ease-in-out infinite;
-}
-.panda-body {
-    transform: translateY(calc((1 - var(--panda-body)) * 150px));
-}
-.panda-leg {
-    opacity: calc((var(--panda-body) - 0.95) * 20);
-}
-.panda-head {
-    transform-origin: 200px 160px;
-    transform: translateY(
-            calc(var(--panda-drop) * 10px + (1 - var(--panda-body)) * 26px)
-        )
-        rotate(calc(var(--panda-drop) * -4deg + var(--panda-turn) * 1deg));
-}
-.panda-face {
-    transform: translate(
-        calc(var(--panda-look-x) * 6px),
-        calc(var(--panda-look-y) * 4px)
-    );
-}
-.panda-eyes {
-    transform-origin: 200px 162px;
-    transform: scaleY(clamp(0, var(--panda-eyes), 1));
-}
-.panda-blink {
-    transform-origin: 200px 160px;
-    animation: panda-blink 4s infinite;
-}
-.panda-pupils {
-    transform: translate(
-        calc(var(--panda-look-x) * 4px),
-        calc(var(--panda-look-y) * 4px)
-    );
-}
-.panda-eyes-closed {
-    opacity: calc(1 - var(--panda-eyes) * 2.5);
-}
-.panda-mouth-asleep {
-    opacity: calc(1 - var(--panda-eyes) * 2);
-}
-.panda-mouth-awake {
-    opacity: calc(var(--panda-eyes) * 2 - 1);
-}
-.panda-arm-a {
-    transform-origin: 300px 242px;
-    transform: rotate(calc((1 - var(--panda-arm-a)) * 35deg));
-}
-.panda-arm-rest {
-    opacity: calc((var(--panda-arm-b) - 0.5) * 2);
-}
-.panda-arm-b {
-    transform: translateY(calc(var(--panda-arm-b) * 160px));
-}
-.panda-wave {
-    transform-origin: 326px 204px;
-    transform: rotate(calc(var(--panda-wave) * 1deg));
-}
-.panda-awake-marks {
-    opacity: calc((var(--panda-eyes) * 2 - 1) * var(--panda-rise));
-}
-.panda-tail-marks {
-    opacity: calc((var(--panda-eyes) * 2 - 1) * var(--panda-body));
-}
-.panda-sleep-marks {
-    opacity: calc((1 - var(--panda-eyes) * 2) * var(--panda-body));
-}
-.panda-twinkle {
-    animation: panda-twinkle 1.6s ease-in-out infinite;
-}
-.panda-float {
-    animation: panda-float 3s ease-in-out infinite;
-}
-@keyframes panda-breath {
-    50% {
-        transform: scaleY(1.025);
-    }
-}
-@keyframes panda-blink {
-    0%,
-    92%,
-    100% {
-        transform: scaleY(1);
-    }
-    95% {
         transform: scaleY(0.1);
     }
 }
-@keyframes panda-twinkle {
-    50% {
-        opacity: 0.3;
-    }
-}
-@keyframes panda-float {
+@keyframes jalak-float {
     50% {
         transform: translateY(-6px);
         opacity: 0.6;
+    }
+}
+@media (prefers-reduced-motion: reduce) {
+    .jalak *,
+    .welcome-stickers *,
+    .empty-class-art * {
+        animation: none !important;
+        transition: none !important;
     }
 }
 .class-plane {
@@ -463,40 +390,6 @@
     100% {
         opacity: 0;
         transform: translateY(9px) scaleY(1);
-    }
-}
-@media (prefers-reduced-motion: reduce) {
-    .crying-face * {
-        animation: none !important;
-    }
-}
-.login-page {
-    --login-gradient-angle: 180deg;
-    background-image:
-        url('/learning-doodles.svg'),
-        linear-gradient(
-            var(--login-gradient-angle),
-            var(--color-primary-deep) 0%,
-            var(--color-primary) 52%,
-            var(--color-secondary) 100%
-        );
-    background-size:
-        420px 420px,
-        cover;
-    background-position: center, center;
-    background-repeat: repeat, no-repeat;
-}
-@media (min-width: 640px) {
-    .login-page {
-        --login-gradient-angle: 135deg;
-        background-size:
-            560px 560px,
-            cover;
-    }
-}
-@media (min-width: 1024px) {
-    .login-page {
-        --login-gradient-angle: 110deg;
     }
 }
 @media (prefers-reduced-motion: reduce) {

@@ -8,7 +8,7 @@ export function FormField({
     name,
     trailing,
     ...props
-}: ComponentProps<'input'> & {
+}: ComponentProps<typeof Input> & {
     name: string;
     label: string;
     error?: unknown;

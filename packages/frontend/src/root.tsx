@@ -9,6 +9,8 @@ import {
     ScrollRestoration,
 } from 'react-router';
 import type { Route } from './+types/root';
+import '@fontsource-variable/fredoka';
+import '@fontsource-variable/nunito';
 import './styles.css';
 
 export const meta: Route.MetaFunction = () => [{ title: 'Aku Senang Belajar' }];

@@ -1,7 +1,7 @@
 import { useEffect, useRef, useState, type ReactNode } from 'react';
 import { LogoutDialog } from './logout-dialog';
 import { Link } from 'react-router';
-import { Button } from '../../components/ui/button';
+import { Button, buttonVariants } from '../../components/ui/button';
 import { useErrorToast } from '../../components/ui/toast';
 import { requestErrorMessage } from '../../components/request-error';
 export function StudentShell({
@@ -49,23 +49,23 @@ export function StudentShell({
         };
     }, []);
     return (
-        <div className="student-space min-h-svh text-lg">
+        <div className="student-space font-rounded min-h-svh text-lg">
             <a
                 href="#main"
                 className="sr-only focus:not-sr-only focus:block focus:p-4"
             >
                 Langsung ke isi
             </a>
-            <header className="border-primary/10 border-b bg-white">
+            <header className="border-paper-edge border-b-2 bg-white">
                 <div className="mx-auto flex max-w-5xl items-center justify-between gap-3 px-4 py-3 sm:px-8">
                     <Link
                         to="/student"
-                        className="text-primary-deep focus-visible:outline-ring rounded-lg text-lg leading-tight font-extrabold focus-visible:outline-3"
+                        className="font-display text-primary-deep focus-visible:outline-ring rounded-lg text-xl leading-tight font-semibold focus-visible:outline-3"
                     >
                         Aku Senang Belajar
                     </Link>
                     <details ref={menu} className="group relative shrink-0">
-                        <summary className="border-primary/15 text-primary-deep hover:bg-student-surface focus-visible:outline-ring flex min-h-12 cursor-pointer list-none items-center gap-2 rounded-xl border bg-white py-1.5 pr-3 pl-1.5 font-bold transition-colors focus-visible:outline-3 [&::-webkit-details-marker]:hidden">
+                        <summary className="border-paper-edge text-primary-deep hover:bg-student-surface focus-visible:outline-ring flex min-h-12 cursor-pointer list-none items-center gap-2 rounded-2xl border-2 bg-white py-1.5 pr-3 pl-1.5 font-bold shadow-[0_3px_0_var(--color-paper-edge)] transition-colors focus-visible:outline-3 [&::-webkit-details-marker]:hidden">
                             <span
                                 aria-hidden="true"
                                 className="bg-primary text-primary-foreground flex size-9 items-center justify-center rounded-full text-base"
@@ -91,12 +91,23 @@ export function StudentShell({
                                 />
                             </svg>
                         </summary>
-                        <div className="student-menu border-primary/15 absolute right-0 z-20 mt-2 w-64 max-w-[calc(100vw-2rem)] space-y-3 rounded-2xl border bg-white p-4 shadow-lg">
-                            <p className="text-primary-deep text-base font-bold break-words">
+                        <div className="student-menu border-paper-edge absolute right-0 z-20 mt-2 w-64 max-w-[calc(100vw-2rem)] space-y-3 rounded-2xl border-2 bg-white p-4 shadow-lg">
+                            <p className="font-display text-primary-deep text-lg font-semibold break-words">
                                 {name}
                             </p>
+                            <Link
+                                to="/account"
+                                className={buttonVariants({
+                                    variant: 'outline',
+                                    feel: 'chunky',
+                                    className: 'w-full',
+                                })}
+                            >
+                                Ganti kata sandi
+                            </Link>
                             <Button
                                 variant="destructive"
+                                feel="chunky"
                                 className="w-full"
                                 disabled={pending}
                                 onClick={() => {

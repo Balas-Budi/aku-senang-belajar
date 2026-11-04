@@ -45,7 +45,7 @@ export function ClassCodeField({
         <div className="space-y-2">
             <label
                 htmlFor="inviteCode"
-                className="text-primary-deep block font-bold"
+                className="font-display text-primary-deep block text-lg font-semibold"
             >
                 Kode kelas
             </label>
@@ -97,8 +97,10 @@ export function ClassCodeField({
                             key={index}
                             aria-hidden="true"
                             className={cn(
-                                'text-primary-deep flex h-14 items-center justify-center rounded-xl border-2 bg-white text-2xl font-extrabold transition-colors duration-150',
-                                character ? 'border-primary' : 'border-border',
+                                'font-display text-primary-deep flex h-16 items-center justify-center rounded-2xl border-2 border-b-[5px] text-3xl font-semibold transition-colors duration-150',
+                                character
+                                    ? 'border-primary bg-student-surface'
+                                    : 'border-border bg-white',
                                 active && 'border-primary ring-ring/30 ring-4',
                                 invalid && 'border-destructive',
                             )}

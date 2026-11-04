@@ -3,12 +3,14 @@ import { useRef, useState } from 'react';
 import { studentClassQuery, useJoinClass, useLeaveClass } from './queries';
 import { ClassCodeField, inviteCodeMessages } from './class-code-field';
 import { meQuery } from '../auth/queries';
-import { Confetti } from '../student/confetti';
-import { LearningBuddy } from '../student/learning-buddy';
-import { LoungingPanda } from '../student/lounging-panda';
+import { AssignmentList } from '../assignments/assignment-list';
+import { studentAssignmentsQuery } from '../assignments/queries';
+import { PerchedJalak } from '../student/perched-jalak';
+import { SchoolBag } from '../student/school-bag';
 import { EmptyClassIllustration } from '../student/empty-class-illustration';
 import { WelcomeStickers } from '../student/welcome-stickers';
 import { Button } from '../../components/ui/button';
+import { LottieMoment } from '../../components/lottie-moment';
 import { useErrorToast } from '../../components/ui/toast';
 import {
     RequestError,
@@ -16,6 +18,7 @@ import {
 } from '../../components/request-error';
 export function StudentClass() {
     const query = useQuery(studentClassQuery());
+    const assignments = useQuery(studentAssignmentsQuery());
     const { data: user } = useQuery(meQuery());
     const join = useJoinClass();
     const leave = useLeaveClass();
@@ -27,15 +30,19 @@ export function StudentClass() {
     const showError = useErrorToast();
     if (query.isPending)
         return (
-            <p role="status" className="rounded-[20px] bg-white p-8">
+            <p
+                role="status"
+                className="border-paper-edge rounded-[24px] border-2 bg-white p-8"
+            >
                 Sebentar, kita buka kelasmu…
             </p>
         );
     if (query.isError)
         return (
-            <div className="space-y-4 rounded-[20px] bg-white p-6">
+            <div className="border-paper-edge space-y-4 rounded-[24px] border-2 bg-white p-6">
                 <RequestError error={query.error} />
                 <Button
+                    feel="chunky"
                     onClick={() => {
                         void query.refetch();
                     }}
@@ -45,41 +52,50 @@ export function StudentClass() {
             </div>
         );
     const classroom = query.data.classroom;
+    const sessionCount = assignments.data?.length ?? 0;
     return (
         <div className="space-y-6">
             <section
-                className="student-welcome relative grid grid-cols-[minmax(0,1fr)_auto] items-center gap-4 rounded-[20px] px-5 pt-6 pb-16 sm:gap-8 sm:px-8 sm:pt-8 sm:pb-14 lg:pb-8"
+                className="student-welcome border-paper-edge relative grid grid-cols-[minmax(0,1fr)_auto] items-center gap-4 rounded-[24px] border-2 px-5 pt-6 pb-24 sm:gap-8 sm:px-8 sm:pt-8 sm:pb-28"
                 aria-labelledby="student-welcome-title"
             >
                 <WelcomeStickers cheers={cheers} />
                 <div className="relative">
                     <h1
                         id="student-welcome-title"
-                        className="text-primary-deep text-2xl leading-tight font-extrabold break-words sm:text-4xl"
+                        className="font-display text-primary-deep text-3xl leading-tight font-semibold break-words sm:text-5xl"
                     >
                         Halo{user ? `, ${user.name.split(' ')[0]}` : ''}!
                     </h1>
-                    <p className="text-muted-foreground mt-2 max-w-md text-lg leading-relaxed text-pretty">
-                        {classroom
-                            ? 'Kelasmu sudah siap. Tunggu sesi pertama dari gurumu, ya.'
-                            : 'Masukkan kode kelas dari gurumu untuk mulai belajar.'}
+                    <p className="text-muted-foreground mt-2 max-w-md text-lg leading-relaxed text-pretty sm:text-xl">
+                        {!classroom
+                            ? 'Masukkan kode kelas dari gurumu untuk mulai belajar.'
+                            : sessionCount
+                              ? `Gurumu sudah membagikan ${sessionCount} sesi belajar.`
+                              : 'Kelasmu sudah siap. Tunggu sesi pertama dari gurumu, ya.'}
                     </p>
                 </div>
-                <LearningBuddy
+                <SchoolBag
                     cheers={cheers}
-                    className="w-24 sm:w-40 lg:w-52"
+                    className="relative w-24 sm:w-36 lg:w-44"
                 />
             </section>
             <section
-                className="border-primary/10 relative rounded-[20px] border bg-white"
+                className="border-paper-edge relative rounded-[24px] border-2 border-b-[6px] bg-white"
                 aria-labelledby="student-class-title"
             >
-                <LoungingPanda
+                <PerchedJalak
                     watching={typing}
                     lookAt={codeSlots}
                     cheers={cheers}
                 />
-                {cheers > 0 && <Confetti key={cheers} />}
+                {cheers > 0 && (
+                    <LottieMoment
+                        key={cheers}
+                        path="/lottie/celebrate.json"
+                        className="absolute top-0 left-1/2 z-10 aspect-[3/2] w-[min(100%,420px)] -translate-x-1/2 -translate-y-[72%]"
+                    />
+                )}
                 <div className="flex items-center gap-3 px-5 pt-8 pb-4 sm:px-7">
                     <span
                         aria-hidden="true"
@@ -101,17 +117,17 @@ export function StudentClass() {
                     </span>
                     <h2
                         id="student-class-title"
-                        className="text-primary-deep text-xl font-bold"
+                        className="font-display text-primary-deep text-2xl font-semibold"
                     >
                         Kelas belajarku
                     </h2>
                 </div>
-                <div className="border-primary/10 border-t p-5 sm:p-7">
+                <div className="border-paper-edge border-t-2 p-5 sm:p-7">
                     {classroom ? (
                         <div className="space-y-5">
                             <div className="flex flex-wrap items-start justify-between gap-3">
                                 <div className="min-w-0">
-                                    <h3 className="text-primary-deep text-2xl font-extrabold break-words">
+                                    <h3 className="font-display text-primary-deep text-3xl font-semibold break-words">
                                         {classroom.name}
                                     </h3>
                                     <p className="text-muted-foreground mt-1 text-base break-words">
@@ -136,34 +152,9 @@ export function StudentClass() {
                                     Sudah bergabung
                                 </p>
                             </div>
-                            <div className="bg-student-accent-soft flex items-start gap-4 rounded-2xl p-4 sm:p-5">
-                                <svg
-                                    aria-hidden="true"
-                                    viewBox="0 0 48 48"
-                                    className="text-student-accent-ink size-12 shrink-0"
-                                    fill="none"
-                                    stroke="currentColor"
-                                    strokeWidth="2.3"
-                                    strokeLinecap="round"
-                                    strokeLinejoin="round"
-                                >
-                                    <path d="M11 8h28v33H11z" fill="white" />
-                                    <path d="M9 8H6v33h5M18 17h14m-14 7h14m-14 7h8" />
-                                    <path
-                                        d="m34 4 7 5-13 18-8 3 1-8L34 4Z"
-                                        fill="var(--color-activity-orange)"
-                                    />
-                                </svg>
-                                <div>
-                                    <h4 className="text-primary-deep font-bold">
-                                        Belum ada sesi belajar
-                                    </h4>
-                                    <p className="text-muted-foreground mt-1 text-base leading-relaxed">
-                                        Saat {classroom.teacherName} membagikan
-                                        sesi, kamu bisa mulai dari sini.
-                                    </p>
-                                </div>
-                            </div>
+                            <AssignmentList
+                                teacherName={classroom.teacherName}
+                            />
                             <details className="text-base">
                                 <summary className="text-muted-foreground focus-visible:outline-ring min-h-12 cursor-pointer rounded-lg py-3 underline underline-offset-4 focus-visible:outline-3">
                                     Ingin pindah kelas?
@@ -175,6 +166,7 @@ export function StudentClass() {
                                 {!confirmLeave ? (
                                     <Button
                                         variant="outline"
+                                        feel="chunky"
                                         onClick={() => setConfirmLeave(true)}
                                     >
                                         Keluar dari kelas
@@ -187,6 +179,7 @@ export function StudentClass() {
                                         </p>
                                         <div className="flex flex-wrap gap-3">
                                             <Button
+                                                feel="chunky"
                                                 disabled={leave.isPending}
                                                 onClick={() =>
                                                     leave.mutate(undefined, {
@@ -209,6 +202,7 @@ export function StudentClass() {
                                             </Button>
                                             <Button
                                                 variant="outline"
+                                                feel="chunky"
                                                 onClick={() =>
                                                     setConfirmLeave(false)
                                                 }
@@ -233,15 +227,15 @@ export function StudentClass() {
                                 />
                             </div>
                             <div>
-                                <h3 className="text-primary-deep text-2xl font-extrabold">
+                                <h3 className="font-display text-primary-deep text-3xl font-semibold">
                                     Belum ada kelas, nih!
                                 </h3>
-                                <p className="text-muted-foreground mt-2 text-base leading-relaxed">
+                                <p className="text-muted-foreground mt-2 text-lg leading-relaxed">
                                     Minta kode kelas ke gurumu, lalu ketik di
                                     kotak ini.
                                 </p>
                                 <form
-                                    className="mt-5 space-y-4"
+                                    className="mt-5 space-y-5"
                                     onSubmit={(event) => {
                                         event.preventDefault();
                                         join.mutate(
@@ -283,8 +277,9 @@ export function StudentClass() {
                                     />
                                     <Button
                                         type="submit"
+                                        feel="chunky"
                                         disabled={join.isPending}
-                                        className="student-action min-h-14 w-full px-8 sm:w-auto"
+                                        className="w-full px-8 sm:w-auto"
                                     >
                                         {join.isPending
                                             ? 'Menghubungkan…'

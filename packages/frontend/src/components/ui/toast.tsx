@@ -34,7 +34,7 @@ export function ToastProvider({ children }: { children: ReactNode }) {
     return (
         <ToastContext value={show}>
             {children}
-            <div className="pointer-events-none fixed inset-x-0 top-3 z-50 flex flex-col items-center gap-2 px-4">
+            <div className="font-rounded pointer-events-none fixed inset-x-0 bottom-0 z-50 flex flex-col items-end gap-2 px-4 pt-4 pb-[max(1rem,env(safe-area-inset-bottom))]">
                 {toasts.map((toast) => (
                     <ToastMessage
                         key={toast.id}
@@ -71,7 +71,7 @@ function ToastMessage({
             onPointerLeave={() => setPaused(false)}
             onFocus={() => setPaused(true)}
             onBlur={() => setPaused(false)}
-            className="toast border-destructive/25 pointer-events-auto relative flex w-full max-w-md items-start gap-3 overflow-hidden rounded-2xl border bg-white py-2 pr-2 pl-4 shadow-lg"
+            className="toast border-destructive/25 pointer-events-auto relative flex w-full max-w-md items-start gap-3 overflow-hidden rounded-2xl border-2 bg-white py-2 pr-2 pl-4 shadow-lg"
         >
             <AlertIcon className="text-destructive mt-2.5 size-6" />
             <p className="text-foreground flex-1 py-2.5 text-base leading-snug">
