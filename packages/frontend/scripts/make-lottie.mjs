@@ -200,9 +200,9 @@ const celebrate = Array.from({ length: 18 }, (_, index) => {
 });
 const chirpFrames = 64;
 const notes = [
-    { at: [52, 34], start: 0, color: palette[0], sway: -14 },
-    { at: [86, 18], start: 8, color: palette[4], sway: 12 },
-    { at: [122, 36], start: 16, color: palette[1], sway: -10 },
+    { at: [52, 74], start: 0, color: palette[0], sway: -14 },
+    { at: [86, 58], start: 8, color: palette[4], sway: 12 },
+    { at: [122, 76], start: 16, color: palette[1], sway: -10 },
 ];
 const chirp = notes.map(({ at, start, color, sway }, index) => {
     const note = [
@@ -215,7 +215,7 @@ const chirp = notes.map(({ at, start, color, sway }, index) => {
         `note-${index + 1}`,
         {
             p: positionTrack([
-                [start, [80, 112]],
+                [start, [80, 152]],
                 [start + 34, at, easeOut],
                 [chirpFrames, [at[0], at[1] - 10]],
             ]),
@@ -257,5 +257,5 @@ writeFileSync(
 );
 writeFileSync(
     `${out}/chirp.json`,
-    JSON.stringify(animation('chirp', 160, 140, chirpFrames, chirp)),
+    JSON.stringify(animation('chirp', 160, 180, chirpFrames, chirp)),
 );

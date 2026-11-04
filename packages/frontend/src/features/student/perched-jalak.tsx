@@ -31,7 +31,7 @@ export function PerchedJalak({
                 <LottieMoment
                     key={chirps}
                     path="/lottie/chirp.json"
-                    className="absolute top-0 left-[16.7%] aspect-[8/7] w-[66.7%]"
+                    className="absolute top-0 left-[16.7%] aspect-[8/9] w-[66.7%] -translate-y-[22.2%]"
                 />
             )}
             <SpeechBubble
