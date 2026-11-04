@@ -29,6 +29,21 @@ export const blockKind = pgEnum('block_kind', [
     'challenge',
     'reflection',
 ]);
+export const attemptStatus = pgEnum('attempt_status', [
+    'in_progress',
+    'submitted',
+]);
+export const responseOutcome = pgEnum('response_outcome', [
+    'accepted',
+    'correct',
+    'not_yet',
+]);
+export const helpKind = pgEnum('help_kind', [
+    'hint',
+    'example',
+    'ask_teacher',
+    'reveal',
+]);
 
 export const users = pgTable('users', {
     id: integer().primaryKey().generatedAlwaysAsIdentity(),
@@ -174,6 +189,77 @@ export const assignments = pgTable(
             table.classId,
         ),
         index('assignments_class_id_idx').on(table.classId),
+    ],
+);
+
+export const attempts = pgTable(
+    'attempts',
+    {
+        id: integer().primaryKey().generatedAlwaysAsIdentity(),
+        assignmentId: integer()
+            .notNull()
+            .references(() => assignments.id, { onDelete: 'cascade' }),
+        studentId: integer()
+            .notNull()
+            .references(() => users.id, { onDelete: 'cascade' }),
+        status: attemptStatus().notNull().default('in_progress'),
+        currentBlockId: integer()
+            .notNull()
+            .references(() => sessionBlocks.id, { onDelete: 'cascade' }),
+        startedAt: timestamp({ withTimezone: true }).notNull().defaultNow(),
+        submittedAt: timestamp({ withTimezone: true }),
+    },
+    (table) => [
+        unique('attempts_assignment_id_student_id_unique').on(
+            table.assignmentId,
+            table.studentId,
+        ),
+        index('attempts_student_id_idx').on(table.studentId),
+        index('attempts_current_block_id_idx').on(table.currentBlockId),
+    ],
+);
+
+export const responses = pgTable(
+    'responses',
+    {
+        id: integer().primaryKey().generatedAlwaysAsIdentity(),
+        attemptId: integer()
+            .notNull()
+            .references(() => attempts.id, { onDelete: 'cascade' }),
+        blockId: integer()
+            .notNull()
+            .references(() => sessionBlocks.id, { onDelete: 'cascade' }),
+        tryNumber: integer().notNull(),
+        answer: jsonb().notNull(),
+        outcome: responseOutcome().notNull(),
+        createdAt: timestamp({ withTimezone: true }).notNull().defaultNow(),
+    },
+    (table) => [
+        unique('responses_attempt_id_block_id_try_number_unique').on(
+            table.attemptId,
+            table.blockId,
+            table.tryNumber,
+        ),
+        index('responses_block_id_idx').on(table.blockId),
+    ],
+);
+
+export const helpEvents = pgTable(
+    'help_events',
+    {
+        id: integer().primaryKey().generatedAlwaysAsIdentity(),
+        attemptId: integer()
+            .notNull()
+            .references(() => attempts.id, { onDelete: 'cascade' }),
+        blockId: integer()
+            .notNull()
+            .references(() => sessionBlocks.id, { onDelete: 'cascade' }),
+        kind: helpKind().notNull(),
+        createdAt: timestamp({ withTimezone: true }).notNull().defaultNow(),
+    },
+    (table) => [
+        index('help_events_attempt_id_idx').on(table.attemptId),
+        index('help_events_block_id_idx').on(table.blockId),
     ],
 );
 

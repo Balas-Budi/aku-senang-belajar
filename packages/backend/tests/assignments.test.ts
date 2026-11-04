@@ -115,6 +115,8 @@ test('a student sees the sessions assigned to their class, newest first (FR-016)
             summary: 'What Food chains covers',
             subject: 'natural_and_social_science',
             moduleTitle: 'Chapter of Food chains',
+            progress: 'not_started',
+            step: null,
         },
         {
             id: mainIdea,
@@ -122,6 +124,8 @@ test('a student sees the sessions assigned to their class, newest first (FR-016)
             summary: 'What Main idea covers',
             subject: 'indonesian_language',
             moduleTitle: 'Chapter of Main idea',
+            progress: 'not_started',
+            step: null,
         },
         {
             id: fractions,
@@ -129,6 +133,8 @@ test('a student sees the sessions assigned to their class, newest first (FR-016)
             summary: 'What Fractions covers',
             subject: 'mathematics',
             moduleTitle: 'Chapter of Fractions',
+            progress: 'not_started',
+            step: null,
         },
     ]);
 });

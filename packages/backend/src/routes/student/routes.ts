@@ -1,10 +1,31 @@
 import type { FastifyPluginAsyncZod } from 'fastify-type-provider-zod';
 import { requireRole } from '../../auth/guards.ts';
-import { joinClass, leaveClass, myAssignments, myClass } from './handlers.ts';
 import {
+    answerBlock,
+    askForHelp,
+    assignmentDetail,
+    joinClass,
+    leaveClass,
+    moveCheckpoint,
+    myAssignments,
+    myClass,
+    startAttempt,
+    submitAttempt,
+} from './handlers.ts';
+import {
+    assignmentParams,
+    assignmentResponse,
     assignmentsResponse,
+    attemptParams,
+    attemptResponse,
+    checkpointBody,
     classroomResponse,
+    doneResponse,
+    feedbackResponse,
+    helpBody,
+    helpResponse,
     joinClassBody,
+    responseBody,
 } from './schema.ts';
 
 export const studentRoutes: FastifyPluginAsyncZod = async (fastify) => {
@@ -36,5 +57,62 @@ export const studentRoutes: FastifyPluginAsyncZod = async (fastify) => {
         '/assignments',
         { schema: { response: { 200: assignmentsResponse } } },
         myAssignments,
+    );
+    fastify.get(
+        '/assignments/:assignmentId',
+        {
+            schema: {
+                params: assignmentParams,
+                response: { 200: assignmentResponse },
+            },
+        },
+        assignmentDetail,
+    );
+    fastify.post(
+        '/assignments/:assignmentId/attempt',
+        {
+            schema: {
+                params: assignmentParams,
+                response: { 200: attemptResponse, 201: attemptResponse },
+            },
+        },
+        startAttempt,
+    );
+    fastify.put(
+        '/attempts/:attemptId/checkpoint',
+        { schema: { params: attemptParams, body: checkpointBody } },
+        moveCheckpoint,
+    );
+    fastify.post(
+        '/attempts/:attemptId/responses',
+        {
+            schema: {
+                params: attemptParams,
+                body: responseBody,
+                response: { 200: feedbackResponse, 201: feedbackResponse },
+            },
+        },
+        answerBlock,
+    );
+    fastify.post(
+        '/attempts/:attemptId/help',
+        {
+            schema: {
+                params: attemptParams,
+                body: helpBody,
+                response: { 201: helpResponse },
+            },
+        },
+        askForHelp,
+    );
+    fastify.post(
+        '/attempts/:attemptId/submit',
+        {
+            schema: {
+                params: attemptParams,
+                response: { 200: doneResponse },
+            },
+        },
+        submitAttempt,
     );
 };
