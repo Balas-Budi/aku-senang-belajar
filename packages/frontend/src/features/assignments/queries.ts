@@ -1,5 +1,6 @@
 import { queryOptions } from '@tanstack/react-query';
 import { api } from '../../lib/api';
+import type { Step } from '../learning-sessions/queries';
 export type Subject =
     | 'mathematics'
     | 'natural_and_social_science'
@@ -11,6 +12,8 @@ export type Assignment = {
     summary: string;
     subject: Subject;
     moduleTitle: string;
+    progress: 'not_started' | 'in_progress' | 'submitted';
+    step: Step | null;
 };
 export const studentAssignmentsQuery = (cookie?: string | null) =>
     queryOptions({

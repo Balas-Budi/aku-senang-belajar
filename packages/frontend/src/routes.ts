@@ -8,6 +8,7 @@ export default [
     route('student', 'routes/student-layout.tsx', [
         index('routes/student-home.tsx'),
     ]),
+    route('student/sessions/:assignmentId', 'routes/student-session.tsx'),
     route('teacher', 'routes/teacher-layout.tsx', [
         index('routes/teacher-home.tsx'),
         route('classes/:classId', 'routes/teacher-class.tsx'),

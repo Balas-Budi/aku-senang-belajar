@@ -71,8 +71,8 @@ export function StudentClass() {
                         {!classroom
                             ? 'Masukkan kode kelas dari gurumu untuk mulai belajar.'
                             : sessionCount
-                              ? `Gurumu sudah membagikan ${sessionCount} sesi belajar.`
-                              : 'Kelasmu sudah siap. Tunggu sesi pertama dari gurumu, ya.'}
+                              ? `Gurumu sudah membagikan ${sessionCount} misi belajar.`
+                              : 'Kelasmu sudah siap. Tunggu misi pertama dari gurumu, ya.'}
                     </p>
                 </div>
                 <SchoolBag
