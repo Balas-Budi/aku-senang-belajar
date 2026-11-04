@@ -1,6 +1,6 @@
 import type { FastifyRequest } from 'fastify';
 import type { FastifyPluginAsyncZod } from 'fastify-type-provider-zod';
-import { requireRole, requireUser } from '../../auth/guards.ts';
+import { requireUser } from '../../auth/guards.ts';
 import { changePassword, login, logout, logoutAll, me } from './handlers.ts';
 import { changePasswordBody, loginBody, userResponse } from './schema.ts';
 
@@ -51,7 +51,7 @@ export const authRoutes: FastifyPluginAsyncZod = async (fastify) => {
         '/password',
         {
             schema: { body: changePasswordBody },
-            preHandler: requireRole('teacher', 'admin'),
+            preHandler: requireUser,
         },
         changePassword,
     );

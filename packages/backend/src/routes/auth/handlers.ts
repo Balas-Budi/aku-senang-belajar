@@ -14,11 +14,17 @@ import {
     deleteSession,
     deleteUserSessions,
     setSessionCookie,
+    SESSION_LIFETIME,
+    SHORT_SESSION_LIFETIME,
 } from '../../auth/sessions.ts';
 import { users } from '../../db/schema.ts';
-import { fieldError } from '../../lib/field-error.ts';
+import { fieldError, validationError } from '../../lib/field-error.ts';
 import { AppError } from '../../lib/errors.ts';
-import type { ChangePasswordBody, LoginBody } from './schema.ts';
+import {
+    passwordForRole,
+    type ChangePasswordBody,
+    type LoginBody,
+} from './schema.ts';
 
 export const publicUserColumns = {
     id: users.id,
@@ -32,7 +38,7 @@ export async function login(
     reply: FastifyReply,
 ) {
     const { db, env } = request.server;
-    const { username, password } = request.body;
+    const { username, password, rememberMe } = request.body;
 
     const [user] = await db
         .select({ ...publicUserColumns, passwordHash: users.passwordHash })
@@ -65,10 +71,19 @@ export async function login(
         await deleteSession(db, request.user.sessionId);
     }
 
+    const expiresAt = new Date(
+        Date.now() + (rememberMe ? SESSION_LIFETIME : SHORT_SESSION_LIFETIME),
+    );
     setSessionCookie(
         reply,
         env,
-        await createSession(db, user.id, request.headers['user-agent']),
+        await createSession(
+            db,
+            user.id,
+            request.headers['user-agent'],
+            expiresAt,
+        ),
+        expiresAt,
     );
 
     return {
@@ -106,6 +121,15 @@ export async function changePassword(
     const { db, env } = request.server;
     const user = currentUser(request);
     const { currentPassword, newPassword } = request.body;
+    const parsedPassword = passwordForRole(user.role).safeParse(newPassword);
+    if (!parsedPassword.success) {
+        throw validationError(
+            parsedPassword.error.issues.map((issue) => ({
+                field: 'newPassword',
+                message: issue.message,
+            })),
+        );
+    }
 
     const [stored] = await db
         .select({ passwordHash: users.passwordHash })
@@ -124,10 +148,15 @@ export async function changePassword(
             .where(eq(users.id, user.id));
         await deleteUserSessions(tx, user.id);
 
-        return createSession(tx, user.id, request.headers['user-agent']);
+        return createSession(
+            tx,
+            user.id,
+            request.headers['user-agent'],
+            user.sessionExpiresAt,
+        );
     });
 
-    setSessionCookie(reply, env, token);
+    setSessionCookie(reply, env, token, user.sessionExpiresAt);
 
     return reply.code(204).send();
 }

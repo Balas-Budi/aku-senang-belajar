@@ -10,6 +10,7 @@ export type RequestUser = {
     name: string;
     username: string;
     sessionId: string;
+    sessionExpiresAt: Date;
 };
 
 declare module 'fastify' {

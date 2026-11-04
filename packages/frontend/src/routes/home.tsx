@@ -1,7 +1,11 @@
+import { redirect } from 'react-router';
+import { requireUser } from '../lib/require-user.server';
+import { roleHome } from '../features/auth/queries';
+import type { Route } from './+types/home';
+export async function loader({ request }: Route.LoaderArgs) {
+    const { user } = await requireUser(request);
+    throw redirect(roleHome(user.role));
+}
 export default function Home() {
-    return (
-        <main className="mx-auto max-w-xl p-8">
-            <h1 className="text-2xl font-semibold">Aku Senang Belajar</h1>
-        </main>
-    );
+    return null;
 }

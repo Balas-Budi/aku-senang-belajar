@@ -1,0 +1,35 @@
+<svg xmlns="http://www.w3.org/2000/svg" width="560" height="560" viewBox="0 0 560 560" fill="none">
+  <g stroke="#ffffff" stroke-opacity="0.19" stroke-width="2" stroke-linecap="round" stroke-linejoin="round">
+    <g transform="translate(30 35) rotate(-15 22 18)"><path d="M22 7C15 2 7 2 1 4v29c7-2 14-1 21 4 7-5 14-6 21-4V4c-6-2-14-2-21 3v30"/><path d="M7 11c4-1 7 0 10 2m-10 5c4-1 7 0 10 2m11-7c3-2 6-3 9-2m-9 9c3-2 6-3 9-2"/></g>
+    <g transform="translate(142 20) rotate(22 15 25)"><path d="m5 42 4-12L30 9l8 8-21 21-12 4Z"/><path d="m9 30 8 8M27 12l8 8M5 42l6-2"/></g>
+    <g transform="translate(265 36) rotate(-9 18 18)"><path d="M2 2h36v26H17L7 37v-9H2Z"/><path d="M10 11h20M10 18h12"/></g>
+    <g transform="translate(408 18) rotate(17 20 18)"><path d="M0 4h44v22H0Z"/><path d="M8 4v10M16 4v6M24 4v10M32 4v6M40 4v10"/></g>
+    <g transform="translate(510 70) rotate(-10 14 14)"><path d="M4 10c0-14 23-14 23 0 0 7-7 8-7 15H11c0-7-7-8-7-15Z"/><path d="M11 30h9m-7 5h5M15 1v-5"/></g>
+    <g transform="translate(80 133) rotate(12 17 18)"><circle cx="17" cy="18" r="19"/><path d="M17-1v38M-2 18h38M17 18 4 4"/><path d="m17 18 13-14"/></g>
+    <g transform="translate(192 114) rotate(-16 20 20)"><rect x="1" y="1" width="34" height="43" rx="4"/><path d="M8 1v43m5-32h15m-15 7h15m-15 7h9"/></g>
+    <g transform="translate(337 120) rotate(15 20 20)"><path d="m0 35 22-35 22 35Z"/><path d="m12 35 10-17 10 17M4 35h36"/></g>
+    <g transform="translate(449 139) rotate(-17 16 16)"><path d="M2 2h31v42L17 32 2 44Z"/><path d="M10 13h15m-15 7h10"/></g>
+    <g transform="translate(15 240) rotate(17 20 20)"><path d="m0 10 22-10 22 10-22 10L0 10Z"/><path d="M8 15v14c8 7 20 7 28 0V15m8-5v21m-2 0h4"/></g>
+    <g transform="translate(130 224) rotate(-11 18 20)"><path d="M7 0h22v6h-4v16l12 20c2 4 0 6-4 6H3c-4 0-6-2-4-6l12-20V6H7Z"/><path d="M5 34h26m-17-8h7m-3 13h2"/></g>
+    <g transform="translate(252 218) rotate(10 16 22)"><path d="M17 0v13m-7-7h14M4 33h26m-7-7-12 14"/><circle cx="5" cy="14" r="2"/><circle cx="28" cy="15" r="2"/></g>
+    <g transform="translate(383 235) rotate(-12 20 20)"><path d="M0 6c9-6 17-4 22 2 5-6 13-8 22-2v31c-9-6-17-4-22 2-5-6-13-8-22-2Z"/><path d="M22 8v31m-15-25 8 2m-8 7 8 2m15-9 8-2m-8 11 8-2"/></g>
+    <g transform="translate(506 255) rotate(20 15 15)"><rect x="0" y="0" width="30" height="30" rx="3"/><path d="M7 15h16m-8-8v16"/></g>
+    <g transform="translate(57 351) rotate(-10 20 20)"><path d="m4 34 5-12L31 0l8 8-22 22-13 4Z"/><path d="m9 22 8 8m11-27 8 8M1 41h29"/></g>
+    <g transform="translate(190 339) rotate(14 15 18)"><path d="M3 0h30v41H3Z"/><path d="M10 8h16M10 16h4m8 0h4m-16 8h4m8 0h4m-16 8h4m8 0h4"/></g>
+    <g transform="translate(304 357) rotate(-17 18 18)"><path d="M0 0h39v28H22L10 39V28H0Z"/><path d="m9 15 6 6 13-13"/></g>
+    <g transform="translate(437 344) rotate(12 18 18)"><circle cx="18" cy="18" r="18"/><path d="M0 18h36M18 0c-12 10-12 26 0 36 12-10 12-26 0-36ZM4 8h28M4 28h28"/></g>
+    <g transform="translate(12 462) rotate(14 16 18)"><path d="M2 34 18 1l16 33Z"/><circle cx="18" cy="23" r="4"/></g>
+    <g transform="translate(123 451) rotate(-14 18 18)"><path d="M3 3h34v34H3Z"/><path d="M10 11h20M10 20h20M10 29h13"/><path d="M3 3v34"/></g>
+    <g transform="translate(262 458) rotate(11 18 18)"><path d="M0 0h13v13H0Zm23 0h13v13H23ZM0 23h13v13H0Z"/><path d="M23 30h13m-6-7v13"/></g>
+    <g transform="translate(383 464) rotate(-13 18 18)"><path d="M6 13c0-17 26-17 26 0 0 9-8 9-8 18H14c0-9-8-9-8-18Z"/><path d="M14 37h10m-8 5h6M19 3v13m-5-4 5 5 5-5"/></g>
+    <g transform="translate(502 443) rotate(18 16 18)"><path d="M2 2h28v40H2Z"/><path d="M8 11h16M8 20h16M8 29h9"/></g>
+  </g>
+  <g fill="#ffffff" fill-opacity="0.17" font-family="ui-rounded,system-ui,sans-serif" font-size="30" font-weight="600">
+    <text x="117" y="103" transform="rotate(-12 117 103)">a</text>
+    <text x="393" y="112" transform="rotate(16 393 112)">3</text>
+    <text x="220" y="311" transform="rotate(-14 220 311)">?</text>
+    <text x="483" y="370" transform="rotate(12 483 370)">2</text>
+    <text x="101" y="439" transform="rotate(14 101 439)">b</text>
+    <text x="346" y="546" transform="rotate(-10 346 546)">1</text>
+  </g>
+</svg>
