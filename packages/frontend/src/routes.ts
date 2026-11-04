@@ -3,7 +3,7 @@ export default [
     index('routes/home.tsx'),
     route('login', 'routes/login.tsx'),
     route('account', 'routes/account-layout.tsx', [
-        index('routes/account-password.tsx'),
+        index('routes/account-home.tsx'),
     ]),
     route('student', 'routes/student-layout.tsx', [
         index('routes/student-home.tsx'),

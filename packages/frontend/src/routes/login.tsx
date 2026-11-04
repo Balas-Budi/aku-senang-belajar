@@ -63,6 +63,15 @@ export default function Login() {
                         <p className="text-muted-foreground mt-3 leading-relaxed md:hidden">
                             Belajar, mencoba, lalu memahami.
                         </p>
+                        {params.get('account') === 'deleted' && (
+                            <p
+                                role="status"
+                                className="bg-secondary mt-4 rounded-lg p-4 leading-relaxed"
+                            >
+                                Akunmu sudah dihapus. Semua perangkat sudah
+                                keluar dari akun itu.
+                            </p>
+                        )}
                     </header>
                     <form
                         className="space-y-5"
@@ -162,7 +171,7 @@ export default function Login() {
                             yang baru.
                         </p>
                         <p className="mt-3 leading-relaxed">
-                            Setelah masuk, buka Ganti kata sandi untuk membuat
+                            Setelah masuk, buka Pengaturan akun untuk membuat
                             kata sandimu sendiri.
                         </p>
                         <Button

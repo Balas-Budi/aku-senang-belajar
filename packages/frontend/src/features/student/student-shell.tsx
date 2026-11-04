@@ -103,7 +103,7 @@ export function StudentShell({
                                     className: 'w-full',
                                 })}
                             >
-                                Ganti kata sandi
+                                Pengaturan akun
                             </Link>
                             <Button
                                 variant="destructive"

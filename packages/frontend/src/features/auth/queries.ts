@@ -41,6 +41,11 @@ export function useLogout() {
         onSuccess: () => client.clear(),
     });
 }
+export function useLogoutAll() {
+    return useMutation({
+        mutationFn: () => api<void>('/api/auth/logout-all', { method: 'POST' }),
+    });
+}
 export function useChangePassword() {
     return useMutation({
         mutationFn: (input: { currentPassword: string; newPassword: string }) =>
@@ -49,5 +54,10 @@ export function useChangePassword() {
                 body: JSON.stringify(input),
             }),
         gcTime: 0,
+    });
+}
+export function useDeleteAccount() {
+    return useMutation({
+        mutationFn: () => api<void>('/api/users/me', { method: 'DELETE' }),
     });
 }

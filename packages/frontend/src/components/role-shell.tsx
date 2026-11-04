@@ -85,7 +85,7 @@ export function RoleShell({ role }: { role: Role }) {
                             to="/account"
                             className="text-primary focus-visible:outline-ring min-h-11 rounded px-2 py-3 underline underline-offset-4 focus-visible:outline-3"
                         >
-                            Ganti kata sandi
+                            Pengaturan akun
                         </Link>
                         <Button
                             variant="outline"

@@ -1,7 +1,6 @@
 import { useState } from 'react';
 import { useQuery } from '@tanstack/react-query';
-import { Link } from 'react-router';
-import { meQuery, roleHome, useChangePassword } from './queries';
+import { meQuery, useChangePassword } from './queries';
 import { PasswordField } from './password-field';
 import { GreetingJalak } from './greeting-jalak';
 import { Button } from '../../components/ui/button';
@@ -23,29 +22,25 @@ export function ChangePasswordForm() {
     };
     return (
         <section
+            aria-labelledby="change-password-title"
             className={cn(
-                'mx-auto max-w-xl space-y-6',
+                'space-y-6',
                 student &&
                     'border-paper-edge rounded-[28px] border-2 border-b-[6px] bg-white p-6 sm:p-10',
             )}
         >
-            <Link
-                to={roleHome(user.role)}
-                className="text-primary inline-block min-h-11 py-3 font-semibold underline"
-            >
-                Kembali ke ruangmu
-            </Link>
             <div className="flex flex-col-reverse items-start gap-4">
                 <div>
-                    <h1
+                    <h2
+                        id="change-password-title"
                         className={
                             student
-                                ? 'font-display text-primary-deep text-3xl font-semibold sm:text-4xl'
-                                : 'text-primary-deep text-3xl font-bold'
+                                ? 'font-display text-primary-deep text-2xl font-semibold sm:text-3xl'
+                                : 'text-primary-deep text-2xl font-bold'
                         }
                     >
                         Ganti kata sandi
-                    </h1>
+                    </h2>
                     <p className="text-muted-foreground mt-3 leading-relaxed">
                         Buat kata sandimu sendiri. Setelah disimpan, perangkat
                         lain akan keluar dari akun ini. Kamu tetap masuk di
