@@ -23,12 +23,12 @@ import {
     standingGreetingSeconds,
     type JalakPose,
 } from '../lib/jalak-motion';
+const body =
+    'M120 38C158 38 182 66 182 104C182 122 178 134 173 142C180 154 183 170 181 186C178 210 152 226 120 226C88 226 62 210 59 186C57 170 60 154 67 142C62 134 58 122 58 104C58 66 82 38 120 38Z';
 const rightWing =
-    'M172 128C192 136 206 160 202 190C200 206 190 216 182 210C174 202 168 176 166 150C166 140 168 132 172 128Z';
+    'M172 146C188 152 194 170 192 190C191 200 188 206 184 206C184 212 180 216 175 214C173 220 167 222 163 218C160 206 158 188 158 172C158 160 162 150 172 146Z';
 const leftWing =
-    'M68 128C48 136 34 160 38 190C40 206 50 216 58 210C66 202 72 176 74 150C74 140 72 132 68 128Z';
-const tail =
-    'M106 212C100 230 90 244 80 252C88 258 98 256 103 249C110 240 115 228 118 214ZM114 214C113 232 113 246 115 256C119 260 125 260 127 256C128 246 128 232 126 214ZM134 212C140 230 150 244 160 252C152 258 142 256 137 249C130 240 125 228 122 214Z';
+    'M68 146C52 152 46 170 48 190C49 200 52 206 56 206C56 212 60 216 65 214C67 220 73 222 77 218C80 206 82 188 82 172C82 160 78 150 68 146Z';
 const cssName = (channel: string) =>
     `--jalak-${channel.replace(/[A-Z]/g, (letter) => `-${letter.toLowerCase()}`)}`;
 export function useJalakMotion(
@@ -230,30 +230,15 @@ export function JalakBali({
     const below = `${id}-below`;
     const rightWingClip = `${id}-wing-right`;
     const leftWingClip = `${id}-wing-left`;
-    const tailClip = `${id}-tail`;
-    const tailDrawing = (
-        <g>
-            <path d={tail} fill="white" stroke="none" />
-            <rect
-                x="70"
-                y="250"
-                width="100"
-                height="20"
-                fill="var(--color-jalak-ink)"
-                stroke="none"
-                clipPath={`url(#${tailClip})`}
-            />
-            <path d={tail} />
-        </g>
-    );
+    const bodyClip = `${id}-body`;
     const feet = (
         <g>
             <path
-                d="M107 216v15M133 216v15M99 238l8-7 8 7M125 238l8-7 8 7"
+                d="M104 220v18M96 244l8-6 8 6M136 220v18M128 244l8-6 8 6"
                 strokeWidth="10"
             />
             <path
-                d="M107 216v15M133 216v15M99 238l8-7 8 7M125 238l8-7 8 7"
+                d="M104 220v18M96 244l8-6 8 6M136 220v18M128 244l8-6 8 6"
                 stroke="var(--color-jalak-legs)"
                 strokeWidth="4"
             />
@@ -289,8 +274,8 @@ export function JalakBali({
                 <clipPath id={leftWingClip}>
                     <path d={leftWing} />
                 </clipPath>
-                <clipPath id={tailClip}>
-                    <path d={tail} />
+                <clipPath id={bodyClip}>
+                    <path d={body} />
                 </clipPath>
             </defs>
             {!perched && (
@@ -307,7 +292,6 @@ export function JalakBali({
             <g clipPath={perched ? `url(#${above})` : undefined}>
                 <g className="jalak-rise">
                     <g className="jalak-body">
-                        {tailDrawing}
                         <g className="jalak-breath">
                             <g className="jalak-head">
                                 <g className="jalak-crest">
@@ -315,27 +299,23 @@ export function JalakBali({
                                         className="jalak-crest-sway"
                                         fill="white"
                                     >
-                                        <path d="M106 50C94 32 74 22 50 22C68 30 84 44 94 60Z" />
-                                        <path d="M114 44C106 22 86 6 62 2C80 14 94 30 102 52Z" />
-                                        <path d="M124 41C124 21 114 5 98 -3C108 13 114 29 114 46Z" />
+                                        <path d="M104 58C84 54 62 44 46 30C66 22 98 30 114 48Z" />
+                                        <path d="M106 50C90 36 76 18 72 0C92 4 114 20 120 42Z" />
+                                        <path d="M112 46C104 28 100 8 108 -6C122 4 132 24 128 44Z" />
                                     </g>
                                 </g>
                             </g>
-                            <g strokeWidth="10">
-                                <circle cx="120" cy="94" r="58" />
-                                <ellipse cx="120" cy="168" rx="64" ry="56" />
-                            </g>
-                            <g fill="white" stroke="none">
-                                <circle cx="120" cy="94" r="58" />
-                                <ellipse cx="120" cy="168" rx="64" ry="56" />
-                            </g>
+                            <path d={body} strokeWidth="10" />
+                            <path d={body} fill="white" stroke="none" />
                             <ellipse
                                 cx="120"
-                                cy="194"
-                                rx="44"
-                                ry="24"
+                                cy="246"
+                                rx="80"
+                                ry="40"
                                 fill="var(--color-secondary)"
+                                opacity=".5"
                                 stroke="none"
+                                clipPath={`url(#${bodyClip})`}
                             />
                             <g className="jalak-head">
                                 <g
@@ -451,7 +431,7 @@ export function JalakBali({
                                 <path d={leftWing} fill="white" stroke="none" />
                                 <rect
                                     x="20"
-                                    y="190"
+                                    y="200"
                                     width="70"
                                     height="40"
                                     fill="var(--color-jalak-ink)"
@@ -468,7 +448,7 @@ export function JalakBali({
                                 />
                                 <rect
                                     x="150"
-                                    y="190"
+                                    y="200"
                                     width="70"
                                     height="40"
                                     fill="var(--color-jalak-ink)"
@@ -486,10 +466,7 @@ export function JalakBali({
                 <>
                     <g className="jalak-front" clipPath={`url(#${below})`}>
                         <g className="jalak-rise">
-                            <g className="jalak-body">
-                                {tailDrawing}
-                                {feet}
-                            </g>
+                            <g className="jalak-body">{feet}</g>
                         </g>
                     </g>
                     <g

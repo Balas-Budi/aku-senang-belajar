@@ -220,20 +220,20 @@
     opacity: var(--jalak-beak);
 }
 .jalak-wing-right {
-    transform-origin: 174px 136px;
+    transform-origin: 170px 150px;
     transform: rotate(
         calc(
             var(--jalak-wing) * -128deg + var(--jalak-wave) * 1deg +
-                var(--jalak-cover) * 149deg
+                var(--jalak-cover) * 162deg
         )
     );
 }
 .jalak-wing-left {
-    transform-origin: 66px 136px;
+    transform-origin: 70px 150px;
     transform: rotate(
         calc(
             var(--jalak-flap) * 128deg - var(--jalak-wave) * 1deg -
-                var(--jalak-cover) * 149deg
+                var(--jalak-cover) * 162deg
         )
     );
 }
