@@ -8,6 +8,13 @@
             "when": 1793603380486,
             "tag": "0000_daffy_odin",
             "breakpoints": true
+        },
+        {
+            "idx": 1,
+            "version": "7",
+            "when": 1793755879734,
+            "tag": "0001_open_ultimates",
+            "breakpoints": true
         }
     ]
 }

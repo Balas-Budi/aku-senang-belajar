@@ -1,7 +1,11 @@
 import type { FastifyPluginAsyncZod } from 'fastify-type-provider-zod';
 import { requireRole } from '../../auth/guards.ts';
-import { joinClass, leaveClass, myClass } from './handlers.ts';
-import { classroomResponse, joinClassBody } from './schema.ts';
+import { joinClass, leaveClass, myAssignments, myClass } from './handlers.ts';
+import {
+    assignmentsResponse,
+    classroomResponse,
+    joinClassBody,
+} from './schema.ts';
 
 export const studentRoutes: FastifyPluginAsyncZod = async (fastify) => {
     fastify.addHook('preHandler', requireRole('student'));
@@ -28,4 +32,9 @@ export const studentRoutes: FastifyPluginAsyncZod = async (fastify) => {
         joinClass,
     );
     fastify.delete('/class', leaveClass);
+    fastify.get(
+        '/assignments',
+        { schema: { response: { 200: assignmentsResponse } } },
+        myAssignments,
+    );
 };

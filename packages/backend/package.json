@@ -73,6 +73,10 @@
             "create-admin": {
                 "command": "node --env-file-if-exists=.env packages/backend/src/scripts/create-admin.ts",
                 "cache": false
+            },
+            "seed-sample-sessions": {
+                "command": "node --env-file-if-exists=.env packages/backend/src/scripts/seed-sample-sessions.ts",
+                "cache": false
             }
         }
     }

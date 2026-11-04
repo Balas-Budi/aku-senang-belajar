@@ -1,7 +1,14 @@
-import { eq } from 'drizzle-orm';
+import { and, asc, desc, eq } from 'drizzle-orm';
 import type { FastifyReply, FastifyRequest } from 'fastify';
 import { currentUser } from '../../auth/guards.ts';
-import { classes, classMembers } from '../../db/schema.ts';
+import {
+    assignments,
+    classes,
+    classMembers,
+    learningSessions,
+    materials,
+    modules,
+} from '../../db/schema.ts';
 import { AppError } from '../../lib/errors.ts';
 import { fieldError } from '../../lib/field-error.ts';
 import { isUniqueViolation } from '../../lib/unique-violation.ts';
@@ -54,6 +61,32 @@ export async function joinClass(
     return reply
         .code(201)
         .send({ classroom: await classroomOf(db, student.id) });
+}
+
+export async function myAssignments(request: FastifyRequest) {
+    return request.server.db
+        .select({
+            id: assignments.id,
+            title: learningSessions.title,
+            summary: learningSessions.summary,
+            subject: materials.subject,
+            moduleTitle: modules.title,
+        })
+        .from(classMembers)
+        .innerJoin(assignments, eq(assignments.classId, classMembers.classId))
+        .innerJoin(
+            learningSessions,
+            eq(learningSessions.id, assignments.learningSessionId),
+        )
+        .innerJoin(modules, eq(modules.id, learningSessions.moduleId))
+        .innerJoin(materials, eq(materials.id, modules.materialId))
+        .where(
+            and(
+                eq(classMembers.studentId, currentUser(request).id),
+                eq(learningSessions.status, 'ready'),
+            ),
+        )
+        .orderBy(desc(assignments.assignedAt), asc(assignments.id));
 }
 
 export async function leaveClass(request: FastifyRequest, reply: FastifyReply) {

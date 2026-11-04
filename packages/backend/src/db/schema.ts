@@ -5,9 +5,20 @@ import {
     pgTable,
     text,
     timestamp,
+    unique,
 } from 'drizzle-orm/pg-core';
 
 export const role = pgEnum('role', ['teacher', 'student', 'admin']);
+export const subject = pgEnum('subject', [
+    'mathematics',
+    'natural_and_social_science',
+    'indonesian_language',
+    'pancasila_education',
+]);
+export const learningSessionStatus = pgEnum('learning_session_status', [
+    'draft',
+    'ready',
+]);
 
 export const users = pgTable('users', {
     id: integer().primaryKey().generatedAlwaysAsIdentity(),
@@ -45,6 +56,59 @@ export const classMembers = pgTable(
         joinedAt: timestamp({ withTimezone: true }).notNull().defaultNow(),
     },
     (table) => [index('class_members_class_id_idx').on(table.classId)],
+);
+
+export const materials = pgTable('materials', {
+    id: integer().primaryKey().generatedAlwaysAsIdentity(),
+    subject: subject().notNull(),
+    title: text().notNull(),
+});
+
+export const modules = pgTable(
+    'modules',
+    {
+        id: integer().primaryKey().generatedAlwaysAsIdentity(),
+        materialId: integer()
+            .notNull()
+            .references(() => materials.id, { onDelete: 'cascade' }),
+        title: text().notNull(),
+    },
+    (table) => [index('modules_material_id_idx').on(table.materialId)],
+);
+
+export const learningSessions = pgTable(
+    'learning_sessions',
+    {
+        id: integer().primaryKey().generatedAlwaysAsIdentity(),
+        moduleId: integer()
+            .notNull()
+            .references(() => modules.id, { onDelete: 'cascade' }),
+        title: text().notNull(),
+        summary: text().notNull(),
+        status: learningSessionStatus().notNull().default('draft'),
+    },
+    (table) => [index('learning_sessions_module_id_idx').on(table.moduleId)],
+);
+
+export const assignments = pgTable(
+    'assignments',
+    {
+        id: integer().primaryKey().generatedAlwaysAsIdentity(),
+        learningSessionId: integer()
+            .notNull()
+            .references(() => learningSessions.id, { onDelete: 'cascade' }),
+        classId: integer()
+            .notNull()
+            .references(() => classes.id, { onDelete: 'cascade' }),
+        assignedAt: timestamp({ withTimezone: true }).notNull().defaultNow(),
+    },
+    (table) => [
+        unique('assignments_learning_session_id_class_id_unique').on(
+            table.learningSessionId,
+            table.classId,
+        ),
+        index('assignments_class_id_idx').on(table.classId),
+    ],
 );
 
 export const sessions = pgTable(
