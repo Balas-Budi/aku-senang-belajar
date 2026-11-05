@@ -3,6 +3,7 @@ import { Link } from 'react-router';
 import { RequestError } from '../../components/request-error';
 import { Button } from '../../components/ui/button';
 import { Card } from '../../components/ui/card';
+import { cellLink, textLink } from '../../components/ui/text-link';
 import {
     Table,
     TableCell,
@@ -16,9 +17,6 @@ import { AnalyseAgain, stateLabel, waitsForTeacher } from './analysis-state';
 import { sessionResultsQuery } from './queries';
 import { reviewLabel, ShownStatus, statusLabels, StatusLegend } from './status';
 
-const linkStyle =
-    'text-primary focus-visible:outline-ring rounded underline underline-offset-4 focus-visible:outline-3';
-
 export function SessionResults({
     classId,
     assignmentId,
@@ -30,10 +28,7 @@ export function SessionResults({
     const classes = useQuery(classesQuery());
     const className = classes.data?.find(({ id }) => id === classId)?.name;
     const back = (
-        <Link
-            to={`/teacher/classes/${classId}`}
-            className="text-primary inline-block min-h-12 py-3 underline underline-offset-4"
-        >
+        <Link to={`/teacher/classes/${classId}`} className={textLink}>
             Kembali ke {className ?? 'kelas'}
         </Link>
     );
@@ -179,7 +174,7 @@ export function SessionResults({
                                         >
                                             <th
                                                 scope="row"
-                                                className="bg-background group-hover:bg-muted sticky left-0 px-4 py-3 text-left font-normal"
+                                                className="bg-background group-hover:bg-muted sticky left-0 px-4 py-3 text-left align-top font-normal"
                                             >
                                                 {student.attemptId === null ? (
                                                     student.name
@@ -188,7 +183,7 @@ export function SessionResults({
                                                         to={evidenceOf(
                                                             student.id,
                                                         )}
-                                                        className={`${linkStyle} font-semibold`}
+                                                        className={`${cellLink} font-semibold`}
                                                     >
                                                         {student.name}
                                                     </Link>

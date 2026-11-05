@@ -8,6 +8,7 @@ import { StatCard, StatGrid } from '../../components/stat-card';
 import { Button } from '../../components/ui/button';
 import { Card } from '../../components/ui/card';
 import { Table, TableHead, TableHeader } from '../../components/ui/table';
+import { textLink } from '../../components/ui/text-link';
 import { RequestError } from '../../components/request-error';
 function AccountList({
     role,
@@ -43,10 +44,7 @@ function AccountList({
                         )}
                     </h2>
                     {unplacedOnly && (
-                        <Link
-                            to="/admin?role=student"
-                            className="text-primary focus-visible:outline-ring inline-block min-h-11 rounded py-2 underline underline-offset-4 focus-visible:outline-3"
-                        >
+                        <Link to="/admin?role=student" className={textLink}>
                             Tampilkan semua siswa
                         </Link>
                     )}

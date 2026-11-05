@@ -5,6 +5,7 @@ import { classesQuery, rosterQuery } from '../features/classes/queries';
 import { ClassDetail } from '../features/classes/class-detail';
 import { classMissionsQuery } from '../features/results/queries';
 import { ApiError } from '../lib/api';
+import { textLink } from '../components/ui/text-link';
 import type { Route } from './+types/teacher-class';
 export async function loader({ request, params }: Route.LoaderArgs) {
     const { client, cookie } = await requireUser(request, 'teacher');
@@ -28,10 +29,7 @@ export const meta = () => [{ title: 'Daftar siswa | Aku Senang Belajar' }];
 export default function Detail({ loaderData }: Route.ComponentProps) {
     return (
         <HydrationBoundary state={loaderData.dehydratedState}>
-            <Link
-                to="/teacher/classes"
-                className="text-primary inline-block min-h-12 py-3 underline"
-            >
+            <Link to="/teacher/classes" className={textLink}>
                 Kembali ke daftar kelas
             </Link>
             <ClassDetail id={loaderData.id} />

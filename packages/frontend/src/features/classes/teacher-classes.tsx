@@ -3,6 +3,7 @@ import { Link } from 'react-router';
 import { classesQuery, useCreateClass } from './queries';
 import { Button } from '../../components/ui/button';
 import { Card } from '../../components/ui/card';
+import { textLink } from '../../components/ui/text-link';
 import { FormField } from '../../components/form-field';
 import { RequestError } from '../../components/request-error';
 export function TeacherClasses() {
@@ -45,7 +46,7 @@ export function TeacherClasses() {
                             <Card className="h-full space-y-2">
                                 <Link
                                     to={`/teacher/classes/${item.id}`}
-                                    className="text-primary focus-visible:outline-ring inline-block min-h-11 rounded py-2 text-lg font-semibold underline underline-offset-4 focus-visible:outline-3"
+                                    className={`${textLink} text-lg font-semibold`}
                                 >
                                     {item.name}
                                 </Link>

@@ -11,12 +11,12 @@ import {
     TableHeader,
     TableRow,
 } from '../../components/ui/table';
+import { cellLink, textLink } from '../../components/ui/text-link';
 import { classesQuery } from '../classes/queries';
 import { teacherOverviewQuery } from './queries';
 import { reviewLabel } from './status';
 
-const linkStyle =
-    'text-primary focus-visible:outline-ring inline-block rounded font-medium underline underline-offset-4 focus-visible:outline-3';
+const linkStyle = `${textLink} font-medium`;
 
 function YourClasses() {
     const classes = useQuery(classesQuery());
@@ -259,9 +259,7 @@ export function TeacherHome() {
                                                             <Link
                                                                 to={`/teacher/classes/${mission.classId}/sessions/${mission.assignmentId}`}
                                                                 aria-label={`Lihat hasil ${mission.title} di ${mission.className}`}
-                                                                className={
-                                                                    linkStyle
-                                                                }
+                                                                className={`${cellLink} font-medium`}
                                                             >
                                                                 Lihat hasil
                                                             </Link>

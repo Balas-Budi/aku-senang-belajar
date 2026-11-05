@@ -77,7 +77,7 @@ export function ShownStatus({ shown }: { shown: Shown }) {
 export function StatusLegend() {
     return (
         <details className="border-paper-edge rounded-lg border px-4 py-2">
-            <summary className="focus-visible:outline-ring cursor-pointer py-2 font-semibold focus-visible:outline-3">
+            <summary className="focus-visible:outline-ring cursor-pointer py-2.5 font-semibold focus-visible:outline-3">
                 Arti label
             </summary>
             <dl className="mt-2 grid gap-4 pb-2 sm:grid-cols-2">

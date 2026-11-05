@@ -5,6 +5,7 @@ import { RequestError } from '../../components/request-error';
 import { Alert } from '../../components/ui/alert';
 import { Button } from '../../components/ui/button';
 import { Card } from '../../components/ui/card';
+import { textLink } from '../../components/ui/text-link';
 import { cn } from '../../lib/cn';
 import { subjects } from '../assignments/subject-art';
 import { Illustration } from '../learning-sessions/illustration';
@@ -194,7 +195,7 @@ function Rubric({
 
     return (
         <details className="border-paper-edge rounded-lg border px-4 py-2">
-            <summary className="focus-visible:outline-ring cursor-pointer py-2 font-semibold focus-visible:outline-3">
+            <summary className="focus-visible:outline-ring cursor-pointer py-2.5 font-semibold focus-visible:outline-3">
                 Rubrik {code}
             </summary>
             <div className="space-y-3 pb-2">
@@ -396,7 +397,7 @@ export function StudentEvidence({
     const back = (title?: string) => (
         <Link
             to={`/teacher/classes/${classId}/sessions/${assignmentId}#siswa-${studentId}`}
-            className="text-primary inline-block min-h-12 py-3 underline underline-offset-4"
+            className={textLink}
         >
             Kembali ke hasil {title ?? 'misi'}
         </Link>

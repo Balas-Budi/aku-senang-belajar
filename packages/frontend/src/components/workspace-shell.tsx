@@ -114,7 +114,7 @@ export function WorkspaceShell({
         <div className="bg-muted font-workspace text-foreground min-h-screen md:flex">
             <a
                 href="#main"
-                className="bg-background sr-only focus:not-sr-only focus:block focus:p-4"
+                className="bg-background focus-visible:outline-ring sr-only focus:not-sr-only focus:block focus:p-4 focus-visible:outline-3 focus-visible:-outline-offset-3"
             >
                 Langsung ke isi
             </a>
