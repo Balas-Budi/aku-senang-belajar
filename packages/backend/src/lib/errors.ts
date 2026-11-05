@@ -24,6 +24,10 @@ export class AppError extends Error {
     }
 }
 
+export function notFound(message: string): AppError {
+    return new AppError(404, { message, code: 'NOT_FOUND' });
+}
+
 export class AssertionError extends AppError {
     constructor(detail: string) {
         super(500, {

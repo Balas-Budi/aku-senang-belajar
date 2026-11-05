@@ -12,7 +12,7 @@ import {
     sessionBlocks,
 } from '../../db/schema.ts';
 import { sessionBlock, type SessionBlock } from '../../learning/blocks.ts';
-import { AppError } from '../../lib/errors.ts';
+import { AppError, notFound } from '../../lib/errors.ts';
 import { fieldError } from '../../lib/field-error.ts';
 import { answer, type Answer, TRY_LIMIT } from './schema.ts';
 
@@ -31,9 +31,6 @@ type History = {
     help: { blockId: number; kind: HelpKind }[];
 };
 type BlockHistory = { answers: Saved[]; help: HelpKind[] };
-
-export const notFound = (message: string) =>
-    new AppError(404, { message, code: 'NOT_FOUND' });
 
 export const alreadyAnswered = () =>
     new AppError(409, {

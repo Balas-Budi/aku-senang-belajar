@@ -30,6 +30,8 @@ export const SYSTEM_PROMPT = [
     '- "followUps": when the status is not "visible", one or two short questions in Indonesian the teacher can ask the student aloud to check the competency; otherwise an empty list.',
 ].join('\n');
 
+export const assessmentFlag = z.enum(['thin', 'ambiguous', 'conflicting']);
+
 export const modelAnswer = z.object({
     competencies: z.array(
         z.object({
@@ -42,10 +44,7 @@ export const modelAnswer = z.object({
             ]),
             reason: z.string().trim().min(1).max(400),
             uncertainty: z.enum(['low', 'medium', 'high']),
-            flags: z
-                .array(z.enum(['thin', 'ambiguous', 'conflicting']))
-                .max(3)
-                .default([]),
+            flags: z.array(assessmentFlag).max(3).default([]),
             evidence: z.array(z.int()).max(20).default([]),
             followUps: z
                 .array(z.string().trim().min(1).max(250))

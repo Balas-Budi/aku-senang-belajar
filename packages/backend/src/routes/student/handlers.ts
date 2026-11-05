@@ -15,7 +15,7 @@ import {
     sessionBlocks,
 } from '../../db/schema.ts';
 import { stepOfKind } from '../../learning/blocks.ts';
-import { AppError } from '../../lib/errors.ts';
+import { AppError, notFound } from '../../lib/errors.ts';
 import { fieldError } from '../../lib/field-error.ts';
 import { isUniqueViolation } from '../../lib/unique-violation.ts';
 import { classroomOf } from '../classes/queries.ts';
@@ -33,7 +33,6 @@ import {
     isClosed,
     judge,
     lockedAttempt,
-    notFound,
     openAttempt,
     stateOf,
 } from './attempts.ts';

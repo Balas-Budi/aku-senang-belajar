@@ -1,222 +1,41 @@
 import assert from 'node:assert/strict';
-import { randomUUID } from 'node:crypto';
 import { test } from 'node:test';
-import { and, asc, eq } from 'drizzle-orm';
+import { asc, eq } from 'drizzle-orm';
 import type { FastifyInstance } from 'fastify';
 import { z } from 'zod';
-import type { AiConfig } from '../src/ai/chat.ts';
 import { PROMPT_VERSION } from '../src/analysis/prompt.ts';
-import {
-    claimRun,
-    processRun,
-    startAnalysisRunner,
-} from '../src/analysis/runner.ts';
+import { startAnalysisRunner } from '../src/analysis/runner.ts';
 import { buildApp } from '../src/app.ts';
 import {
     analysisRuns,
     assessments,
-    assignments,
-    classMembers,
     competencies,
     responses,
 } from '../src/db/schema.ts';
-import { demoModule } from '../src/learning/demo-module.ts';
-import { seedModule } from '../src/learning/seed-module.ts';
-import { completion, type ProviderRequest, stubProvider } from './ai-stub.ts';
+import { stubProvider } from './ai-stub.ts';
 import {
-    createClass,
-    createStudent,
-    createUser,
-    loginAs,
-    TEST_ORIGIN,
-    TEST_STUDENT_PASSWORD,
-    testApp,
-    testEnv,
-} from './helpers.ts';
-
-const sent = z.object({
-    competencies: z.array(
-        z.object({
-            code: z.string(),
-            evidence: z.array(
-                z.object({
-                    block: z.int(),
-                    kind: z.string(),
-                    tries: z.array(z.object({ ref: z.int() })),
-                }),
-            ),
-            selfReport: z.object({ ref: z.int() }).nullable(),
-        }),
-    ),
-});
-
-type Sent = z.infer<typeof sent>['competencies'][number];
-
-type Entry = {
-    status: string;
-    reason: string;
-    uncertainty: string;
-    flags: string[];
-    evidence: number[];
-    followUps: string[];
-};
+    asStudent,
+    demoClass,
+    demoStudent,
+    refsOf,
+    runFor,
+    sentEvidence,
+    takeDemo,
+    verdicts,
+} from './demo-attempts.ts';
+import { testApp, testEnv } from './helpers.ts';
 
 const refList = z.array(z.int());
 
-function sentEvidence(request: ProviderRequest) {
-    const message = request.body.messages[1];
-
-    assert.ok(message, 'the request holds the evidence as its second message');
-
-    return sent.parse(JSON.parse(message.content)).competencies;
-}
-
-function refsOf(competency: Sent) {
-    return competency.evidence.flatMap(({ tries }) =>
-        tries.map(({ ref }) => ref),
-    );
-}
-
-function verdicts(change: (competency: Sent) => Partial<Entry> = () => ({})) {
-    return (request: ProviderRequest) => ({
-        body: completion(
-            JSON.stringify({
-                competencies: sentEvidence(request).map((competency) => ({
-                    code: competency.code,
-                    status: 'visible',
-                    reason: 'Jawabannya menunjukkan pemahaman.',
-                    uncertainty: 'low',
-                    flags: [],
-                    evidence: refsOf(competency).slice(-1),
-                    followUps: [],
-                    ...change(competency),
-                })),
-            }),
-        ),
-    });
-}
-
-function call(
-    app: FastifyInstance,
-    token: string,
-    method: 'GET' | 'POST',
-    url: string,
-    payload?: object,
-) {
-    return app.inject({
-        method,
-        url: `/api/student${url}`,
-        headers: { origin: TEST_ORIGIN },
-        cookies: { session: token },
-        payload,
-    });
-}
-
 async function submittedDemo(app: FastifyInstance, extraCompetency = false) {
-    const teacher = await createUser(app);
-    const classroom = await createClass(
+    const { teacher, classId, assignmentId } = await demoClass(
         app,
-        await loginAs(app, teacher.username),
+        extraCompetency,
     );
-    const { sessionId } = await seedModule(app.db, classroom.id, {
-        ...demoModule,
-        material: `Demo module ${randomUUID()}`,
-        competencies: extraCompetency
-            ? [
-                  ...demoModule.competencies,
-                  { code: 'C4', description: 'Membandingkan 1/3 dan 1/4.' },
-              ]
-            : demoModule.competencies,
-    });
-    const [assignment] = await app.db
-        .select({ id: assignments.id })
-        .from(assignments)
-        .where(
-            and(
-                eq(assignments.learningSessionId, sessionId),
-                eq(assignments.classId, classroom.id),
-            ),
-        );
-    const student = await createStudent(app, 'Wulan Sari');
+    const student = await demoStudent(app, classId);
+    const attemptId = await takeDemo(app, student.token, assignmentId);
 
-    await app.db
-        .insert(classMembers)
-        .values({ studentId: student.id, classId: classroom.id });
-
-    const token = await loginAs(app, student.username, TEST_STUDENT_PASSWORD);
-    const detail: { blocks: { id: number; kind: string }[] } = (
-        await call(app, token, 'GET', `/assignments/${assignment.id}`)
-    ).json();
-    const attempt: { id: number } = (
-        await call(app, token, 'POST', `/assignments/${assignment.id}/attempt`)
-    ).json();
-    const blockId = (kind: string, index = 0) => {
-        const block = detail.blocks.filter((entry) => entry.kind === kind)[
-            index
-        ];
-
-        if (!block) {
-            throw new Error(`The demo has no ${kind} block ${index + 1}`);
-        }
-
-        return block.id;
-    };
-    const answer = async (id: number, tryNumber: number, given: object) => {
-        const response = await call(
-            app,
-            token,
-            'POST',
-            `/attempts/${attempt.id}/responses`,
-            { blockId: id, tryNumber, answer: given },
-        );
-
-        assert.equal(response.statusCode, 201, `block ${id} try ${tryNumber}`);
-    };
-
-    await answer(blockId('hook'), 1, { kind: 'hook', choice: 'a' });
-    await answer(blockId('check', 0), 1, {
-        kind: 'check',
-        choice: 'a',
-        reason: 'Karena dipotong empat',
-    });
-    await answer(blockId('check', 0), 2, {
-        kind: 'check',
-        choice: 'b',
-        reason: 'Karena potongannya tidak sama besar',
-    });
-    await answer(blockId('check', 1), 1, { kind: 'check', choice: 'b' });
-    await answer(blockId('challenge'), 1, {
-        kind: 'challenge',
-        choice: 'b',
-        reason: 'Budi, karena setengah lebih besar dari seperempat',
-    });
-    await answer(blockId('reflection'), 1, {
-        kind: 'reflection',
-        understood: ['Arti 1/4'],
-        confusing: [],
-    });
-
-    const submitted = await call(
-        app,
-        token,
-        'POST',
-        `/attempts/${attempt.id}/submit`,
-    );
-
-    assert.equal(submitted.statusCode, 200);
-
-    return { attemptId: attempt.id, student, teacher, token };
-}
-
-async function runFor(
-    app: FastifyInstance,
-    attemptId: number,
-    ai: AiConfig | null,
-) {
-    const run = await claimRun(app.db, { attemptId });
-
-    assert.ok(run, 'the attempt has a due run');
-    await processRun(app, run, ai);
+    return { attemptId, student, teacher, token: student.token };
 }
 
 function runsOf(app: FastifyInstance, attemptId: number) {
@@ -261,7 +80,7 @@ test('submitting queues one analysis run, and submitting again queues no second 
     const app = await testApp(t);
     const { attemptId, token } = await submittedDemo(app);
 
-    await call(app, token, 'POST', `/attempts/${attemptId}/submit`);
+    await asStudent(app, token, 'POST', `/attempts/${attemptId}/submit`);
 
     const runs = await runsOf(app, attemptId);
 

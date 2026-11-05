@@ -1,4 +1,5 @@
 import { asc, eq, inArray } from 'drizzle-orm';
+import { z } from 'zod';
 import type { Queryable } from '../db/index.ts';
 import {
     assignments,
@@ -7,6 +8,7 @@ import {
     competencies,
     helpEvents,
     learningSessions,
+    responseOutcome,
     responses,
     sessionBlocks,
 } from '../db/schema.ts';
@@ -16,36 +18,46 @@ import { answer as storedAnswer } from '../routes/student/schema.ts';
 
 type Outcome = typeof responses.$inferSelect.outcome;
 
-export type EvidenceTry = {
-    ref: number;
-    try: number;
-    choice: string;
-    reason?: string;
-    outcome: Outcome;
-};
+const evidenceTry = z.object({
+    ref: z.int(),
+    try: z.int(),
+    choice: z.string(),
+    reason: z.string().optional(),
+    outcome: z.enum(responseOutcome.enumValues),
+});
 
-export type EvidenceQuestion = {
-    block: number;
-    kind: 'check' | 'challenge';
-    question: string;
-    picture?: string;
-    options: { id: string; label: string; picture?: string }[];
-    rightOption: string;
-    tries: EvidenceTry[];
-    help: {
-        hints: number;
-        otherExample: boolean;
-        answerShown: boolean;
-        askedTeacher: boolean;
-    };
-};
+export const evidenceQuestion = z.object({
+    block: z.int(),
+    kind: z.enum(['check', 'challenge']),
+    question: z.string(),
+    picture: z.string().optional(),
+    options: z.array(
+        z.object({
+            id: z.string(),
+            label: z.string(),
+            picture: z.string().optional(),
+        }),
+    ),
+    rightOption: z.string(),
+    tries: z.array(evidenceTry),
+    help: z.object({
+        hints: z.int(),
+        otherExample: z.boolean(),
+        answerShown: z.boolean(),
+        askedTeacher: z.boolean(),
+    }),
+});
 
-export type SelfReport = {
-    ref: number;
-    understood: string[];
-    confusing: string[];
-    note?: string;
-};
+export const selfReport = z.object({
+    ref: z.int(),
+    understood: z.array(z.string()),
+    confusing: z.array(z.string()),
+    note: z.string().optional(),
+});
+
+export type EvidenceTry = z.infer<typeof evidenceTry>;
+export type EvidenceQuestion = z.infer<typeof evidenceQuestion>;
+export type SelfReport = z.infer<typeof selfReport>;
 
 export type CompetencyEvidence = {
     id: number;

@@ -1,33 +1,12 @@
-import { and, asc, count, eq, isNull } from 'drizzle-orm';
+import { asc, count, eq } from 'drizzle-orm';
 import type { FastifyReply, FastifyRequest } from 'fastify';
 import { newInviteCode } from '../../auth/codes.ts';
 import { currentUser } from '../../auth/guards.ts';
-import type { Queryable } from '../../db/index.ts';
-import { classes, classMembers, users } from '../../db/schema.ts';
-import { AppError } from '../../lib/errors.ts';
+import { classes, classMembers } from '../../db/schema.ts';
+import { notFound } from '../../lib/errors.ts';
 import { retryOnUniqueViolation } from '../../lib/unique-violation.ts';
+import { membersOf, ownedClassId } from './queries.ts';
 import type { ClassParams, CreateClassBody } from './schema.ts';
-
-const notFound = () =>
-    new AppError(404, { message: 'Class not found', code: 'NOT_FOUND' });
-
-async function ownedClassId(
-    db: Queryable,
-    classId: number,
-    teacherId: number,
-): Promise<number> {
-    const [classroom] = await db
-        .select({ id: classes.id })
-        .from(classes)
-        .where(and(eq(classes.id, classId), eq(classes.teacherId, teacherId)))
-        .limit(1);
-
-    if (!classroom) {
-        throw notFound();
-    }
-
-    return classroom.id;
-}
 
 export async function createClass(
     request: FastifyRequest<{ Body: CreateClassBody }>,
@@ -80,16 +59,7 @@ export async function listStudents(
         currentUser(request).id,
     );
 
-    return db
-        .select({
-            id: users.id,
-            name: users.name,
-            joinedAt: classMembers.joinedAt,
-        })
-        .from(classMembers)
-        .innerJoin(users, eq(users.id, classMembers.studentId))
-        .where(and(eq(classMembers.classId, classId), isNull(users.deletedAt)))
-        .orderBy(asc(users.name));
+    return membersOf(db, classId);
 }
 
 export async function regenerateInviteCode(
@@ -111,7 +81,7 @@ export async function regenerateInviteCode(
     );
 
     if (!classroom?.inviteCode) {
-        throw notFound();
+        throw notFound('Class not found');
     }
 
     return { inviteCode: classroom.inviteCode };
