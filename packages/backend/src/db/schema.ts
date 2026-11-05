@@ -44,6 +44,28 @@ export const helpKind = pgEnum('help_kind', [
     'ask_teacher',
     'reveal',
 ]);
+export const analysisRunStatus = pgEnum('analysis_run_status', [
+    'queued',
+    'running',
+    'succeeded',
+    'failed',
+]);
+export const understandingStatus = pgEnum('understanding_status', [
+    'not_observed',
+    'developing',
+    'visible',
+    'needs_verification',
+]);
+export const uncertaintyLevel = pgEnum('uncertainty_level', [
+    'low',
+    'medium',
+    'high',
+]);
+export const verificationDecision = pgEnum('verification_decision', [
+    'agree',
+    'change',
+    'unsure',
+]);
 
 export const users = pgTable('users', {
     id: integer().primaryKey().generatedAlwaysAsIdentity(),
@@ -261,6 +283,79 @@ export const helpEvents = pgTable(
     (table) => [
         index('help_events_attempt_id_idx').on(table.attemptId),
         index('help_events_block_id_idx').on(table.blockId),
+    ],
+);
+
+export const analysisRuns = pgTable(
+    'analysis_runs',
+    {
+        id: integer().primaryKey().generatedAlwaysAsIdentity(),
+        attemptId: integer()
+            .notNull()
+            .references(() => attempts.id, { onDelete: 'cascade' }),
+        status: analysisRunStatus().notNull().default('queued'),
+        tries: integer().notNull().default(0),
+        runAfter: timestamp({ withTimezone: true }).notNull().defaultNow(),
+        model: text(),
+        promptVersion: text(),
+        error: text(),
+        createdAt: timestamp({ withTimezone: true }).notNull().defaultNow(),
+        startedAt: timestamp({ withTimezone: true }),
+        finishedAt: timestamp({ withTimezone: true }),
+    },
+    (table) => [
+        index('analysis_runs_attempt_id_idx').on(table.attemptId),
+        index('analysis_runs_status_run_after_idx').on(
+            table.status,
+            table.runAfter,
+        ),
+    ],
+);
+
+export const assessments = pgTable(
+    'assessments',
+    {
+        id: integer().primaryKey().generatedAlwaysAsIdentity(),
+        runId: integer()
+            .notNull()
+            .references(() => analysisRuns.id, { onDelete: 'cascade' }),
+        competencyId: integer()
+            .notNull()
+            .references(() => competencies.id, { onDelete: 'cascade' }),
+        status: understandingStatus().notNull(),
+        reason: text().notNull(),
+        uncertainty: uncertaintyLevel().notNull(),
+        flags: jsonb().notNull(),
+        evidence: jsonb().notNull(),
+        followUps: jsonb().notNull(),
+        createdAt: timestamp({ withTimezone: true }).notNull().defaultNow(),
+    },
+    (table) => [
+        unique('assessments_run_id_competency_id_unique').on(
+            table.runId,
+            table.competencyId,
+        ),
+        index('assessments_competency_id_idx').on(table.competencyId),
+    ],
+);
+
+export const verifications = pgTable(
+    'verifications',
+    {
+        id: integer().primaryKey().generatedAlwaysAsIdentity(),
+        assessmentId: integer()
+            .notNull()
+            .references(() => assessments.id, { onDelete: 'cascade' }),
+        teacherId: integer()
+            .notNull()
+            .references(() => users.id),
+        decision: verificationDecision().notNull(),
+        status: understandingStatus().notNull(),
+        note: text(),
+        createdAt: timestamp({ withTimezone: true }).notNull().defaultNow(),
+    },
+    (table) => [
+        index('verifications_assessment_id_idx').on(table.assessmentId),
     ],
 );
 

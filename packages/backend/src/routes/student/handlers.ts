@@ -1,5 +1,6 @@
 import { and, asc, desc, eq } from 'drizzle-orm';
 import type { FastifyReply, FastifyRequest } from 'fastify';
+import { queueAnalysis } from '../../analysis/runner.ts';
 import { currentUser } from '../../auth/guards.ts';
 import {
     assignments,
@@ -382,6 +383,7 @@ export async function submitAttempt(
                 .update(attempts)
                 .set({ status: 'submitted', submittedAt: new Date() })
                 .where(eq(attempts.id, attempt.id));
+            await queueAnalysis(tx, attempt.id);
         }
 
         return doneOf(

@@ -1,4 +1,5 @@
 import { existsSync } from 'node:fs';
+import { startAnalysisRunner } from './analysis/runner.ts';
 import { buildApp } from './app.ts';
 import { loadEnv } from './env.ts';
 
@@ -6,6 +7,8 @@ if (existsSync('.env')) process.loadEnvFile('.env');
 
 const env = loadEnv();
 const app = await buildApp(env);
+
+startAnalysisRunner(app);
 
 for (const signal of ['SIGINT', 'SIGTERM'] as const) {
     process.once(signal, async () => {
