@@ -29,7 +29,7 @@ export default function Detail({ loaderData }: Route.ComponentProps) {
     return (
         <HydrationBoundary state={loaderData.dehydratedState}>
             <Link
-                to="/teacher"
+                to="/teacher/classes"
                 className="text-primary inline-block min-h-12 py-3 underline"
             >
                 Kembali ke daftar kelas

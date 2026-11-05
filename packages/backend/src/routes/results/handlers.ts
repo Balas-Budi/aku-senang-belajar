@@ -3,7 +3,12 @@ import type { FastifyReply, FastifyRequest } from 'fastify';
 import { evidenceOf } from '../../analysis/evidence.ts';
 import { queueAnalysis } from '../../analysis/runner.ts';
 import { currentUser } from '../../auth/guards.ts';
-import { assessments, competencies, verifications } from '../../db/schema.ts';
+import {
+    assessments,
+    classes,
+    competencies,
+    verifications,
+} from '../../db/schema.ts';
 import { AppError, notFound } from '../../lib/errors.ts';
 import { fieldError } from '../../lib/field-error.ts';
 import { membersOf, ownedClassId } from '../classes/queries.ts';
@@ -22,6 +27,7 @@ import {
     type AssessmentParams,
     type AssignmentParams,
     type AttemptParams,
+    type Overview,
     type StudentParams,
     storedAssessment,
     type VerificationBody,
@@ -319,4 +325,125 @@ export async function analyseAgain(
     });
 
     return reply.code(202).send({ analysis: 'queued' as const });
+}
+
+export async function teacherOverview(request: FastifyRequest) {
+    const { db } = request.server;
+    const owned = await db
+        .select({ id: classes.id, name: classes.name })
+        .from(classes)
+        .where(eq(classes.teacherId, currentUser(request).id))
+        .orderBy(asc(classes.name), asc(classes.id));
+    const missions: Overview['missions'] = [];
+    const checks: Overview['checks'] = [];
+
+    for (const classroom of owned) {
+        const assigned = await classAssignments(db, classroom.id);
+        const members = await membersOf(db, classroom.id);
+        const names = new Map(members.map(({ id, name }) => [id, name]));
+        const taken = await attemptsOf(
+            db,
+            assigned.map(({ id }) => id),
+            members.map(({ id }) => id),
+        );
+        const runs = await currentRuns(
+            db,
+            taken.map(({ id }) => id),
+        );
+        const finished = [...runs.values()]
+            .filter(({ status }) => status === 'succeeded')
+            .map(({ id }) => id);
+        const estimates =
+            finished.length === 0
+                ? []
+                : await db
+                      .select({
+                          id: assessments.id,
+                          runId: assessments.runId,
+                          status: assessments.status,
+                          code: competencies.code,
+                      })
+                      .from(assessments)
+                      .innerJoin(
+                          competencies,
+                          eq(competencies.id, assessments.competencyId),
+                      )
+                      .where(inArray(assessments.runId, finished))
+                      .orderBy(asc(competencies.code));
+        const decisions = await decisionsOn(
+            db,
+            estimates.map(({ id }) => id),
+        );
+
+        for (const assignment of assigned) {
+            const submitted = taken.filter(
+                ({ assignmentId, status }) =>
+                    assignmentId === assignment.id && status === 'submitted',
+            );
+            let needsVerification = 0;
+            let unreviewed = 0;
+            let waiting = 0;
+
+            for (const attempt of submitted) {
+                const run = runs.get(attempt.id);
+
+                if (!run || run.status === 'failed') {
+                    waiting += 1;
+                    continue;
+                }
+
+                for (const estimate of estimates) {
+                    if (estimate.runId !== run.id) continue;
+
+                    const shown = shownOf(
+                        estimate.status,
+                        decisions.filter(
+                            ({ assessmentId }) => assessmentId === estimate.id,
+                        ),
+                    );
+
+                    if (shown.status === 'needs_verification') {
+                        needsVerification += 1;
+                        checks.push({
+                            classId: classroom.id,
+                            className: classroom.name,
+                            assignmentId: assignment.id,
+                            missionTitle: assignment.title,
+                            studentId: attempt.studentId,
+                            studentName: names.get(attempt.studentId) ?? '',
+                            competencyCode: estimate.code,
+                            decision: shown.decision,
+                        });
+                    } else if (shown.decision === null) {
+                        unreviewed += 1;
+                    }
+                }
+            }
+
+            if (submitted.length > 0) {
+                missions.push({
+                    classId: classroom.id,
+                    className: classroom.name,
+                    assignmentId: assignment.id,
+                    title: assignment.title,
+                    students: members.length,
+                    submitted: submitted.length,
+                    needsVerification,
+                    unreviewed,
+                    waiting,
+                });
+            }
+        }
+    }
+
+    const total = (field: 'needsVerification' | 'unreviewed' | 'waiting') =>
+        missions.reduce((sum, mission) => sum + mission[field], 0);
+
+    return {
+        needsVerification: total('needsVerification'),
+        unreviewed: total('unreviewed'),
+        waiting: total('waiting'),
+        missions,
+        checks,
+    };
 }

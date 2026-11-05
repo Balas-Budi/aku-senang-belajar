@@ -149,7 +149,7 @@ export function SessionResults({
                             role="region"
                             aria-label="Tabel hasil per siswa"
                             tabIndex={0}
-                            className="border-paper-edge focus-visible:outline-ring overflow-x-auto rounded-lg border focus-visible:outline-3"
+                            className="border-paper-edge focus-visible:outline-ring relative overflow-x-auto rounded-lg border focus-visible:outline-3"
                         >
                             <Table className="min-w-[42rem]">
                                 <TableHeader>

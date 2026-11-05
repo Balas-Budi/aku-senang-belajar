@@ -45,8 +45,13 @@ function useWorkspaceLinks(role: Role): WorkspaceLink[] {
     return [
         {
             to: '/teacher',
-            label: 'Kelas',
+            label: 'Beranda',
             current: location.pathname === '/teacher' ? 'page' : false,
+        },
+        {
+            to: '/teacher/classes',
+            label: 'Kelas',
+            current: location.pathname === '/teacher/classes' ? 'page' : false,
             nested: classroom
                 ? [
                       {

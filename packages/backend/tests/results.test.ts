@@ -568,3 +568,151 @@ test("another teacher's class, session, student, assessment, and attempt answer 
 
     assert.equal(asAStudent.statusCode, 403);
 });
+
+type Overview = {
+    needsVerification: number;
+    unreviewed: number;
+    waiting: number;
+    missions: object[];
+    checks: {
+        classId: number;
+        assignmentId: number;
+        studentId: number;
+        studentName: string;
+        competencyCode: string;
+        decision: string | null;
+    }[];
+};
+
+test("the teacher's home counts what needs verification, what nobody has reviewed, and what waits for analysis", async (t) => {
+    const app = await testApp(t);
+    const demo = await classWithResults(t, app);
+    const overview = async () => {
+        const response = await asTeacher(
+            app,
+            demo.teacherToken,
+            'GET',
+            '/teacher/overview',
+        );
+
+        assert.equal(response.statusCode, 200);
+
+        const body: Overview = response.json();
+
+        return body;
+    };
+    const before = await overview();
+
+    assert.deepEqual(
+        [before.needsVerification, before.unreviewed, before.waiting],
+        [0, 3, 0],
+    );
+    assert.deepEqual(before.missions, [
+        {
+            classId: demo.classId,
+            className: 'Kelas 4A',
+            assignmentId: demo.assignmentId,
+            title: demoModule.session.title,
+            students: 4,
+            submitted: 2,
+            needsVerification: 0,
+            unreviewed: 3,
+            waiting: 0,
+        },
+    ]);
+    assert.deepEqual(before.checks, []);
+
+    const evidence: Evidence = (
+        await evidenceFor(app, demo, demo.ayu.id)
+    ).json();
+    const decide = async (code: string, payload: object) => {
+        const id = evidence.competencies.find(
+            (competency) => competency.code === code,
+        )?.assessment?.id;
+
+        assert.ok(id, `${code} has an assessment`);
+
+        const response = await asTeacher(
+            app,
+            demo.teacherToken,
+            'POST',
+            `/assessments/${id}/verifications`,
+            payload,
+        );
+
+        assert.equal(response.statusCode, 201);
+    };
+
+    await decide('C1', { decision: 'agree' });
+    await decide('C2', { decision: 'unsure' });
+    await app.db
+        .update(analysisRuns)
+        .set({ status: 'failed', tries: 3, finishedAt: new Date() })
+        .where(eq(analysisRuns.attemptId, demo.attempts.waiting));
+
+    const after = await overview();
+
+    assert.deepEqual(
+        [after.needsVerification, after.unreviewed, after.waiting],
+        [1, 1, 1],
+    );
+    assert.deepEqual(
+        after.checks.map(
+            ({
+                classId,
+                assignmentId,
+                studentId,
+                studentName,
+                competencyCode,
+                decision,
+            }) => ({
+                classId,
+                assignmentId,
+                studentId,
+                studentName,
+                competencyCode,
+                decision,
+            }),
+        ),
+        [
+            {
+                classId: demo.classId,
+                assignmentId: demo.assignmentId,
+                studentId: demo.ayu.id,
+                studentName: 'Ayu Lestari',
+                competencyCode: 'C2',
+                decision: 'unsure',
+            },
+        ],
+    );
+});
+
+test("another teacher's home shows none of these classes, and a student is refused", async (t) => {
+    const app = await testApp(t);
+    const demo = await classWithResults(t, app);
+    const other = await createUser(app);
+    const response = await asTeacher(
+        app,
+        await loginAs(app, other.username),
+        'GET',
+        '/teacher/overview',
+    );
+
+    assert.equal(response.statusCode, 200);
+    assert.deepEqual(response.json(), {
+        needsVerification: 0,
+        unreviewed: 0,
+        waiting: 0,
+        missions: [],
+        checks: [],
+    });
+
+    const asAStudent = await asTeacher(
+        app,
+        demo.bima.token,
+        'GET',
+        '/teacher/overview',
+    );
+
+    assert.equal(asAStudent.statusCode, 403);
+});

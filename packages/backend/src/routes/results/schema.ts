@@ -89,6 +89,37 @@ export const verificationResponse = z.object({
 
 export const queuedResponse = z.object({ analysis: z.literal('queued') });
 
+export const overviewResponse = z.object({
+    needsVerification: z.number(),
+    unreviewed: z.number(),
+    waiting: z.number(),
+    missions: z.array(
+        z.object({
+            classId: z.number(),
+            className: z.string(),
+            assignmentId: z.number(),
+            title: z.string(),
+            students: z.number(),
+            submitted: z.number(),
+            needsVerification: z.number(),
+            unreviewed: z.number(),
+            waiting: z.number(),
+        }),
+    ),
+    checks: z.array(
+        z.object({
+            classId: z.number(),
+            className: z.string(),
+            assignmentId: z.number(),
+            missionTitle: z.string(),
+            studentId: z.number(),
+            studentName: z.string(),
+            competencyCode: z.string(),
+            decision: decision.nullable(),
+        }),
+    ),
+});
+
 export const evidenceResponse = z.object({
     student: z.object({ id: z.number(), name: z.string() }),
     assignment,
@@ -122,3 +153,4 @@ export type StudentParams = z.infer<typeof studentParams>;
 export type AssessmentParams = z.infer<typeof assessmentParams>;
 export type AttemptParams = z.infer<typeof attemptParams>;
 export type VerificationBody = z.infer<typeof verificationBody>;
+export type Overview = z.infer<typeof overviewResponse>;

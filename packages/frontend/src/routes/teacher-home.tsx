@@ -1,18 +1,18 @@
 import { dehydrate, HydrationBoundary } from '@tanstack/react-query';
 import { requireUser } from '../lib/require-user.server';
-import { classesQuery } from '../features/classes/queries';
-import { TeacherClasses } from '../features/classes/teacher-classes';
+import { teacherOverviewQuery } from '../features/results/queries';
+import { TeacherHome } from '../features/results/teacher-home';
 import type { Route } from './+types/teacher-home';
 export async function loader({ request }: Route.LoaderArgs) {
     const { client, cookie } = await requireUser(request, 'teacher');
-    await client.prefetchQuery(classesQuery(cookie));
+    await client.prefetchQuery(teacherOverviewQuery(cookie));
     return { dehydratedState: dehydrate(client) };
 }
-export const meta = () => [{ title: 'Kelas | Aku Senang Belajar' }];
+export const meta = () => [{ title: 'Beranda | Aku Senang Belajar' }];
 export default function Home({ loaderData }: Route.ComponentProps) {
     return (
         <HydrationBoundary state={loaderData.dehydratedState}>
-            <TeacherClasses />
+            <TeacherHome />
         </HydrationBoundary>
     );
 }

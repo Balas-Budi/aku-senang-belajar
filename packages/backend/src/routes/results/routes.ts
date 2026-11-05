@@ -6,6 +6,7 @@ import {
     listAssignments,
     sessionResults,
     studentEvidence,
+    teacherOverview,
     verify,
 } from './handlers.ts';
 import {
@@ -14,6 +15,7 @@ import {
     assignmentsResponse,
     attemptParams,
     evidenceResponse,
+    overviewResponse,
     queuedResponse,
     resultsResponse,
     studentParams,
@@ -24,6 +26,11 @@ import {
 export const resultRoutes: FastifyPluginAsyncZod = async (fastify) => {
     fastify.addHook('preHandler', requireRole('teacher'));
 
+    fastify.get(
+        '/teacher/overview',
+        { schema: { response: { 200: overviewResponse } } },
+        teacherOverview,
+    );
     fastify.get(
         '/classes/:classId/assignments',
         {

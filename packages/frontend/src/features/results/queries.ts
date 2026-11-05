@@ -124,6 +124,8 @@ export type VerificationInput =
 
 const headers = (cookie?: string | null) => (cookie ? { cookie } : undefined);
 
+const overviewKey = ['teacher', 'overview'];
+
 export const analysing = (analysis: RunStatus | null) =>
     analysis === 'queued' || analysis === 'running';
 
@@ -193,9 +195,12 @@ export function useVerify(classId: number, assignmentId: number) {
                 { method: 'POST', body: JSON.stringify(input) },
             ),
         onSuccess: () =>
-            client.invalidateQueries({
-                queryKey: ['classes', classId, 'assignments', assignmentId],
-            }),
+            Promise.all([
+                client.invalidateQueries({
+                    queryKey: ['classes', classId, 'assignments', assignmentId],
+                }),
+                client.invalidateQueries({ queryKey: overviewKey }),
+            ]),
     });
 }
 
@@ -208,8 +213,47 @@ export function useAnalyseAgain(classId: number) {
                 method: 'POST',
             }),
         onSettled: () =>
-            client.invalidateQueries({
-                queryKey: ['classes', classId, 'assignments'],
-            }),
+            Promise.all([
+                client.invalidateQueries({
+                    queryKey: ['classes', classId, 'assignments'],
+                }),
+                client.invalidateQueries({ queryKey: overviewKey }),
+            ]),
     });
 }
+
+export type TeacherOverview = {
+    needsVerification: number;
+    unreviewed: number;
+    waiting: number;
+    missions: {
+        classId: number;
+        className: string;
+        assignmentId: number;
+        title: string;
+        students: number;
+        submitted: number;
+        needsVerification: number;
+        unreviewed: number;
+        waiting: number;
+    }[];
+    checks: {
+        classId: number;
+        className: string;
+        assignmentId: number;
+        missionTitle: string;
+        studentId: number;
+        studentName: string;
+        competencyCode: string;
+        decision: Decision | null;
+    }[];
+};
+
+export const teacherOverviewQuery = (cookie?: string | null) =>
+    queryOptions({
+        queryKey: overviewKey,
+        queryFn: () =>
+            api<TeacherOverview>('/api/teacher/overview', {
+                headers: headers(cookie),
+            }),
+    });

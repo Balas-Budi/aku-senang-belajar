@@ -11,6 +11,7 @@ export default [
     route('student/sessions/:assignmentId', 'routes/student-session.tsx'),
     route('teacher', 'routes/teacher-layout.tsx', [
         index('routes/teacher-home.tsx'),
+        route('classes', 'routes/teacher-classes.tsx'),
         route('classes/:classId', 'routes/teacher-class.tsx'),
         route(
             'classes/:classId/sessions/:assignmentId',
