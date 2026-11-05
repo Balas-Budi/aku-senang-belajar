@@ -1,7 +1,7 @@
 import { useQuery } from '@tanstack/react-query';
 import { Link } from 'react-router';
 import { RequestError } from '../../components/request-error';
-import { StatCard } from '../../components/stat-card';
+import { StatCard, StatGrid } from '../../components/stat-card';
 import { Button, buttonVariants } from '../../components/ui/button';
 import { Card } from '../../components/ui/card';
 import {
@@ -84,7 +84,7 @@ export function TeacherHome() {
                 </div>
             ) : (
                 <>
-                    <ul className="grid gap-4 sm:grid-cols-3">
+                    <StatGrid>
                         <li>
                             <StatCard
                                 label="Perlu verifikasi"
@@ -106,7 +106,7 @@ export function TeacherHome() {
                                 note="Misi terkirim yang analisisnya gagal atau belum berjalan"
                             />
                         </li>
-                    </ul>
+                    </StatGrid>
                     <div className="grid items-start gap-6 lg:grid-cols-12">
                         <Card className="lg:col-span-8">
                             <section

@@ -279,6 +279,29 @@ test('an admin lists users by role, students with their class', async (t) => {
     );
 });
 
+test('students who share a name keep their list order after a class move', async (t) => {
+    const app = await testApp(t);
+    const call = await adminCaller(app);
+    const teacher = await createUser(app);
+    const grade4 = await createClass(app, await loginAs(app, teacher.username));
+    const name = randomUsername('Sama');
+    const first = await createStudent(app, name);
+    const second = await createStudent(app, name);
+
+    await call('PUT', `/api/admin/students/${first.id}/class`, {
+        classId: grade4.id,
+    });
+    const list = await call('GET', '/api/admin/users?role=student');
+
+    assert.deepEqual(
+        list
+            .json()
+            .filter((entry: { name: string }) => entry.name === name)
+            .map((entry: { id: number }) => entry.id),
+        [first.id, second.id],
+    );
+});
+
 test('an admin moves a student to another class or takes them out of any class', async (t) => {
     const app = await testApp(t);
     const call = await adminCaller(app);

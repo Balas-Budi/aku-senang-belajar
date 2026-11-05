@@ -18,17 +18,21 @@ function useWorkspaceLinks(role: Role): WorkspaceLink[] {
     });
 
     if (role === 'admin') {
-        const shown =
-            new URLSearchParams(location.search).get('role') === 'teacher'
-                ? 'teacher'
-                : 'student';
+        const params = new URLSearchParams(location.search);
+        const shown = params.get('role') === 'teacher' ? 'teacher' : 'student';
         const onAccounts = location.pathname === '/admin';
+        const filtered = params.get('filter') === 'no-class';
 
         return [
             {
                 to: '/admin?role=student',
                 label: 'Akun siswa',
-                current: onAccounts && shown === 'student' ? 'page' : false,
+                current:
+                    onAccounts && shown === 'student'
+                        ? filtered
+                            ? 'within'
+                            : 'page'
+                        : false,
             },
             {
                 to: '/admin?role=teacher',

@@ -220,7 +220,7 @@ export async function listUsers(
         .leftJoin(classes, eq(classes.id, classMembers.classId))
         .leftJoin(teachers, eq(teachers.id, classes.teacherId))
         .where(and(eq(users.role, role), isNull(users.deletedAt)))
-        .orderBy(asc(users.name));
+        .orderBy(asc(users.name), asc(users.id));
 
     return rows.map((row) => ({
         id: row.id,
@@ -252,7 +252,7 @@ export async function listClasses(request: FastifyRequest) {
         .innerJoin(teachers, eq(teachers.id, classes.teacherId))
         .leftJoin(classMembers, eq(classMembers.classId, classes.id))
         .groupBy(classes.id, teachers.name)
-        .orderBy(asc(classes.name));
+        .orderBy(asc(classes.name), asc(classes.id));
 }
 
 export async function moveStudent(

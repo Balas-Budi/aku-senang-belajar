@@ -25,8 +25,8 @@ export function ClassDetail({ id }: { id: number }) {
                             id="roster-title"
                             className="mb-2 text-lg font-semibold"
                         >
-                            Siswa yang bergabung
-                            <span className="text-muted-foreground ml-2 text-sm font-normal tabular-nums">
+                            Siswa yang bergabung{' '}
+                            <span className="text-muted-foreground ml-1 text-sm font-normal tabular-nums">
                                 {roster.data?.length ?? ''}
                             </span>
                         </h2>
