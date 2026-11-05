@@ -1,5 +1,7 @@
 import { z } from 'zod';
 
+const blankAsUnset = (value: unknown) => (value === '' ? undefined : value);
+
 const envSchema = z.object({
     NODE_ENV: z
         .enum(['development', 'test', 'production'])
@@ -14,6 +16,17 @@ const envSchema = z.object({
     LOG_LEVEL: z
         .enum(['fatal', 'error', 'warn', 'info', 'debug', 'trace', 'silent'])
         .default('info'),
+    AI_BASE_URL: z.preprocess(
+        blankAsUnset,
+        z
+            .url()
+            .transform((value) =>
+                value.replace(/\/+$/, '').replace(/\/chat\/completions$/, ''),
+            )
+            .optional(),
+    ),
+    AI_API_KEY: z.preprocess(blankAsUnset, z.string().trim().min(1).optional()),
+    AI_MODEL: z.preprocess(blankAsUnset, z.string().trim().min(1).optional()),
 });
 
 export type Env = z.infer<typeof envSchema>;
