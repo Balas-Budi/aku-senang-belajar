@@ -110,6 +110,7 @@ export const competencies = pgTable(
             .references(() => modules.id, { onDelete: 'cascade' }),
         code: text().notNull(),
         description: text().notNull(),
+        rubric: jsonb(),
     },
     (table) => [
         unique('competencies_module_id_code_unique').on(

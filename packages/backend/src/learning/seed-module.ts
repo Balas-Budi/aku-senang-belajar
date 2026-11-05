@@ -10,14 +10,25 @@ import {
     sessionBlocks,
 } from '../db/schema.ts';
 import { sessionBlock, type SessionBlock } from './blocks.ts';
+import { competencyRubric, type CompetencyRubric } from './rubric.ts';
 
 export type PreparedModule = {
     subject: typeof materials.$inferInsert.subject;
     material: string;
     module: string;
-    competencies: { code: string; description: string }[];
+    competencies: {
+        code: string;
+        description: string;
+        rubric?: CompetencyRubric;
+    }[];
     session: { title: string; summary: string };
     blocks: (SessionBlock & { competencies: string[] })[];
+};
+
+type ParsedCompetency = {
+    code: string;
+    description: string;
+    rubric: CompetencyRubric | null;
 };
 
 type ParsedBlock = { block: SessionBlock; codes: string[] };
@@ -25,6 +36,7 @@ type ParsedBlock = { block: SessionBlock; codes: string[] };
 async function insertModule(
     tx: Queryable,
     prepared: PreparedModule,
+    parsed: ParsedCompetency[],
     blocks: ParsedBlock[],
 ) {
     const [material] = await tx
@@ -38,7 +50,7 @@ async function insertModule(
     const stored = await tx
         .insert(competencies)
         .values(
-            prepared.competencies.map((competency) => ({
+            parsed.map((competency) => ({
                 ...competency,
                 moduleId: chapter.id,
             })),
@@ -79,11 +91,36 @@ async function insertModule(
     return session.id;
 }
 
+async function refreshRubrics(
+    tx: Queryable,
+    moduleId: number,
+    parsed: ParsedCompetency[],
+) {
+    for (const { code, rubric } of parsed) {
+        await tx
+            .update(competencies)
+            .set({ rubric })
+            .where(
+                and(
+                    eq(competencies.moduleId, moduleId),
+                    eq(competencies.code, code),
+                ),
+            );
+    }
+}
+
 export async function seedModule(
     db: Queryable,
     classId: number,
     prepared: PreparedModule,
 ) {
+    const parsed = prepared.competencies.map(
+        ({ code, description, rubric }) => ({
+            code,
+            description,
+            rubric: rubric ? competencyRubric.parse(rubric) : null,
+        }),
+    );
     const blocks = prepared.blocks.map((block) => ({
         block: sessionBlock.parse(block),
         codes: block.competencies,
@@ -91,7 +128,10 @@ export async function seedModule(
 
     return db.transaction(async (tx) => {
         const [existing] = await tx
-            .select({ id: learningSessions.id })
+            .select({
+                id: learningSessions.id,
+                moduleId: learningSessions.moduleId,
+            })
             .from(learningSessions)
             .innerJoin(modules, eq(modules.id, learningSessions.moduleId))
             .innerJoin(materials, eq(materials.id, modules.materialId))
@@ -101,8 +141,13 @@ export async function seedModule(
                     eq(learningSessions.title, prepared.session.title),
                 ),
             );
+
+        if (existing) {
+            await refreshRubrics(tx, existing.moduleId, parsed);
+        }
+
         const sessionId =
-            existing?.id ?? (await insertModule(tx, prepared, blocks));
+            existing?.id ?? (await insertModule(tx, prepared, parsed, blocks));
         const assigned = await tx
             .insert(assignments)
             .values({ learningSessionId: sessionId, classId })

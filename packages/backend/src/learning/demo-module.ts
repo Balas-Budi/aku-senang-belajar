@@ -9,16 +9,51 @@ export const demoModule: PreparedModule = {
             code: 'C1',
             description:
                 'Mengenali 1/4 pada gambar: menunjuk satu dari empat bagian yang sama besar pada dua bentuk berbeda.',
+            rubric: {
+                visible: [
+                    'Memilih roti B, yang dipotong menjadi empat bagian sama besar, pada percobaan pertama tanpa petunjuk.',
+                ],
+                developing: [
+                    'Memilih roti B setelah memakai petunjuk atau contoh lain.',
+                    'Memilih roti A atau C: belum memastikan rotinya dibagi menjadi empat bagian yang sama besar.',
+                    'Jawaban yang tepat baru tampil setelah tiga percobaan.',
+                ],
+                notEnough: ['Soal roti bundar belum dijawab.'],
+            },
         },
         {
             code: 'C2',
             description:
                 'Menjelaskan arti 1/4: satu dari empat bagian yang sama besar.',
+            rubric: {
+                visible: [
+                    'Menjawab "Bukan seperempat" dan alasannya menyebut bahwa potongannya tidak sama besar, dengan kata-kata sendiri, sependek apa pun.',
+                    'Di tantangan, alasannya memakai gagasan bagian yang sama besar.',
+                ],
+                developing: [
+                    'Memilih "Bukan seperempat", tetapi alasannya belum menyebut ukuran yang sama besar, misalnya hanya "karena dipotong empat".',
+                    'Masih mengira empat potong yang tidak sama besar tetap seperempat, atau baru tepat setelah petunjuk.',
+                ],
+                notEnough: [
+                    'Alasan kosong, tidak berkaitan dengan soal, atau tidak bisa dipahami.',
+                ],
+            },
         },
         {
             code: 'C3',
             description:
                 'Menerapkan 1/4 pada situasi baru: membandingkan 1/4 dengan 1/2 dan memberi alasan.',
+            rubric: {
+                visible: [
+                    'Memilih Budi dan alasannya masuk akal, misalnya 1/2 lebih banyak karena roti dibagi menjadi lebih sedikit bagian yang sama besar.',
+                ],
+                developing: [
+                    'Memilih Budi, tetapi alasannya belum menjelaskan mengapa 1/2 lebih banyak.',
+                    'Memilih Ani karena 4 lebih besar dari 2.',
+                    'Memilih "Sama banyak" karena keduanya sama-sama mengambil satu bagian.',
+                ],
+                notEnough: ['Tantangan belum dijawab, atau alasannya kosong.'],
+            },
         },
     ],
     session: {
