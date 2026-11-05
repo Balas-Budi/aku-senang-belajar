@@ -2,7 +2,9 @@ import { useQuery } from '@tanstack/react-query';
 import { useEffect, useState } from 'react';
 import { Link } from 'react-router';
 import { RequestError } from '../../components/request-error';
+import { Alert } from '../../components/ui/alert';
 import { Button } from '../../components/ui/button';
+import { Card } from '../../components/ui/card';
 import { cn } from '../../lib/cn';
 import { subjects } from '../assignments/subject-art';
 import { Illustration } from '../learning-sessions/illustration';
@@ -110,7 +112,7 @@ function QuestionEvidence({
                     <li
                         key={attempt.ref}
                         className={cn(
-                            'border-border rounded-lg border p-3',
+                            'border-paper-edge rounded-lg border p-3',
                             cited.has(attempt.ref) &&
                                 'border-primary bg-secondary',
                         )}
@@ -140,7 +142,7 @@ function Reflection({ report, cited }: { report: SelfReport; cited: boolean }) {
     return (
         <div
             className={cn(
-                'border-border space-y-1 rounded-lg border p-3',
+                'border-paper-edge space-y-1 rounded-lg border p-3',
                 cited && 'border-primary bg-secondary',
             )}
         >
@@ -191,7 +193,7 @@ function Rubric({
     ] as const;
 
     return (
-        <details className="border-border rounded-lg border px-4 py-2">
+        <details className="border-paper-edge rounded-lg border px-4 py-2">
             <summary className="focus-visible:outline-ring cursor-pointer py-2 font-semibold focus-visible:outline-3">
                 Rubrik {code}
             </summary>
@@ -215,7 +217,7 @@ function History({ assessment }: { assessment: Assessment }) {
     return (
         <div className="space-y-2">
             <h3 className="text-lg font-semibold">Riwayat keputusan</h3>
-            <ol className="divide-border divide-y">
+            <ol className="divide-paper-edge divide-y">
                 {assessment.verifications.map((verification) => (
                     <li key={verification.id} className="space-y-1 py-2">
                         <p className="flex flex-wrap items-center gap-2">
@@ -252,13 +254,14 @@ function CompetencyCard({
     const titleId = `kompetensi-${code}-judul`;
 
     return (
-        <section
+        <Card
             id={`kompetensi-${code}`}
+            role="region"
             aria-labelledby={titleId}
-            className="border-border scroll-mt-6 space-y-5 rounded-xl border p-5 sm:p-6"
+            className="scroll-mt-6 space-y-5 sm:p-6"
         >
             <div className="space-y-3">
-                <h2 id={titleId} className="text-xl font-semibold">
+                <h2 id={titleId} className="text-lg font-semibold">
                     <span className="text-muted-foreground mr-2">{code}</span>
                     {description}
                 </h2>
@@ -328,7 +331,7 @@ function CompetencyCard({
                     )}
                 </div>
             </div>
-        </section>
+        </Card>
     );
 }
 
@@ -352,13 +355,13 @@ function AnalysisSummary({
         );
     if (analysing(analysis))
         return (
-            <p role="status">
+            <Alert role="status">
                 Sedang dianalisis. Halaman ini diperbarui sendiri.
-            </p>
+            </Alert>
         );
     if (attemptId !== null && waitsForTeacher(progress, analysis))
         return (
-            <div className="space-y-3">
+            <Alert tone="attention" className="space-y-3">
                 <p role="status">
                     Menunggu analisis.{' '}
                     {analysis === 'failed'
@@ -372,7 +375,7 @@ function AnalysisSummary({
                     analysis={analysis}
                     studentName={student.name}
                 />
-            </div>
+            </Alert>
         );
 
     return <p role="status">Sudah mengirim dan sudah dianalisis.</p>;
@@ -429,10 +432,10 @@ export function StudentEvidence({
     const { student, assignment, competencies } = evidence.data;
 
     return (
-        <div className="space-y-8">
+        <div className="space-y-6">
             <div className="space-y-2">
                 {back(assignment.title)}
-                <h1 className="text-3xl font-bold">{student.name}</h1>
+                <h1 className="text-2xl font-semibold">{student.name}</h1>
                 <p className="text-muted-foreground">
                     {assignment.title} · {subjects[assignment.subject].label} ·{' '}
                     {assignment.moduleTitle}

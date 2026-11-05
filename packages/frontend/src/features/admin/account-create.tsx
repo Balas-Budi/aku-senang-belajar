@@ -10,19 +10,21 @@ export function AccountCreate({ role }: { role: ManagedRole }) {
     const [credentials, setCredentials] = useState<Credential[]>([]);
     const [message, setMessage] = useState('');
     return (
-        <div className="space-y-6">
+        <div className="grid items-start gap-6 lg:grid-cols-2">
             {credentials.length > 0 && (
-                <CredentialSheet
-                    items={credentials}
-                    onClose={() => {
-                        setCredentials([]);
-                        create.reset();
-                        upload.reset();
-                    }}
-                />
+                <div className="lg:col-span-2">
+                    <CredentialSheet
+                        items={credentials}
+                        onClose={() => {
+                            setCredentials([]);
+                            create.reset();
+                            upload.reset();
+                        }}
+                    />
+                </div>
             )}
-            <details className="border-border rounded-xl border p-5">
-                <summary className="cursor-pointer py-2 text-lg font-semibold">
+            <details className="border-paper-edge bg-background rounded-2xl border p-5">
+                <summary className="focus-visible:outline-ring cursor-pointer py-2 text-lg font-semibold focus-visible:outline-3">
                     Buat akun {role === 'student' ? 'siswa' : 'guru'}
                 </summary>
                 <form
@@ -95,8 +97,8 @@ export function AccountCreate({ role }: { role: ManagedRole }) {
                     </Button>
                 </form>
             </details>
-            <details className="border-border rounded-xl border p-5">
-                <summary className="cursor-pointer py-2 text-lg font-semibold">
+            <details className="border-paper-edge bg-background rounded-2xl border p-5">
+                <summary className="focus-visible:outline-ring cursor-pointer py-2 text-lg font-semibold focus-visible:outline-3">
                     Impor akun dari Excel
                 </summary>
                 <form
@@ -167,7 +169,9 @@ export function AccountCreate({ role }: { role: ManagedRole }) {
                     </Button>
                 </form>
             </details>
-            <p role="status">{message}</p>
+            <p role="status" className="lg:col-span-2">
+                {message}
+            </p>
         </div>
     );
 }

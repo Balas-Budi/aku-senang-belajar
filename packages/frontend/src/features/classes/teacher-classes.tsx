@@ -2,46 +2,26 @@ import { useQuery } from '@tanstack/react-query';
 import { Link } from 'react-router';
 import { classesQuery, useCreateClass } from './queries';
 import { Button } from '../../components/ui/button';
+import { Card } from '../../components/ui/card';
 import { FormField } from '../../components/form-field';
 import { RequestError } from '../../components/request-error';
 export function TeacherClasses() {
     const query = useQuery(classesQuery());
     const create = useCreateClass();
     return (
-        <div className="space-y-8">
+        <div className="space-y-6">
             <div>
-                <h1 className="text-3xl font-bold">Kelas yang Anda dampingi</h1>
-                <p className="text-muted-foreground mt-3">
+                <h1 className="text-2xl font-semibold">
+                    Kelas yang Anda dampingi
+                </h1>
+                <p className="text-muted-foreground mt-2">
                     Buat kelas, bagikan kode, lalu lihat siswa yang bergabung.
                 </p>
             </div>
-            <form
-                className="border-border max-w-xl space-y-4 rounded-xl border p-6"
-                onSubmit={(event) => {
-                    event.preventDefault();
-                    const form = event.currentTarget;
-                    create.mutate(
-                        String(new FormData(form).get('name') ?? ''),
-                        { onSuccess: () => form.reset() },
-                    );
-                }}
-            >
-                <h2 className="text-xl font-semibold">Buat kelas</h2>
-                <FormField
-                    name="name"
-                    label="Nama kelas"
-                    required
-                    error={create.error}
-                />
-                <RequestError error={create.error} />
-                <Button type="submit" disabled={create.isPending}>
-                    {create.isPending ? 'Membuat kelas…' : 'Buat kelas'}
-                </Button>
-            </form>
             {query.isPending ? (
                 <p role="status">Memuat daftar kelas…</p>
             ) : query.isError ? (
-                <>
+                <div className="space-y-3">
                     <RequestError error={query.error} />
                     <Button
                         onClick={() => {
@@ -50,46 +30,73 @@ export function TeacherClasses() {
                     >
                         Muat ulang kelas
                     </Button>
-                </>
+                </div>
             ) : query.data.length === 0 ? (
-                <p>
-                    Belum ada kelas. Gunakan formulir di atas untuk membuat
-                    kelas pertama.
-                </p>
+                <Card>
+                    <p>
+                        Belum ada kelas. Gunakan formulir di bawah untuk membuat
+                        kelas pertama.
+                    </p>
+                </Card>
             ) : (
-                <ul className="divide-border divide-y">
+                <ul className="grid gap-4 sm:grid-cols-2 xl:grid-cols-3">
                     {query.data.map((item) => (
-                        <li
-                            key={item.id}
-                            className="flex flex-wrap items-center justify-between gap-4 py-5"
-                        >
-                            <div>
+                        <li key={item.id}>
+                            <Card className="h-full space-y-2">
                                 <Link
                                     to={`/teacher/classes/${item.id}`}
-                                    className="text-primary inline-block min-h-12 py-3 text-xl font-semibold underline underline-offset-4"
+                                    className="text-primary focus-visible:outline-ring inline-block min-h-11 rounded py-2 text-lg font-semibold underline underline-offset-4 focus-visible:outline-3"
                                 >
                                     {item.name}
                                 </Link>
-                                <p className="text-muted-foreground">
-                                    {item.studentCount} siswa bergabung
+                                <p>
+                                    <span className="font-semibold tabular-nums">
+                                        {item.studentCount}
+                                    </span>{' '}
+                                    siswa bergabung
                                 </p>
-                            </div>
-                            <p>
-                                {item.inviteCode ? (
-                                    <>
-                                        Kode kelas:{' '}
-                                        <strong className="break-all">
-                                            {item.inviteCode}
-                                        </strong>
-                                    </>
-                                ) : (
-                                    'Pendaftaran ditutup'
-                                )}
-                            </p>
+                                <p className="text-muted-foreground text-sm">
+                                    {item.inviteCode ? (
+                                        <>
+                                            Kode kelas:{' '}
+                                            <strong className="text-foreground break-all">
+                                                {item.inviteCode}
+                                            </strong>
+                                        </>
+                                    ) : (
+                                        'Pendaftaran ditutup'
+                                    )}
+                                </p>
+                            </Card>
                         </li>
                     ))}
                 </ul>
             )}
+            <Card className="max-w-xl">
+                <form
+                    className="space-y-4"
+                    onSubmit={(event) => {
+                        event.preventDefault();
+                        const form = event.currentTarget;
+                        create.mutate(
+                            String(new FormData(form).get('name') ?? ''),
+                            { onSuccess: () => form.reset() },
+                        );
+                    }}
+                >
+                    <h2 className="text-lg font-semibold">Buat kelas</h2>
+                    <FormField
+                        name="name"
+                        label="Nama kelas"
+                        required
+                        error={create.error}
+                    />
+                    <RequestError error={create.error} />
+                    <Button type="submit" disabled={create.isPending}>
+                        {create.isPending ? 'Membuat kelas…' : 'Buat kelas'}
+                    </Button>
+                </form>
+            </Card>
         </div>
     );
 }

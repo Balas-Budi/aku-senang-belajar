@@ -3,6 +3,7 @@
     --font-display:
         'Fredoka Variable', 'Nunito Variable', ui-rounded, system-ui, sans-serif;
     --font-rounded: 'Nunito Variable', ui-rounded, system-ui, sans-serif;
+    --font-workspace: 'Inter Variable', ui-sans-serif, system-ui, sans-serif;
     --color-background: #ffffff;
     --color-foreground: #171629;
     --color-muted: #f2f2f2;
@@ -36,6 +37,7 @@
     --color-status-developing: #8a5300;
     --color-status-developing-soft: #ffefc7;
     --color-status-verify: #b03a00;
+    --color-status-verify-soft: #fff0e6;
     --color-ai-suggestion: #5b3fd9;
 }
 .student-space,
