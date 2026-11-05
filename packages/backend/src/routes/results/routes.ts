@@ -14,6 +14,7 @@ import {
     assignmentsResponse,
     attemptParams,
     evidenceResponse,
+    queuedResponse,
     resultsResponse,
     studentParams,
     verificationBody,
@@ -66,7 +67,12 @@ export const resultRoutes: FastifyPluginAsyncZod = async (fastify) => {
     );
     fastify.post(
         '/attempts/:attemptId/analysis',
-        { schema: { params: attemptParams } },
+        {
+            schema: {
+                params: attemptParams,
+                response: { 202: queuedResponse },
+            },
+        },
         analyseAgain,
     );
 };

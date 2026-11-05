@@ -459,6 +459,7 @@ test('a failed or missing analysis can be started again, and only then (AT-12)',
     const restarted = await retry(demo.attempts.waiting);
 
     assert.equal(restarted.statusCode, 202);
+    assert.deepEqual(restarted.json(), { analysis: 'queued' });
     assert.deepEqual(
         (await runsOf(demo.attempts.waiting)).map(({ status }) => status),
         ['failed', 'queued'],

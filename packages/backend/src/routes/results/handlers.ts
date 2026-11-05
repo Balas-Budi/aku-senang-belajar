@@ -318,5 +318,5 @@ export async function analyseAgain(
         await queueAnalysis(tx, attempt.id);
     });
 
-    return reply.code(202).send();
+    return reply.code(202).send({ analysis: 'queued' as const });
 }

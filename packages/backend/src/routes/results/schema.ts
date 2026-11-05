@@ -87,6 +87,8 @@ export const verificationResponse = z.object({
     createdAt: z.date(),
 });
 
+export const queuedResponse = z.object({ analysis: z.literal('queued') });
+
 export const evidenceResponse = z.object({
     student: z.object({ id: z.number(), name: z.string() }),
     assignment,

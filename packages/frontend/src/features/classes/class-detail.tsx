@@ -3,6 +3,7 @@ import { useState } from 'react';
 import { classesQuery, rosterQuery, useChangeCode } from './queries';
 import { Button } from '../../components/ui/button';
 import { RequestError } from '../../components/request-error';
+import { ClassMissions } from '../results/class-missions';
 export function ClassDetail({ id }: { id: number }) {
     const classes = useQuery(classesQuery());
     const roster = useQuery(rosterQuery(id));
@@ -15,6 +16,7 @@ export function ClassDetail({ id }: { id: number }) {
     return (
         <div className="space-y-8">
             <h1 className="text-3xl font-bold">{classroom.name}</h1>
+            <ClassMissions classId={id} />
             <section className="bg-secondary space-y-4 rounded-xl p-6">
                 <h2 className="text-xl font-semibold">Undang siswa</h2>
                 <p>Bagikan kode ini hanya kepada siswa di kelas Anda.</p>

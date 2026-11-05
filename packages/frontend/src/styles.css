@@ -32,6 +32,11 @@
     --color-jalak-mouth: #f2876a;
     --color-bread: #f8cf86;
     --color-bread-crust: #c27a2c;
+    --color-status-visible: #0f7b5f;
+    --color-status-developing: #8a5300;
+    --color-status-developing-soft: #ffefc7;
+    --color-status-verify: #b03a00;
+    --color-ai-suggestion: #5b3fd9;
 }
 .student-space,
 .login-page {
