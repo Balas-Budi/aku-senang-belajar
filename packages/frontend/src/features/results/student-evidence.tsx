@@ -66,9 +66,12 @@ function helpUsed(help: EvidenceQuestion['help']) {
 
 function CitedMark() {
     return (
-        <span className="text-primary-deep ml-2 text-sm font-semibold">
-            Dipakai AI
-        </span>
+        <>
+            {' '}
+            <span className="text-primary-deep ml-1 text-sm font-semibold">
+                Dipakai AI
+            </span>
+        </>
     );
 }
 
@@ -263,7 +266,7 @@ function CompetencyCard({
         >
             <div className="space-y-3">
                 <h2 id={titleId} className="text-lg font-semibold">
-                    <span className="text-muted-foreground mr-2">{code}</span>
+                    <span className="text-muted-foreground mr-1">{code}</span>{' '}
                     {description}
                 </h2>
                 {assessment ? (
