@@ -50,6 +50,13 @@
             "when": 1793927544271,
             "tag": "0006_gray_wilson_fisk",
             "breakpoints": true
+        },
+        {
+            "idx": 7,
+            "version": "7",
+            "when": 1793928894254,
+            "tag": "0007_stale_meltdown",
+            "breakpoints": true
         }
     ]
 }

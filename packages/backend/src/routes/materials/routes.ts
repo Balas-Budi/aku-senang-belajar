@@ -2,18 +2,24 @@ import { z } from 'zod';
 import type { FastifyPluginAsyncZod } from 'fastify-type-provider-zod';
 import { requireRole } from '../../auth/guards.ts';
 import {
+    draftCompetencies,
     getMaterial,
     getPage,
     listMaterials,
+    saveModule,
     uploadMaterial,
 } from './handlers.ts';
 import { MAX_PDF_BYTES, PDF_CONTENT_TYPE } from './pdf.ts';
 import {
+    competencyProposal,
     materialDetail,
     materialParams,
     materialSummary,
+    moduleBody,
     pageParams,
+    pageRange,
     pageText,
+    savedModule,
     uploadQuery,
 } from './schema.ts';
 
@@ -54,5 +60,27 @@ export const materialRoutes: FastifyPluginAsyncZod = async (fastify) => {
         '/:materialId/pages/:number',
         { schema: { params: pageParams, response: { 200: pageText } } },
         getPage,
+    );
+    fastify.post(
+        '/:materialId/competency-drafts',
+        {
+            schema: {
+                params: materialParams,
+                body: pageRange,
+                response: { 200: competencyProposal },
+            },
+        },
+        draftCompetencies,
+    );
+    fastify.post(
+        '/:materialId/modules',
+        {
+            schema: {
+                params: materialParams,
+                body: moduleBody,
+                response: { 201: savedModule },
+            },
+        },
+        saveModule,
     );
 };

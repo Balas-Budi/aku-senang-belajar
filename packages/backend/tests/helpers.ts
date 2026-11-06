@@ -1,6 +1,7 @@
 import { randomUUID } from 'node:crypto';
 import type { TestContext } from 'node:test';
 import type { FastifyInstance } from 'fastify';
+import type { AiConfig } from '../src/ai/chat.ts';
 import { buildApp } from '../src/app.ts';
 import type { Role } from '../src/auth/guards.ts';
 import { users } from '../src/db/schema.ts';
@@ -29,16 +30,24 @@ export function testDatabaseUrl(): string {
     return url;
 }
 
-export function testEnv(): Env {
+export function testEnv(ai?: AiConfig): Env {
     return loadEnv({
         NODE_ENV: 'test',
         DATABASE_URL: testDatabaseUrl(),
         LOG_LEVEL: 'silent',
+        ...(ai && {
+            AI_BASE_URL: ai.baseUrl,
+            AI_API_KEY: ai.apiKey,
+            AI_MODEL: ai.model,
+        }),
     });
 }
 
-export async function testApp(t: TestContext): Promise<FastifyInstance> {
-    const app = await buildApp(testEnv());
+export async function testApp(
+    t: TestContext,
+    ai?: AiConfig,
+): Promise<FastifyInstance> {
+    const app = await buildApp(testEnv(ai));
 
     t.after(() => app.close());
 

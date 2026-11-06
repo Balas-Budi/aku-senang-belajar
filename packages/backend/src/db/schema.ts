@@ -1,3 +1,4 @@
+import { sql } from 'drizzle-orm';
 import {
     index,
     integer,
@@ -144,6 +145,8 @@ export const modules = pgTable(
             .notNull()
             .references(() => materials.id, { onDelete: 'cascade' }),
         title: text().notNull(),
+        firstPage: integer(),
+        lastPage: integer(),
     },
     (table) => [index('modules_material_id_idx').on(table.materialId)],
 );
@@ -158,6 +161,10 @@ export const competencies = pgTable(
         code: text().notNull(),
         description: text().notNull(),
         rubric: jsonb(),
+        pages: integer()
+            .array()
+            .notNull()
+            .default(sql`'{}'::integer[]`),
     },
     (table) => [
         unique('competencies_module_id_code_unique').on(

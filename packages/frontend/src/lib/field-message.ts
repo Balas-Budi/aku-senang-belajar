@@ -13,14 +13,41 @@ export function fieldLabel(field: string) {
         subject: 'Mata pelajaran',
         grade: 'Kelas',
         rights: 'Hak pakai',
+        firstPage: 'Dari halaman',
+        lastPage: 'Sampai halaman',
+        competencies: 'Kompetensi',
+        code: 'Kode',
+        description: 'Deskripsi',
+        pages: 'Halaman sumber',
+        visible: 'Terlihat',
+        developing: 'Berkembang',
+        notEnough: 'Belum cukup bukti',
     };
     const parts = field.split('/');
     const label = labels[parts.at(-1) ?? ''] ?? 'Isian';
-    return parts[0] === 'users'
-        ? `Baris Excel ${Number(parts[1]) + 2}, ${label.toLowerCase()}`
-        : label;
+    if (parts[0] === 'users')
+        return `Baris Excel ${Number(parts[1]) + 2}, ${label.toLowerCase()}`;
+    if (parts[0] === 'competencies' && parts.length > 2)
+        return `C${Number(parts[1]) + 1}, ${label.toLowerCase()}`;
+    return label;
 }
 export function fieldMessage(message: string) {
+    const pageCount = /The material has (\d+) pages/u.exec(message);
+    if (pageCount) return `Materi ini hanya ${pageCount[1]} halaman.`;
+    if (/last page comes before/u.test(message))
+        return 'Halaman akhir harus sama dengan atau sesudah halaman awal.';
+    if (/no readable page/u.test(message))
+        return 'Rentang ini tidak punya halaman yang terbaca. Pilih halaman lain.';
+    if (/at most \d+ readable pages/u.test(message))
+        return 'Satu modul paling banyak 20 halaman yang terbaca. Persempit rentangnya.';
+    if (/readable pages inside the module/u.test(message))
+        return 'Pakai nomor halaman yang terbaca di dalam rentang modul.';
+    if (/its own code/u.test(message))
+        return 'Setiap kompetensi perlu kode sendiri.';
+    if (/expected array to have >=1/u.test(message))
+        return 'Isi setidaknya satu baris.';
+    if (/expected string to have >=1/u.test(message))
+        return 'Isian ini belum diisi.';
     if (/not a PDF/u.test(message))
         return 'File ini bukan PDF yang bisa dibaca. Simpan ulang sebagai PDF, lalu unggah lagi.';
     if (/None of the pages/u.test(message))

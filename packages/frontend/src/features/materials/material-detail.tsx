@@ -1,6 +1,7 @@
 import { useQuery } from '@tanstack/react-query';
 import { useState } from 'react';
 import { materialMeta } from './library';
+import { ModuleForm } from './module-form';
 import { materialQuery, pageTextQuery, type MaterialDetail } from './queries';
 import { RequestError } from '../../components/request-error';
 import { Alert } from '../../components/ui/alert';
@@ -123,10 +124,42 @@ export function MaterialDetailView({ id }: { id: number }) {
                         </h2>
                         <ul className="divide-paper-edge divide-y">
                             {material.modules.map((module) => (
-                                <li key={module.id} className="space-y-1 py-3">
-                                    <p className="font-semibold">
-                                        {module.title}
-                                    </p>
+                                <li key={module.id} className="space-y-2 py-3">
+                                    <div>
+                                        <p className="font-semibold">
+                                            {module.title}
+                                        </p>
+                                        {module.firstPage !== null && (
+                                            <p className="text-muted-foreground text-sm tabular-nums">
+                                                Halaman {module.firstPage}{' '}
+                                                sampai {module.lastPage}
+                                            </p>
+                                        )}
+                                    </div>
+                                    {module.competencies.length > 0 && (
+                                        <ul className="space-y-1 text-sm">
+                                            {module.competencies.map(
+                                                (competency) => (
+                                                    <li key={competency.id}>
+                                                        <span className="font-semibold">
+                                                            {competency.code}
+                                                        </span>{' '}
+                                                        {competency.description}
+                                                        {competency.pages
+                                                            .length > 0 && (
+                                                            <span className="text-muted-foreground tabular-nums">
+                                                                {' '}
+                                                                · Hal.{' '}
+                                                                {competency.pages.join(
+                                                                    ', ',
+                                                                )}
+                                                            </span>
+                                                        )}
+                                                    </li>
+                                                ),
+                                            )}
+                                        </ul>
+                                    )}
                                     {module.sessions.map((session) => (
                                         <p key={session.id} className="text-sm">
                                             {session.title}{' '}
@@ -143,6 +176,12 @@ export function MaterialDetailView({ id }: { id: number }) {
                         </ul>
                     </section>
                 </Card>
+            )}
+            {!material.prepared && material.readablePages > 0 && (
+                <ModuleForm
+                    materialId={material.id}
+                    pageCount={material.pageCount}
+                />
             )}
             {material.pages.length > 0 && (
                 <Card>

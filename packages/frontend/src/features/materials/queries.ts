@@ -16,14 +16,57 @@ export type Material = {
     readablePages: number;
 };
 
-export type MaterialDetail = Material & {
-    pages: { number: number; readable: boolean; snippet: string | null }[];
-    modules: {
+export type SavedModule = {
+    id: number;
+    title: string;
+    firstPage: number | null;
+    lastPage: number | null;
+    competencies: {
         id: number;
-        title: string;
-        sessions: { id: number; title: string; status: 'draft' | 'ready' }[];
+        code: string;
+        description: string;
+        pages: number[];
     }[];
 };
+
+export type MaterialDetail = Material & {
+    pages: { number: number; readable: boolean; snippet: string | null }[];
+    modules: (SavedModule & {
+        sessions: { id: number; title: string; status: 'draft' | 'ready' }[];
+    })[];
+};
+
+export type CompetencyDraft = {
+    code: string;
+    description: string;
+    pages: number[];
+    rubric: { visible: string[]; developing: string[]; notEnough: string[] };
+};
+
+type PageRange = { title: string; firstPage: number; lastPage: number };
+
+export function useCompetencyDrafts(materialId: number) {
+    return useMutation({
+        mutationFn: (range: PageRange) =>
+            api<{ competencies: CompetencyDraft[] }>(
+                `/api/materials/${materialId}/competency-drafts`,
+                { method: 'POST', body: JSON.stringify(range) },
+            ),
+    });
+}
+
+export function useSaveModule(materialId: number) {
+    const client = useQueryClient();
+    return useMutation({
+        mutationFn: (module: PageRange & { competencies: CompetencyDraft[] }) =>
+            api<SavedModule>(`/api/materials/${materialId}/modules`, {
+                method: 'POST',
+                body: JSON.stringify(module),
+            }),
+        onSuccess: () =>
+            client.invalidateQueries({ queryKey: ['materials', materialId] }),
+    });
+}
 
 const headersOf = (cookie?: string | null) => (cookie ? { cookie } : undefined);
 

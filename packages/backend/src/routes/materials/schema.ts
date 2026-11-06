@@ -1,5 +1,11 @@
 import { z } from 'zod';
 import { learningSessionStatus, subject } from '../../db/schema.ts';
+import {
+    competencyDraft,
+    competencyProposal,
+} from '../../studio/competencies.ts';
+
+export { competencyProposal };
 
 export const uploadQuery = z.object({
     title: z.string().trim().min(1).max(120),
@@ -32,6 +38,35 @@ export const materialSummary = z.object({
     readablePages: z.number(),
 });
 
+export const pageRange = z.object({
+    title: z.string().trim().min(1).max(120),
+    firstPage: z.number().int().positive(),
+    lastPage: z.number().int().positive(),
+});
+
+export type PageRange = z.infer<typeof pageRange>;
+
+export const moduleBody = pageRange.extend({
+    competencies: z.array(competencyDraft).min(1).max(6),
+});
+
+export type ModuleBody = z.infer<typeof moduleBody>;
+
+export const savedModule = z.object({
+    id: z.number(),
+    title: z.string(),
+    firstPage: z.number().nullable(),
+    lastPage: z.number().nullable(),
+    competencies: z.array(
+        z.object({
+            id: z.number(),
+            code: z.string(),
+            description: z.string(),
+            pages: z.array(z.number()),
+        }),
+    ),
+});
+
 export const materialDetail = materialSummary.extend({
     pages: z.array(
         z.object({
@@ -41,9 +76,7 @@ export const materialDetail = materialSummary.extend({
         }),
     ),
     modules: z.array(
-        z.object({
-            id: z.number(),
-            title: z.string(),
+        savedModule.extend({
             sessions: z.array(
                 z.object({
                     id: z.number(),
