@@ -96,6 +96,19 @@ export function StudentShell({
                                 {name}
                             </p>
                             <Link
+                                to="/student/profile"
+                                onClick={() => {
+                                    if (menu.current) menu.current.open = false;
+                                }}
+                                className={buttonVariants({
+                                    variant: 'outline',
+                                    feel: 'chunky',
+                                    className: 'w-full',
+                                })}
+                            >
+                                Minatku
+                            </Link>
+                            <Link
                                 to="/account"
                                 className={buttonVariants({
                                     variant: 'outline',

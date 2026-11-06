@@ -1,5 +1,5 @@
 import type { ReactNode } from 'react';
-import { cn } from '../../lib/cn';
+import { Sticker } from '../../components/sticker';
 import type { Subject } from './queries';
 export const subjects: Record<
     Subject,
@@ -79,25 +79,8 @@ export function SubjectArt({
     className?: string;
 }) {
     return (
-        <span
-            aria-hidden="true"
-            className={cn(
-                'flex shrink-0 items-center justify-center rounded-2xl',
-                subjects[subject].tint,
-                className,
-            )}
-        >
-            <svg
-                viewBox="0 0 48 48"
-                fill="none"
-                stroke="var(--color-primary-deep)"
-                strokeWidth="2.5"
-                strokeLinecap="round"
-                strokeLinejoin="round"
-                className="size-[72%]"
-            >
-                {subjects[subject].drawing}
-            </svg>
-        </span>
+        <Sticker tint={subjects[subject].tint} className={className}>
+            {subjects[subject].drawing}
+        </Sticker>
     );
 }
