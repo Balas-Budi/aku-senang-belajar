@@ -6,7 +6,7 @@ export function requestErrorMessage(error: unknown) {
         : error instanceof ApiError && error.status === 429
           ? 'Terlalu banyak percobaan. Tunggu sebentar sebelum mencoba lagi.'
           : error instanceof ApiError && error.status === 413
-            ? 'Ukuran file melebihi batas 2 MB. Gunakan file yang lebih kecil.'
+            ? 'Ukuran file melebihi batas. Gunakan file yang lebih kecil.'
             : 'Permintaan belum berhasil. Periksa koneksi dan isian, lalu coba lagi.';
 }
 export function RequestError({ error }: { error: unknown }) {

@@ -2,6 +2,15 @@ import type { ComponentProps, ReactNode } from 'react';
 import { Input } from './ui/input';
 import { ApiError } from '../lib/api';
 import { fieldMessage } from '../lib/field-message';
+export function fieldErrorText(error: unknown, name: string) {
+    const messages =
+        error instanceof ApiError
+            ? (error.body.details ?? [])
+                  .filter((item) => item.field === name)
+                  .map((item) => fieldMessage(item.message))
+            : [];
+    return messages.length > 0 ? messages.join(' ') : null;
+}
 export function FormField({
     label,
     error,
@@ -14,10 +23,7 @@ export function FormField({
     error?: unknown;
     trailing?: ReactNode;
 }) {
-    const messages =
-        error instanceof ApiError
-            ? error.body.details?.filter((item) => item.field === name)
-            : [];
+    const message = fieldErrorText(error, name);
     return (
         <div className="space-y-2">
             <label htmlFor={name} className="block font-medium">
@@ -27,19 +33,15 @@ export function FormField({
                 <Input
                     id={name}
                     name={name}
-                    aria-invalid={Boolean(messages?.length)}
-                    aria-describedby={
-                        messages?.length ? `${name}-error` : undefined
-                    }
+                    aria-invalid={message !== null}
+                    aria-describedby={message ? `${name}-error` : undefined}
                     {...props}
                 />
                 {trailing}
             </div>
-            {Boolean(messages?.length) && (
+            {message && (
                 <p id={`${name}-error`} className="text-destructive">
-                    {messages
-                        ?.map((item) => fieldMessage(item.message))
-                        .join(' ')}
+                    {message}
                 </p>
             )}
         </div>

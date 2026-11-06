@@ -43,6 +43,13 @@
             "when": 1793848909966,
             "tag": "0005_even_exodus",
             "breakpoints": true
+        },
+        {
+            "idx": 6,
+            "version": "7",
+            "when": 1793927544271,
+            "tag": "0006_gray_wilson_fisk",
+            "breakpoints": true
         }
     ]
 }

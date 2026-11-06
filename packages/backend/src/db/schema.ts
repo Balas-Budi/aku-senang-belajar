@@ -105,11 +105,36 @@ export const classMembers = pgTable(
     (table) => [index('class_members_class_id_idx').on(table.classId)],
 );
 
-export const materials = pgTable('materials', {
-    id: integer().primaryKey().generatedAlwaysAsIdentity(),
-    subject: subject().notNull(),
-    title: text().notNull(),
-});
+export const materials = pgTable(
+    'materials',
+    {
+        id: integer().primaryKey().generatedAlwaysAsIdentity(),
+        subject: subject().notNull(),
+        title: text().notNull(),
+        grade: integer(),
+        ownerId: integer().references(() => users.id, { onDelete: 'cascade' }),
+        rightsConfirmedAt: timestamp({ withTimezone: true }),
+        createdAt: timestamp({ withTimezone: true }).notNull().defaultNow(),
+    },
+    (table) => [index('materials_owner_id_idx').on(table.ownerId)],
+);
+
+export const materialPages = pgTable(
+    'material_pages',
+    {
+        materialId: integer()
+            .notNull()
+            .references(() => materials.id, { onDelete: 'cascade' }),
+        number: integer().notNull(),
+        text: text(),
+    },
+    (table) => [
+        primaryKey({
+            name: 'material_pages_material_id_number_pk',
+            columns: [table.materialId, table.number],
+        }),
+    ],
+);
 
 export const modules = pgTable(
     'modules',

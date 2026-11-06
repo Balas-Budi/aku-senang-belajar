@@ -69,6 +69,16 @@ function useWorkspaceLinks(role: Role): WorkspaceLink[] {
                   ]
                 : [],
         },
+        {
+            to: '/teacher/materials',
+            label: 'Materi',
+            current:
+                location.pathname === '/teacher/materials'
+                    ? 'page'
+                    : location.pathname.startsWith('/teacher/materials/')
+                      ? 'within'
+                      : false,
+        },
     ];
 }
 

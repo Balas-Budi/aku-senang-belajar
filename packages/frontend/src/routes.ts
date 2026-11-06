@@ -13,6 +13,8 @@ export default [
         index('routes/teacher-home.tsx'),
         route('classes', 'routes/teacher-classes.tsx'),
         route('classes/:classId', 'routes/teacher-class.tsx'),
+        route('materials', 'routes/teacher-materials.tsx'),
+        route('materials/:materialId', 'routes/teacher-material.tsx'),
         route(
             'classes/:classId/sessions/:assignmentId',
             'routes/teacher-session.tsx',
