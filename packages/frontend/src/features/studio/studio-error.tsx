@@ -2,6 +2,16 @@ import { RequestError } from '../../components/request-error';
 import { Alert } from '../../components/ui/alert';
 import { ApiError } from '../../lib/api';
 
+const conflicts: Record<string, string> = {
+    SESSION_PUBLISHED:
+        'Sesi ini sudah terbit, jadi isinya tidak bisa diubah lagi.',
+    SESSION_NOT_READY: 'Terbitkan sesi ini dulu sebelum menugaskannya.',
+    PUBLISH_BLOCKED:
+        'Sesi ini belum bisa diterbitkan. Periksa daftar di atas tombol.',
+    WARNINGS_NOT_ACKNOWLEDGED:
+        'Peringatan sesi ini berubah. Centang lagi setiap peringatan, lalu terbitkan.',
+};
+
 export function StudioError({
     error,
     inline = [],
@@ -20,9 +30,8 @@ export function StudioError({
     if (error.status === 409)
         return (
             <Alert tone="attention" role="alert">
-                {error.body.name === 'SESSION_PUBLISHED'
-                    ? 'Sesi ini sudah ditugaskan, jadi isinya tidak bisa diubah lagi.'
-                    : 'AI sedang menyusun sesi ini. Tunggu sampai selesai, lalu coba lagi.'}
+                {conflicts[error.body.name] ??
+                    'AI sedang menyusun sesi ini. Tunggu sampai selesai, lalu coba lagi.'}
             </Alert>
         );
     if (
@@ -32,7 +41,7 @@ export function StudioError({
     )
         return (
             <p role="alert" className="text-destructive">
-                Teks belum tersimpan. Perbaiki isian yang ditandai.
+                Belum tersimpan. Perbaiki isian yang ditandai, lalu coba lagi.
             </p>
         );
     return <RequestError error={error} />;

@@ -1,151 +1,17 @@
 import assert from 'node:assert/strict';
 import { test } from 'node:test';
 import { eq } from 'drizzle-orm';
-import type { FastifyInstance } from 'fastify';
 import { learningSessions } from '../src/db/schema.ts';
 import { completion, stubProvider } from './ai-stub.ts';
-import { createUser, loginAs, TEST_ORIGIN, testApp } from './helpers.ts';
-import { get, post, teacherWithModule } from './studio-fixtures.ts';
-
-const choices = [
-    { id: 'a', label: 'Roti A' },
-    { id: 'b', label: 'Roti B' },
-];
-
-function checkFor(code: string, page: number) {
-    return {
-        kind: 'check',
-        content: {
-            prompt: 'Roti mana yang dibagi empat sama besar?',
-            options: choices,
-            answer: 'a',
-            praise: 'Tepat sekali!',
-            hints: [
-                { text: 'Lihat besar setiap potongan.' },
-                { text: 'Bandingkan potongan satu dengan yang lain.' },
-                { text: 'Potongan perempat semuanya sama besar.' },
-            ],
-            example: {
-                text: 'Kue yang dipotong empat sama besar juga perempat.',
-            },
-            reveal: 'Roti A, karena keempat potongannya sama besar.',
-        },
-        competencies: [code],
-        pages: [page],
-    };
-}
-
-const draft = {
-    title: 'Kancil berbagi roti',
-    summary: 'Belajar membagi roti menjadi empat bagian yang sama besar.',
-    blocks: [
-        {
-            kind: 'hook',
-            content: {
-                prompt: 'Pernahkah kamu berbagi kue dengan teman?',
-                options: [
-                    { id: 'a', label: 'Pernah' },
-                    { id: 'b', label: 'Belum' },
-                ],
-            },
-            competencies: [],
-            pages: [1],
-        },
-        {
-            kind: 'story',
-            content: {
-                text: 'Kancil punya satu roti. Ia ingin berbagi dengan tiga temannya.',
-            },
-            competencies: ['C1'],
-            pages: [1],
-        },
-        checkFor('C1', 1),
-        {
-            kind: 'story',
-            content: {
-                text: 'Satu dari empat bagian sama besar disebut satu perempat.',
-            },
-            competencies: ['C2'],
-            pages: [3],
-        },
-        checkFor('C2', 3),
-        {
-            kind: 'challenge',
-            content: {
-                prompt: 'Ibu memotong semangka menjadi empat bagian sama besar.',
-                question: 'Berapa bagian semangka yang didapat Adi?',
-                options: [
-                    { id: 'a', label: '1/4' },
-                    { id: 'b', label: '1/2' },
-                ],
-                answer: 'a',
-                reasonStarter: 'Menurutku jawabannya',
-            },
-            competencies: ['C2'],
-            pages: [4],
-        },
-        {
-            kind: 'reflection',
-            content: {
-                topics: ['Pecahan', 'Perempat'],
-                takeaways: [
-                    'Perempat berarti satu dari empat bagian sama besar.',
-                ],
-            },
-            competencies: [],
-            pages: [],
-        },
-    ],
-};
-
-type Session = {
-    id: number;
-    title: string;
-    status: string;
-    version: number;
-    drafting: string | null;
-    draftError: string | null;
-    blocks: {
-        id: number;
-        kind: string;
-        content: Record<string, unknown>;
-        competencies: string[];
-        sourcePages: number[];
-    }[];
-};
-
-async function settled(
-    app: FastifyInstance,
-    token: string,
-    id: number,
-): Promise<Session> {
-    for (let tries = 0; tries < 200; tries++) {
-        const session = (
-            await get(app, token, `/api/studio/sessions/${id}`)
-        ).json();
-
-        if (session.drafting !== 'generating') return session;
-
-        await new Promise((done) => setTimeout(done, 25));
-    }
-
-    throw new Error(`Session ${id} is still drafting`);
-}
-
-function put(
-    app: FastifyInstance,
-    token: string,
-    url: string,
-    payload: object,
-) {
-    return app.inject({
-        method: 'PUT',
-        url,
-        headers: { origin: TEST_ORIGIN },
-        cookies: { session: token },
-        payload,
-    });
-}
+import { createUser, loginAs, testApp } from './helpers.ts';
+import {
+    draft,
+    get,
+    post,
+    put,
+    settled,
+    teacherWithModule,
+} from './studio-fixtures.ts';
 
 test('a teacher drafts a session from a module; it is stored with the brain game first, its competencies, and its page sources (FR-010)', async (t) => {
     const provider = await stubProvider(t, [

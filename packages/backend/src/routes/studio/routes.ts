@@ -2,6 +2,8 @@ import type { FastifyPluginAsyncZod } from 'fastify-type-provider-zod';
 import { requireRole } from '../../auth/guards.ts';
 import { trackDrafts } from '../../studio/drafting.ts';
 import {
+    approveSession,
+    assignSession,
     createSession,
     editBlock,
     getSession,
@@ -9,8 +11,11 @@ import {
 } from './handlers.ts';
 import {
     accepted,
+    approvalBody,
+    assignmentBody,
     blockBody,
     blockParams,
+    classList,
     editedBlock,
     moduleParams,
     revisionBody,
@@ -53,5 +58,27 @@ export const studioRoutes: FastifyPluginAsyncZod = async (fastify) => {
             },
         },
         reviseSession,
+    );
+    fastify.post(
+        '/studio/sessions/:sessionId/approval',
+        {
+            schema: {
+                params: sessionParams,
+                body: approvalBody,
+                response: { 200: studioSession },
+            },
+        },
+        approveSession,
+    );
+    fastify.post(
+        '/studio/sessions/:sessionId/assignments',
+        {
+            schema: {
+                params: sessionParams,
+                body: assignmentBody,
+                response: { 200: classList },
+            },
+        },
+        assignSession,
     );
 };

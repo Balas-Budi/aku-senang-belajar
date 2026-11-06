@@ -1,21 +1,26 @@
 import { useQuery } from '@tanstack/react-query';
-import { useRef, useState } from 'react';
+import { useEffect, useRef, useState } from 'react';
 import { Link } from 'react-router';
 import { BlockEditor } from './block-editor';
 import { BlockView } from './block-view';
 import {
     studioSessionQuery,
+    useApproveSession,
+    useAssignSession,
     useReviseSession,
+    type Issue,
     type StudioBlock,
     type StudioSession,
+    type Warning,
 } from './queries';
 import { StudioError } from './studio-error';
-import { TextAreaField } from '../../components/form-field';
+import { TextAreaField, fieldErrorText } from '../../components/form-field';
 import { RequestError } from '../../components/request-error';
 import { Alert } from '../../components/ui/alert';
 import { Button } from '../../components/ui/button';
 import { Card } from '../../components/ui/card';
 import { textLink } from '../../components/ui/text-link';
+import { classesQuery } from '../classes/queries';
 import type { Step } from '../learning-sessions/queries';
 import { stepLabels, stepOrder } from '../learning-sessions/steps';
 
@@ -54,10 +59,33 @@ function stateOf(session: StudioSession) {
 }
 
 function announcementOf(session: StudioSession) {
+    if (session.prepared) return '';
+    if (session.status === 'ready')
+        return 'Sesi sudah terbit dan siap ditugaskan.';
     if (session.drafting === 'generating') return 'AI sedang menyusun sesi.';
     if (session.drafting === 'failed') return 'Penyusunan sesi belum berhasil.';
-    if (session.prepared || session.version === 0) return '';
+    if (session.version === 0) return '';
     return `Draf versi ${session.version} siap ditinjau.`;
+}
+
+function joined(items: (string | number)[]) {
+    if (items.length < 2) return items.join('');
+    return `${items.slice(0, -1).join(', ')} dan ${items.at(-1)}`;
+}
+
+function issueText({ code, competencies = [], blocks = [] }: Issue) {
+    if (code === 'no_draft') return 'Sesi ini belum punya draf.';
+    if (code === 'missing_rubric')
+        return `Kompetensi ${joined(competencies)} belum punya rubrik.`;
+    if (code === 'untested_competency')
+        return `Kompetensi ${joined(competencies)} belum diuji oleh soal cek atau tantangan.`;
+    return `Layar ${joined(blocks)} belum memenuhi aturan layar siswa.`;
+}
+
+function warningText({ code, blocks = [], pages = [] }: Warning) {
+    if (code === 'no_page_source')
+        return `Layar ${joined(blocks)} tidak punya halaman sumber, jadi isinya belum tentu berasal dari materi Anda.`;
+    return `Halaman ${joined(pages)} tidak terbaca, jadi isinya tidak dipakai dalam sesi ini.`;
 }
 
 function metaOf(block: StudioBlock) {
@@ -220,8 +248,222 @@ function RevisionForm({ session }: { session: StudioSession }) {
     );
 }
 
+const choiceCard =
+    'border-border has-[:checked]:border-primary has-[:checked]:bg-secondary flex min-h-11 cursor-pointer items-start gap-3 rounded-lg border p-3';
+const choiceBox =
+    'accent-primary focus-visible:outline-ring mt-0.5 size-5 shrink-0 focus-visible:outline-3 focus-visible:outline-offset-2';
+
+function PublishCard({
+    session,
+    onPublished,
+}: {
+    session: StudioSession;
+    onPublished: () => void;
+}) {
+    const approve = useApproveSession(session.id);
+    const blocked = session.issues.length > 0;
+    return (
+        <Card>
+            <section aria-labelledby="publish-title" className="space-y-4">
+                <div>
+                    <h2 id="publish-title" className="text-lg font-semibold">
+                        Terbitkan
+                    </h2>
+                    <p className="text-muted-foreground mt-1">
+                        Sesi yang sudah terbit tidak bisa diubah lagi dan siap
+                        ditugaskan ke kelas.
+                    </p>
+                </div>
+                {blocked && (
+                    <Alert tone="attention">
+                        <p className="font-semibold">Belum bisa diterbitkan</p>
+                        <ul className="mt-1 list-disc space-y-1 pl-5">
+                            {session.issues.map((issue) => (
+                                <li key={issue.code}>{issueText(issue)}</li>
+                            ))}
+                        </ul>
+                    </Alert>
+                )}
+                <form
+                    className="space-y-4"
+                    onSubmit={(event) => {
+                        event.preventDefault();
+                        const acknowledged = new FormData(event.currentTarget)
+                            .getAll('acknowledged')
+                            .map(String);
+                        approve.mutate(acknowledged, {
+                            onSuccess: onPublished,
+                        });
+                    }}
+                >
+                    {session.warnings.length > 0 && (
+                        <fieldset className="space-y-2">
+                            <legend className="mb-2 font-medium">
+                                Centang setelah Anda memeriksanya
+                            </legend>
+                            {session.warnings.map((warning) => (
+                                <label
+                                    key={warning.code}
+                                    className={choiceCard}
+                                >
+                                    <input
+                                        type="checkbox"
+                                        name="acknowledged"
+                                        value={warning.code}
+                                        required
+                                        className={choiceBox}
+                                    />
+                                    <span>{warningText(warning)}</span>
+                                </label>
+                            ))}
+                        </fieldset>
+                    )}
+                    <StudioError error={approve.error} />
+                    <Button
+                        type="submit"
+                        disabled={blocked || approve.isPending}
+                    >
+                        {approve.isPending ? 'Menerbitkan…' : 'Terbitkan sesi'}
+                    </Button>
+                </form>
+            </section>
+        </Card>
+    );
+}
+
+function AssignCard({
+    session,
+    takeFocus,
+}: {
+    session: StudioSession;
+    takeFocus: boolean;
+}) {
+    const classes = useQuery(classesQuery());
+    const assign = useAssignSession(session.id);
+    const heading = useRef<HTMLHeadingElement>(null);
+    const [message, setMessage] = useState('');
+    useEffect(() => {
+        if (takeFocus) heading.current?.focus();
+    }, [takeFocus]);
+    const assigned = new Set(session.assignedClasses.map(({ id }) => id));
+    const open = (classes.data ?? []).filter(({ id }) => !assigned.has(id));
+    const classError = fieldErrorText(assign.error, 'classIds');
+    return (
+        <Card>
+            <section aria-labelledby="assign-title" className="space-y-4">
+                <div>
+                    <h2
+                        id="assign-title"
+                        ref={heading}
+                        tabIndex={-1}
+                        className="focus-visible:outline-ring rounded text-lg font-semibold focus-visible:outline-3 focus-visible:outline-offset-4"
+                    >
+                        Tugaskan ke kelas
+                    </h2>
+                    <p className="text-muted-foreground mt-1">
+                        Siswa di kelas yang dipilih langsung bisa memulai misi
+                        ini dari beranda mereka.
+                    </p>
+                </div>
+                {session.assignedClasses.length > 0 && (
+                    <p>
+                        Sudah ditugaskan ke{' '}
+                        {joined(
+                            session.assignedClasses.map(({ name }) => name),
+                        )}
+                        .
+                    </p>
+                )}
+                {classes.isPending ? (
+                    <p role="status">Memuat kelas…</p>
+                ) : classes.isError ? (
+                    <RequestError error={classes.error} />
+                ) : classes.data.length === 0 ? (
+                    <p>
+                        Anda belum punya kelas.{' '}
+                        <Link to="/teacher/classes" className={textLink}>
+                            Buat kelas dulu
+                        </Link>
+                        , lalu kembali ke sini.
+                    </p>
+                ) : open.length === 0 ? (
+                    <p className="text-muted-foreground">
+                        Semua kelas Anda sudah mendapat misi ini.
+                    </p>
+                ) : (
+                    <form
+                        className="space-y-4"
+                        onSubmit={(event) => {
+                            event.preventDefault();
+                            const classIds = new FormData(event.currentTarget)
+                                .getAll('classIds')
+                                .map(Number);
+                            const names = open
+                                .filter(({ id }) => classIds.includes(id))
+                                .map(({ name }) => name);
+                            setMessage('');
+                            assign.mutate(classIds, {
+                                onSuccess: () =>
+                                    setMessage(
+                                        `Misi ditugaskan ke ${joined(names)}.`,
+                                    ),
+                            });
+                        }}
+                    >
+                        <fieldset
+                            className="space-y-2"
+                            aria-describedby={
+                                classError ? 'classIds-error' : undefined
+                            }
+                        >
+                            <legend className="mb-2 font-medium">Kelas</legend>
+                            {open.map((classroom) => (
+                                <label
+                                    key={classroom.id}
+                                    className={choiceCard}
+                                >
+                                    <input
+                                        type="checkbox"
+                                        name="classIds"
+                                        value={classroom.id}
+                                        className={choiceBox}
+                                    />
+                                    <span>
+                                        {classroom.name}{' '}
+                                        <span className="text-muted-foreground text-sm tabular-nums">
+                                            · {classroom.studentCount} siswa
+                                        </span>
+                                    </span>
+                                </label>
+                            ))}
+                        </fieldset>
+                        {classError ? (
+                            <p
+                                id="classIds-error"
+                                role="alert"
+                                className="text-destructive"
+                            >
+                                {classError}
+                            </p>
+                        ) : (
+                            <StudioError error={assign.error} />
+                        )}
+                        <Button type="submit" disabled={assign.isPending}>
+                            {assign.isPending ? 'Menugaskan…' : 'Tugaskan'}
+                        </Button>
+                    </form>
+                )}
+                <p role="status" className="sr-only">
+                    {message}
+                </p>
+            </section>
+        </Card>
+    );
+}
+
 export function StudioView({ id }: { id: number }) {
     const query = useQuery(studioSessionQuery(id));
+    const [published, setPublished] = useState(false);
     if (query.isPending) return <p role="status">Memuat sesi…</p>;
     if (query.isError)
         return (
@@ -270,6 +512,9 @@ export function StudioView({ id }: { id: number }) {
                         Sesi ini disiapkan tim Aku Senang Belajar dan hanya bisa
                         dibaca.
                     </Alert>
+                )}
+                {session.status === 'ready' && (
+                    <AssignCard session={session} takeFocus={published} />
                 )}
                 {session.competencies.length > 0 && (
                     <Card>
@@ -329,6 +574,12 @@ export function StudioView({ id }: { id: number }) {
                 })}
                 {draft && session.blocks.length > 0 && (
                     <RevisionForm session={session} />
+                )}
+                {editable && session.blocks.length > 0 && (
+                    <PublishCard
+                        session={session}
+                        onPublished={() => setPublished(true)}
+                    />
                 )}
             </div>
         </>

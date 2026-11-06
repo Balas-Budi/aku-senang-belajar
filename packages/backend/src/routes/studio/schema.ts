@@ -4,6 +4,7 @@ import {
     learningSessionStatus,
     sessionDrafting,
 } from '../../db/schema.ts';
+import { warningCodes } from '../../studio/review.ts';
 
 export const moduleParams = z.object({
     moduleId: z.coerce.number().int().positive(),
@@ -35,9 +36,28 @@ export const blockBody = z.object({ content });
 
 export type BlockBody = z.infer<typeof blockBody>;
 
+export const approvalBody = z.object({
+    acknowledged: z.array(z.enum(warningCodes)).max(warningCodes.length),
+});
+
+export type ApprovalBody = z.infer<typeof approvalBody>;
+
+export const assignmentBody = z.object({
+    classIds: z
+        .array(z.int().positive())
+        .min(1, 'Choose at least one class')
+        .max(50),
+});
+
+export type AssignmentBody = z.infer<typeof assignmentBody>;
+
 export const accepted = z.object({ id: z.number() });
 
 export const editedBlock = z.object({ id: z.number(), content });
+
+export const classList = z.array(
+    z.object({ id: z.number(), name: z.string() }),
+);
 
 export const studioSession = z.object({
     id: z.number(),
@@ -68,4 +88,19 @@ export const studioSession = z.object({
             sourcePages: z.array(z.number()),
         }),
     ),
+    issues: z.array(
+        z.object({
+            code: z.string(),
+            competencies: z.array(z.string()).optional(),
+            blocks: z.array(z.number()).optional(),
+        }),
+    ),
+    warnings: z.array(
+        z.object({
+            code: z.enum(warningCodes),
+            blocks: z.array(z.number()).optional(),
+            pages: z.array(z.number()).optional(),
+        }),
+    ),
+    assignedClasses: classList,
 });

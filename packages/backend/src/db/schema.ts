@@ -194,6 +194,11 @@ export const learningSessions = pgTable(
         version: integer().notNull().default(1),
         drafting: sessionDrafting(),
         draftError: text(),
+        approvedBy: integer().references(() => users.id, {
+            onDelete: 'set null',
+        }),
+        approvedAt: timestamp({ withTimezone: true }),
+        acknowledgedWarnings: jsonb(),
     },
     (table) => [
         index('learning_sessions_module_id_idx').on(table.moduleId),

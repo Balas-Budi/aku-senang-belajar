@@ -51,6 +51,19 @@ export type StudioBlock = {
       }
 );
 
+export type Issue = {
+    code:
+        'no_draft' | 'missing_rubric' | 'untested_competency' | 'invalid_block';
+    competencies?: string[];
+    blocks?: number[];
+};
+export type Warning = {
+    code: 'no_page_source' | 'unreadable_pages';
+    blocks?: number[];
+    pages?: number[];
+};
+export type ClassRef = { id: number; name: string };
+
 export type StudioSession = {
     id: number;
     title: string;
@@ -69,6 +82,9 @@ export type StudioSession = {
     material: { id: number; title: string };
     competencies: { code: string; description: string }[];
     blocks: StudioBlock[];
+    issues: Issue[];
+    warnings: Warning[];
+    assignedClasses: ClassRef[];
 };
 
 const headersOf = (cookie?: string | null) => (cookie ? { cookie } : undefined);
@@ -118,6 +134,44 @@ export function useReviseSession(id: number) {
             }),
         onSuccess: sync.refresh,
         onError: sync.refreshIfStale,
+    });
+}
+
+export function useApproveSession(id: number) {
+    const client = useQueryClient();
+    const sync = useStudioSync(id);
+    return useMutation({
+        mutationFn: (acknowledged: string[]) =>
+            api<StudioSession>(`/api/studio/sessions/${id}/approval`, {
+                method: 'POST',
+                body: JSON.stringify({ acknowledged }),
+            }),
+        onSuccess: (session) => {
+            client.setQueryData(studioSessionQuery(id).queryKey, session);
+            return client.invalidateQueries({ queryKey: ['materials'] });
+        },
+        onError: sync.refreshIfStale,
+    });
+}
+
+export function useAssignSession(id: number) {
+    const client = useQueryClient();
+    return useMutation({
+        mutationFn: (classIds: number[]) =>
+            api<ClassRef[]>(`/api/studio/sessions/${id}/assignments`, {
+                method: 'POST',
+                body: JSON.stringify({ classIds }),
+            }),
+        onSuccess: (assignedClasses) => {
+            client.setQueryData(
+                studioSessionQuery(id).queryKey,
+                (session) => session && { ...session, assignedClasses },
+            );
+            return Promise.all([
+                client.invalidateQueries({ queryKey: ['classes'] }),
+                client.invalidateQueries({ queryKey: ['teacher', 'overview'] }),
+            ]);
+        },
     });
 }
 

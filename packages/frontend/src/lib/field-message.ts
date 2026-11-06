@@ -23,6 +23,7 @@ export function fieldLabel(field: string) {
         developing: 'Berkembang',
         notEnough: 'Belum cukup bukti',
         note: 'Yang perlu diubah',
+        classIds: 'Kelas',
     };
     const parts = field.split('/');
     const label = labels[parts.at(-1) ?? ''] ?? 'Isian';
@@ -39,6 +40,8 @@ export function fieldMessage(message: string) {
         return 'Pilih jawaban benar dari pilihan yang ada.';
     if (/Keep the same options/u.test(message))
         return 'Pilihan jawaban tidak bisa ditambah atau dihapus.';
+    if (/at least one class/u.test(message))
+        return 'Pilih setidaknya satu kelas.';
     const tooLong = /expected string to have <=(\d+)/u.exec(message);
     if (tooLong) return `Paling banyak ${tooLong[1]} karakter.`;
     const pageCount = /The material has (\d+) pages/u.exec(message);

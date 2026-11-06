@@ -1,9 +1,11 @@
-import { and, asc, eq, isNull, or } from 'drizzle-orm';
+import { and, asc, eq, inArray, isNull, or } from 'drizzle-orm';
 import type { FastifyReply, FastifyRequest } from 'fastify';
 import { aiConfig } from '../../ai/chat.ts';
 import { currentUser } from '../../auth/guards.ts';
 import type { Queryable } from '../../db/index.ts';
 import {
+    assignments,
+    classes,
     competencies,
     learningSessions,
     materials,
@@ -14,7 +16,10 @@ import { sessionBlock, type SessionBlock } from '../../learning/blocks.ts';
 import { AppError, notFound } from '../../lib/errors.ts';
 import { fieldError, validationError } from '../../lib/field-error.ts';
 import { blocksWithCodes, startDraft } from '../../studio/drafting.ts';
+import { reviewSession } from '../../studio/review.ts';
 import type {
+    ApprovalBody,
+    AssignmentBody,
     BlockBody,
     BlockParams,
     ModuleParams,
@@ -43,10 +48,17 @@ const alreadyPublished = () =>
 const optionIds = ({ content }: SessionBlock) =>
     'options' in content ? content.options.map(({ id }) => id).join(',') : '';
 
+const visibleTo = (userId: number) =>
+    or(
+        eq(learningSessions.createdBy, userId),
+        isNull(learningSessions.createdBy),
+    );
+
 async function ownSession(db: Queryable, sessionId: number, userId: number) {
     const [session] = await db
         .select({
             id: learningSessions.id,
+            moduleId: learningSessions.moduleId,
             status: learningSessions.status,
             drafting: learningSessions.drafting,
         })
@@ -101,10 +113,21 @@ export async function createSession(
     return reply.code(202).send({ id: session.id });
 }
 
-export async function getSession(
-    request: FastifyRequest<{ Params: SessionParams }>,
-) {
-    const { db } = request.server;
+function assignedClasses(db: Queryable, sessionId: number, teacherId: number) {
+    return db
+        .select({ id: classes.id, name: classes.name })
+        .from(assignments)
+        .innerJoin(classes, eq(classes.id, assignments.classId))
+        .where(
+            and(
+                eq(assignments.learningSessionId, sessionId),
+                eq(classes.teacherId, teacherId),
+            ),
+        )
+        .orderBy(asc(classes.name), asc(classes.id));
+}
+
+async function studioSession(db: Queryable, sessionId: number, userId: number) {
     const [session] = await db
         .select({
             id: learningSessions.id,
@@ -126,19 +149,15 @@ export async function getSession(
         .from(learningSessions)
         .innerJoin(modules, eq(modules.id, learningSessions.moduleId))
         .innerJoin(materials, eq(materials.id, modules.materialId))
-        .where(
-            and(
-                eq(learningSessions.id, request.params.sessionId),
-                or(
-                    eq(learningSessions.createdBy, currentUser(request).id),
-                    isNull(learningSessions.createdBy),
-                ),
-            ),
-        );
+        .where(and(eq(learningSessions.id, sessionId), visibleTo(userId)));
 
     if (!session) throw notFound('Session not found');
 
     const { createdBy, ...rest } = session;
+    const review =
+        createdBy !== null && session.status === 'draft'
+            ? await reviewSession(db, session.id, session.module.id)
+            : { issues: [], warnings: [] };
 
     return {
         ...rest,
@@ -152,7 +171,19 @@ export async function getSession(
             .where(eq(competencies.moduleId, session.module.id))
             .orderBy(asc(competencies.id)),
         blocks: await blocksWithCodes(db, session.id),
+        ...review,
+        assignedClasses: await assignedClasses(db, session.id, userId),
     };
+}
+
+export async function getSession(
+    request: FastifyRequest<{ Params: SessionParams }>,
+) {
+    return studioSession(
+        request.server.db,
+        request.params.sessionId,
+        currentUser(request).id,
+    );
 }
 
 export async function editBlock(
@@ -242,4 +273,110 @@ export async function reviseSession(
     startDraft(request.server, session.id, request.body.note || null);
 
     return reply.code(202).send({ id: session.id });
+}
+
+export async function approveSession(
+    request: FastifyRequest<{ Params: SessionParams; Body: ApprovalBody }>,
+) {
+    const { db } = request.server;
+    const user = currentUser(request);
+    const session = await ownSession(db, request.params.sessionId, user.id);
+
+    if (session.drafting === 'generating') throw stillDrafting();
+    if (session.status === 'ready') throw alreadyPublished();
+
+    const { issues, warnings } = await reviewSession(
+        db,
+        session.id,
+        session.moduleId,
+    );
+
+    if (issues.length > 0) {
+        throw new AppError(409, {
+            message: 'The session has issues that block publishing',
+            code: 'PUBLISH_BLOCKED',
+        });
+    }
+
+    const acknowledged = new Set(request.body.acknowledged);
+
+    if (warnings.some(({ code }) => !acknowledged.has(code))) {
+        throw new AppError(409, {
+            message: 'Acknowledge every warning before publishing',
+            code: 'WARNINGS_NOT_ACKNOWLEDGED',
+        });
+    }
+
+    const [approved] = await db
+        .update(learningSessions)
+        .set({
+            status: 'ready',
+            drafting: null,
+            draftError: null,
+            approvedBy: user.id,
+            approvedAt: new Date(),
+            acknowledgedWarnings: warnings,
+        })
+        .where(
+            and(
+                eq(learningSessions.id, session.id),
+                eq(learningSessions.status, 'draft'),
+                or(
+                    isNull(learningSessions.drafting),
+                    eq(learningSessions.drafting, 'failed'),
+                ),
+            ),
+        )
+        .returning({ id: learningSessions.id });
+
+    if (!approved) throw stillDrafting();
+
+    return studioSession(db, session.id, user.id);
+}
+
+export async function assignSession(
+    request: FastifyRequest<{ Params: SessionParams; Body: AssignmentBody }>,
+) {
+    const { db } = request.server;
+    const user = currentUser(request);
+    const [session] = await db
+        .select({ id: learningSessions.id, status: learningSessions.status })
+        .from(learningSessions)
+        .where(
+            and(
+                eq(learningSessions.id, request.params.sessionId),
+                visibleTo(user.id),
+            ),
+        );
+
+    if (!session) throw notFound('Session not found');
+
+    if (session.status !== 'ready') {
+        throw new AppError(409, {
+            message: 'Publish the session before assigning it',
+            code: 'SESSION_NOT_READY',
+        });
+    }
+
+    const classIds = [...new Set(request.body.classIds)];
+    const owned = await db
+        .select({ id: classes.id })
+        .from(classes)
+        .where(
+            and(inArray(classes.id, classIds), eq(classes.teacherId, user.id)),
+        );
+
+    if (owned.length !== classIds.length) throw notFound('Class not found');
+
+    await db
+        .insert(assignments)
+        .values(
+            classIds.map((classId) => ({
+                learningSessionId: session.id,
+                classId,
+            })),
+        )
+        .onConflictDoNothing();
+
+    return assignedClasses(db, session.id, user.id);
 }

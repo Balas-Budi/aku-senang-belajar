@@ -64,6 +64,13 @@
             "when": 1793930458320,
             "tag": "0008_uneven_leper_queen",
             "breakpoints": true
+        },
+        {
+            "idx": 9,
+            "version": "7",
+            "when": 1793934273435,
+            "tag": "0009_fuzzy_garia",
+            "breakpoints": true
         }
     ]
 }
