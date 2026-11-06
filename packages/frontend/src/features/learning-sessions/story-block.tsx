@@ -57,10 +57,12 @@ export function StoryBlock({
             >
                 Cerita {number} dari {total}
             </ScreenHeading>
-            <Illustration
-                name={content.illustration}
-                className="mx-auto max-w-sm"
-            />
+            {content.illustration && (
+                <Illustration
+                    name={content.illustration}
+                    className="mx-auto max-w-sm"
+                />
+            )}
             <p className="font-display text-primary-deep text-[1.35em] leading-snug font-medium text-pretty">
                 {content.text}
             </p>

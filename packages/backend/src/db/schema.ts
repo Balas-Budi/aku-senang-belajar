@@ -22,6 +22,10 @@ export const learningSessionStatus = pgEnum('learning_session_status', [
     'draft',
     'ready',
 ]);
+export const sessionDrafting = pgEnum('session_drafting', [
+    'generating',
+    'failed',
+]);
 export const blockKind = pgEnum('block_kind', [
     'brain_game',
     'hook',
@@ -184,8 +188,17 @@ export const learningSessions = pgTable(
         title: text().notNull(),
         summary: text().notNull(),
         status: learningSessionStatus().notNull().default('draft'),
+        createdBy: integer().references(() => users.id, {
+            onDelete: 'cascade',
+        }),
+        version: integer().notNull().default(1),
+        drafting: sessionDrafting(),
+        draftError: text(),
     },
-    (table) => [index('learning_sessions_module_id_idx').on(table.moduleId)],
+    (table) => [
+        index('learning_sessions_module_id_idx').on(table.moduleId),
+        index('learning_sessions_created_by_idx').on(table.createdBy),
+    ],
 );
 
 export const sessionBlocks = pgTable(
@@ -198,6 +211,10 @@ export const sessionBlocks = pgTable(
         position: integer().notNull(),
         kind: blockKind().notNull(),
         content: jsonb().notNull(),
+        sourcePages: integer()
+            .array()
+            .notNull()
+            .default(sql`'{}'::integer[]`),
     },
     (table) => [
         unique('session_blocks_learning_session_id_position_unique').on(

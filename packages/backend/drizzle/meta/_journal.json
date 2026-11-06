@@ -57,6 +57,13 @@
             "when": 1793928894254,
             "tag": "0007_stale_meltdown",
             "breakpoints": true
+        },
+        {
+            "idx": 8,
+            "version": "7",
+            "when": 1793930458320,
+            "tag": "0008_uneven_leper_queen",
+            "breakpoints": true
         }
     ]
 }

@@ -1,5 +1,9 @@
 import { z } from 'zod';
-import { learningSessionStatus, subject } from '../../db/schema.ts';
+import {
+    learningSessionStatus,
+    sessionDrafting,
+    subject,
+} from '../../db/schema.ts';
 import {
     competencyDraft,
     competencyProposal,
@@ -82,6 +86,7 @@ export const materialDetail = materialSummary.extend({
                     id: z.number(),
                     title: z.string(),
                     status: z.enum(learningSessionStatus.enumValues),
+                    drafting: z.enum(sessionDrafting.enumValues).nullable(),
                 }),
             ),
         }),

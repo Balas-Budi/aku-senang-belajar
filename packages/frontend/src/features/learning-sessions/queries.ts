@@ -40,7 +40,7 @@ export type Block = { id: number; position: number; step: Step } & (
           kind: 'story';
           content: {
               text: string;
-              illustration: IllustrationName;
+              illustration?: IllustrationName;
               fraction?: Fraction;
           };
       }

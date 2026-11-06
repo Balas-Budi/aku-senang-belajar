@@ -1,5 +1,6 @@
 import { useQuery } from '@tanstack/react-query';
 import { useState } from 'react';
+import { Link, useNavigate } from 'react-router';
 import { materialMeta } from './library';
 import { ModuleForm } from './module-form';
 import { materialQuery, pageTextQuery, type MaterialDetail } from './queries';
@@ -7,6 +8,92 @@ import { RequestError } from '../../components/request-error';
 import { Alert } from '../../components/ui/alert';
 import { Button } from '../../components/ui/button';
 import { Card } from '../../components/ui/card';
+import { textLink } from '../../components/ui/text-link';
+import { useCreateSession } from '../studio/queries';
+import { StudioError } from '../studio/studio-error';
+
+type Module = MaterialDetail['modules'][number];
+
+function sessionState(session: Module['sessions'][number]) {
+    if (session.drafting === 'generating') return 'Sedang disusun AI';
+    if (session.drafting === 'failed') return 'Penyusunan terakhir gagal';
+    return session.status === 'ready' ? 'Siap ditugaskan' : 'Draf';
+}
+
+function ModuleItem({ module, own }: { module: Module; own: boolean }) {
+    const create = useCreateSession(module.id);
+    const navigate = useNavigate();
+    return (
+        <li className="space-y-2 py-3">
+            <div>
+                <p className="font-semibold">{module.title}</p>
+                {module.firstPage !== null && (
+                    <p className="text-muted-foreground text-sm tabular-nums">
+                        Halaman {module.firstPage} sampai {module.lastPage}
+                    </p>
+                )}
+            </div>
+            {module.competencies.length > 0 && (
+                <ul className="space-y-1 text-sm">
+                    {module.competencies.map((competency) => (
+                        <li key={competency.id}>
+                            <span className="font-semibold">
+                                {competency.code}
+                            </span>{' '}
+                            {competency.description}
+                            {competency.pages.length > 0 && (
+                                <span className="text-muted-foreground tabular-nums">
+                                    {' '}
+                                    · Hal. {competency.pages.join(', ')}
+                                </span>
+                            )}
+                        </li>
+                    ))}
+                </ul>
+            )}
+            {module.sessions.length > 0 && (
+                <ul>
+                    {module.sessions.map((session) => (
+                        <li key={session.id}>
+                            <Link
+                                to={`/teacher/studio/${session.id}`}
+                                className={textLink}
+                            >
+                                {session.title}
+                            </Link>{' '}
+                            <span className="text-muted-foreground text-sm">
+                                · {sessionState(session)}
+                            </span>
+                        </li>
+                    ))}
+                </ul>
+            )}
+            {own && (
+                <div className="space-y-3 pt-1">
+                    <Button
+                        variant={
+                            module.sessions.length > 0 ? 'outline' : 'primary'
+                        }
+                        disabled={create.isPending}
+                        onClick={() =>
+                            create.mutate(undefined, {
+                                onSuccess: ({ id }) =>
+                                    void navigate(`/teacher/studio/${id}`),
+                            })
+                        }
+                    >
+                        {create.isPending
+                            ? 'Menyiapkan sesi…'
+                            : module.sessions.length > 0
+                              ? 'Susun sesi baru'
+                              : 'Susun sesi'}
+                    </Button>
+                    <StudioError error={create.error} />
+                </div>
+            )}
+        </li>
+    );
+}
 
 function listOf(numbers: number[]) {
     if (numbers.length === 1) return String(numbers[0]);
@@ -124,54 +211,11 @@ export function MaterialDetailView({ id }: { id: number }) {
                         </h2>
                         <ul className="divide-paper-edge divide-y">
                             {material.modules.map((module) => (
-                                <li key={module.id} className="space-y-2 py-3">
-                                    <div>
-                                        <p className="font-semibold">
-                                            {module.title}
-                                        </p>
-                                        {module.firstPage !== null && (
-                                            <p className="text-muted-foreground text-sm tabular-nums">
-                                                Halaman {module.firstPage}{' '}
-                                                sampai {module.lastPage}
-                                            </p>
-                                        )}
-                                    </div>
-                                    {module.competencies.length > 0 && (
-                                        <ul className="space-y-1 text-sm">
-                                            {module.competencies.map(
-                                                (competency) => (
-                                                    <li key={competency.id}>
-                                                        <span className="font-semibold">
-                                                            {competency.code}
-                                                        </span>{' '}
-                                                        {competency.description}
-                                                        {competency.pages
-                                                            .length > 0 && (
-                                                            <span className="text-muted-foreground tabular-nums">
-                                                                {' '}
-                                                                · Hal.{' '}
-                                                                {competency.pages.join(
-                                                                    ', ',
-                                                                )}
-                                                            </span>
-                                                        )}
-                                                    </li>
-                                                ),
-                                            )}
-                                        </ul>
-                                    )}
-                                    {module.sessions.map((session) => (
-                                        <p key={session.id} className="text-sm">
-                                            {session.title}{' '}
-                                            <span className="text-muted-foreground">
-                                                ·{' '}
-                                                {session.status === 'ready'
-                                                    ? 'Siap ditugaskan'
-                                                    : 'Draf'}
-                                            </span>
-                                        </p>
-                                    ))}
-                                </li>
+                                <ModuleItem
+                                    key={module.id}
+                                    module={module}
+                                    own={!material.prepared}
+                                />
                             ))}
                         </ul>
                     </section>

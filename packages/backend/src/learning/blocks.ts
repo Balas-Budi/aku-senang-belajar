@@ -64,7 +64,7 @@ export const blockContent = {
     }),
     story: z.object({
         text: screenText,
-        illustration,
+        illustration: illustration.optional(),
         fraction: z
             .object({
                 numerator: z.int().positive(),

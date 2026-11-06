@@ -124,6 +124,7 @@ async function materialDetail(
                       moduleId: learningSessions.moduleId,
                       title: learningSessions.title,
                       status: learningSessions.status,
+                      drafting: learningSessions.drafting,
                   })
                   .from(learningSessions)
                   .where(inArray(learningSessions.moduleId, moduleIds))

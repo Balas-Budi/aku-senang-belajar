@@ -4,14 +4,12 @@ import {
     useSaveModule,
     type CompetencyDraft,
 } from './queries';
-import { FormField, fieldErrorText } from '../../components/form-field';
+import { FormField, TextAreaField } from '../../components/form-field';
 import { RequestError } from '../../components/request-error';
 import { Alert } from '../../components/ui/alert';
 import { Button } from '../../components/ui/button';
 import { Card } from '../../components/ui/card';
-import { inputVariants } from '../../components/ui/input';
 import { ApiError } from '../../lib/api';
-import { cn } from '../../lib/cn';
 
 type Draft = {
     description: string;
@@ -46,59 +44,6 @@ const toDraft = ({ description, pages, rubric }: CompetencyDraft): Draft => ({
     notEnough: rubric.notEnough.join('\n'),
 });
 
-function TextArea({
-    name,
-    label,
-    hint,
-    rows,
-    value,
-    error,
-    onChange,
-}: {
-    name: string;
-    label: string;
-    hint?: string;
-    rows: number;
-    value: string;
-    error: unknown;
-    onChange: (value: string) => void;
-}) {
-    const message = fieldErrorText(error, name);
-    const described = [hint && `${name}-hint`, message && `${name}-error`]
-        .filter(Boolean)
-        .join(' ');
-    return (
-        <div className="space-y-2">
-            <label htmlFor={name} className="block font-medium">
-                {label}
-            </label>
-            {hint && (
-                <p
-                    id={`${name}-hint`}
-                    className="text-muted-foreground text-sm"
-                >
-                    {hint}
-                </p>
-            )}
-            <textarea
-                id={name}
-                rows={rows}
-                required
-                value={value}
-                onChange={(event) => onChange(event.currentTarget.value)}
-                aria-invalid={message !== null}
-                aria-describedby={described || undefined}
-                className={cn(inputVariants(), 'min-h-20 py-2')}
-            />
-            {message && (
-                <p id={`${name}-error`} className="text-destructive">
-                    {message}
-                </p>
-            )}
-        </div>
-    );
-}
-
 function CompetencyCard({
     index,
     draft,
@@ -116,14 +61,17 @@ function CompetencyCard({
     return (
         <fieldset className="border-paper-edge space-y-4 rounded-lg border p-4">
             <legend className="px-1 font-semibold">C{index + 1}</legend>
-            <TextArea
+            <TextAreaField
                 name={`${field}/description`}
                 label="Deskripsi"
                 hint="Satu kalimat tujuan belajar yang diawali kata kerja."
                 rows={2}
+                required
                 value={draft.description}
                 error={error}
-                onChange={(description) => onChange({ description })}
+                onChange={(event) =>
+                    onChange({ description: event.currentTarget.value })
+                }
             />
             <FormField
                 name={`${field}/pages`}
@@ -139,29 +87,38 @@ function CompetencyCard({
             <p className="text-muted-foreground text-sm">
                 Rubrik: tulis satu indikator per baris.
             </p>
-            <TextArea
+            <TextAreaField
                 name={`${field}/rubric/visible`}
                 label="Terlihat"
                 rows={3}
+                required
                 value={draft.visible}
                 error={error}
-                onChange={(visible) => onChange({ visible })}
+                onChange={(event) =>
+                    onChange({ visible: event.currentTarget.value })
+                }
             />
-            <TextArea
+            <TextAreaField
                 name={`${field}/rubric/developing`}
                 label="Berkembang"
                 rows={3}
+                required
                 value={draft.developing}
                 error={error}
-                onChange={(developing) => onChange({ developing })}
+                onChange={(event) =>
+                    onChange({ developing: event.currentTarget.value })
+                }
             />
-            <TextArea
+            <TextAreaField
                 name={`${field}/rubric/notEnough`}
                 label="Belum cukup bukti"
                 rows={2}
+                required
                 value={draft.notEnough}
                 error={error}
-                onChange={(notEnough) => onChange({ notEnough })}
+                onChange={(event) =>
+                    onChange({ notEnough: event.currentTarget.value })
+                }
             />
             {onRemove && (
                 <Button variant="outline" onClick={onRemove}>

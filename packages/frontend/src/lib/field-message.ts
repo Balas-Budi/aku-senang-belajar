@@ -22,6 +22,7 @@ export function fieldLabel(field: string) {
         visible: 'Terlihat',
         developing: 'Berkembang',
         notEnough: 'Belum cukup bukti',
+        note: 'Yang perlu diubah',
     };
     const parts = field.split('/');
     const label = labels[parts.at(-1) ?? ''] ?? 'Isian';
@@ -32,6 +33,14 @@ export function fieldLabel(field: string) {
     return label;
 }
 export function fieldMessage(message: string) {
+    if (/at most two sentences/u.test(message))
+        return 'Satu layar siswa paling banyak dua kalimat. Pendekkan teksnya.';
+    if (/answer must be one of the options/u.test(message))
+        return 'Pilih jawaban benar dari pilihan yang ada.';
+    if (/Keep the same options/u.test(message))
+        return 'Pilihan jawaban tidak bisa ditambah atau dihapus.';
+    const tooLong = /expected string to have <=(\d+)/u.exec(message);
+    if (tooLong) return `Paling banyak ${tooLong[1]} karakter.`;
     const pageCount = /The material has (\d+) pages/u.exec(message);
     if (pageCount) return `Materi ini hanya ${pageCount[1]} halaman.`;
     if (/last page comes before/u.test(message))

@@ -1,6 +1,11 @@
 import { z } from 'zod';
-import type { subject } from '../db/schema.ts';
 import { competencyRubric } from '../learning/rubric.ts';
+import {
+    materialSection,
+    moduleHeader,
+    type MaterialPage,
+    type ModuleInfo,
+} from './material-text.ts';
 
 export const COMPETENCY_PROMPT_VERSION = 'competencies-2026-11-06';
 
@@ -20,15 +25,6 @@ export const competencyProposal = z.object({
     competencies: z.array(competencyDraft).min(2).max(4),
 });
 
-export type MaterialPage = { number: number; text: string };
-
-const subjectNames: Record<(typeof subject.enumValues)[number], string> = {
-    mathematics: 'Matematika',
-    natural_and_social_science: 'IPAS',
-    indonesian_language: 'Bahasa Indonesia',
-    pancasila_education: 'Pendidikan Pancasila',
-};
-
 export const COMPETENCY_SYSTEM_PROMPT = [
     "You draft learning competencies for one module of an Indonesian primary school (SD) course. You receive the module's title, subject, and grade, and the text of its pages between <material> and </material>, each page after a [Page N] marker.",
     '',
@@ -47,24 +43,8 @@ export const COMPETENCY_SYSTEM_PROMPT = [
     '{"competencies": [{"code": "C1", "description": "...", "pages": [12], "rubric": {"visible": ["..."], "developing": ["..."], "notEnough": ["..."]}}]}',
 ].join('\n');
 
-const asData = (text: string) => text.replace(/<\/?material>/gi, '(material)');
-
-export function competencyMessage(
-    module: {
-        title: string;
-        subject: (typeof subject.enumValues)[number];
-        grade: number | null;
-    },
-    pages: MaterialPage[],
-) {
-    return [
-        `Module: ${module.title}`,
-        `Subject: ${subjectNames[module.subject]}`,
-        `Grade: ${module.grade ?? 'not given'}`,
-        '<material>',
-        ...pages.map((page) => `[Page ${page.number}]\n${asData(page.text)}`),
-        '</material>',
-    ].join('\n');
+export function competencyMessage(module: ModuleInfo, pages: MaterialPage[]) {
+    return [...moduleHeader(module), ...materialSection(pages)].join('\n');
 }
 
 export function checkProposal(readable: number[]) {

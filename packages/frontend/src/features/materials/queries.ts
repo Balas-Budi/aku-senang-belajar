@@ -32,7 +32,12 @@ export type SavedModule = {
 export type MaterialDetail = Material & {
     pages: { number: number; readable: boolean; snippet: string | null }[];
     modules: (SavedModule & {
-        sessions: { id: number; title: string; status: 'draft' | 'ready' }[];
+        sessions: {
+            id: number;
+            title: string;
+            status: 'draft' | 'ready';
+            drafting: 'generating' | 'failed' | null;
+        }[];
     })[];
 };
 

@@ -75,7 +75,8 @@ function useWorkspaceLinks(role: Role): WorkspaceLink[] {
             current:
                 location.pathname === '/teacher/materials'
                     ? 'page'
-                    : location.pathname.startsWith('/teacher/materials/')
+                    : location.pathname.startsWith('/teacher/materials/') ||
+                        location.pathname.startsWith('/teacher/studio/')
                       ? 'within'
                       : false,
         },

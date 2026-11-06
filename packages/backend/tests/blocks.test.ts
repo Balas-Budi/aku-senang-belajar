@@ -37,6 +37,16 @@ test('a check passes with its answer among the options and three hints', () => {
     assert.deepEqual(issuePaths(check), []);
 });
 
+test('a story screen may go without a picture, as an AI draft does', () => {
+    assert.deepEqual(
+        issuePaths({
+            kind: 'story',
+            content: { text: 'Kancil membagi roti menjadi empat bagian.' },
+        }),
+        [],
+    );
+});
+
 test('a check whose answer is not one of its options is refused', () => {
     assert.deepEqual(
         issuePaths({ ...check, content: { ...check.content, answer: 'c' } }),
