@@ -9,6 +9,8 @@ import {
     moveCheckpoint,
     myAssignments,
     myClass,
+    myProfile,
+    saveProfile,
     startAttempt,
     submitAttempt,
 } from './handlers.ts';
@@ -25,6 +27,8 @@ import {
     helpBody,
     helpResponse,
     joinClassBody,
+    profileBody,
+    profileResponse,
     responseBody,
 } from './schema.ts';
 
@@ -53,6 +57,16 @@ export const studentRoutes: FastifyPluginAsyncZod = async (fastify) => {
         joinClass,
     );
     fastify.delete('/class', leaveClass);
+    fastify.get(
+        '/profile',
+        { schema: { response: { 200: profileResponse } } },
+        myProfile,
+    );
+    fastify.put(
+        '/profile',
+        { schema: { body: profileBody, response: { 200: profileResponse } } },
+        saveProfile,
+    );
     fastify.get(
         '/assignments',
         { schema: { response: { 200: assignmentsResponse } } },
