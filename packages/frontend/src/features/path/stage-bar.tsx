@@ -1,7 +1,6 @@
 import { cn } from '../../lib/cn';
 import { finished, type Stage } from './queries';
 
-// One segment per stage, the same bar the session player uses for its steps.
 export function StageBar({
     stages,
     className,

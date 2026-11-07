@@ -1,7 +1,6 @@
 import { demoModule } from './demo-module.ts';
 import type { PreparedBook } from './seed-book.ts';
 
-// A sample shared book: three playable stages in chapter 1, and a second chapter without stages yet.
 export const mathsBook: PreparedBook = {
     subject: 'mathematics',
     material: 'Contoh buku Matematika',

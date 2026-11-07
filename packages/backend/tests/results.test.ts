@@ -91,7 +91,6 @@ function asTeacher(
 }
 
 async function classWithResults(t: TestContext, app: FastifyInstance) {
-    // The chapter gets a C4 that no block of the mission tests, so it must stay out of every result.
     const demo = await demoClass(app, true);
     const ayu = await demoStudent(app, demo.classId, 'Ayu Lestari');
     const bima = await demoStudent(app, demo.classId, 'Bima Putra');

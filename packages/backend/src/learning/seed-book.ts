@@ -22,7 +22,6 @@ export type PreparedBook = {
     }[];
 };
 
-// Adds the book to the shared library once; a book already there is left as it is.
 export async function seedBook(db: Queryable, book: PreparedBook) {
     const chapters = book.chapters.map((chapter) => ({
         ...chapter,
@@ -56,7 +55,6 @@ export async function seedBook(db: Queryable, book: PreparedBook) {
             .returning({ id: materials.id });
 
         for (const chapter of chapters) {
-            // Chapters without pages keep the order they are inserted in.
             const { moduleId, competencyIds } = await insertChapter(
                 tx,
                 { materialId: material.id, title: chapter.title },

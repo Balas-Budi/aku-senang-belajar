@@ -13,9 +13,7 @@ import { stepLabels } from '../learning-sessions/steps';
 import { findChapter, finished, studentPathQuery, type Stage } from './queries';
 import { StageBar } from './stage-bar';
 
-// The path winds through these horizontal positions (percent of its width).
 const lanes = [50, 70, 50, 30];
-// Each stage gets one row (h-52, 208px); the node centre sits 52px down it, a quarter of the row.
 const nodeY = 25;
 
 function statusOf(stage: Stage) {
@@ -106,7 +104,6 @@ function Node({
             )}
         </span>
     );
-    // The label sits on a plain patch so the trail and the page doodles pass behind the text.
     const label = (
         <>
             {circle}

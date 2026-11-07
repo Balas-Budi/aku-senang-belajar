@@ -271,7 +271,6 @@ export async function closeChapter(
     );
 
     await db.transaction(async (tx) => {
-        // Locking the rows makes a student who starts right now wait, so no saved attempt is deleted.
         const opened = await tx
             .select({ id: assignments.id })
             .from(assignments)

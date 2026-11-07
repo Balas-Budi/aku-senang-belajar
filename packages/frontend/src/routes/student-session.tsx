@@ -20,7 +20,6 @@ export async function loader({ request, params }: Route.LoaderArgs) {
     } catch (error) {
         if (error instanceof ApiError && error.status === 404)
             throw data('Misi tidak ditemukan', { status: 404 });
-        // A locked stage is not linked anywhere, so only a typed address lands here.
         if (error instanceof ApiError && error.body.name === 'STAGE_LOCKED')
             throw redirect('/student');
         throw error;

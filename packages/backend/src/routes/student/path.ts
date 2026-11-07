@@ -33,7 +33,6 @@ export const stageLocked = () =>
         code: 'STAGE_LOCKED',
     });
 
-// Stage rows arrive in stage order (session id); chapter rows in book order.
 function buildPath(chapterRows: ChapterRow[], stageRows: StageRow[]) {
     const chapters = chapterRows.map((chapter) => {
         const rows = stageRows.filter((row) => row.moduleId === chapter.id);

@@ -104,7 +104,6 @@ export function useChapterAccess(classId: number) {
             chapterId: number;
             method: 'PUT' | 'DELETE';
         }) => api(`/api/classes/${classId}/chapters/${chapterId}`, { method }),
-        // Opening and closing change the class missions list as well.
         onSuccess: () =>
             client.invalidateQueries({ queryKey: ['classes', classId] }),
     });
