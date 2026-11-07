@@ -1,12 +1,18 @@
 import assert from 'node:assert/strict';
 import { test } from 'node:test';
 import { asc, eq } from 'drizzle-orm';
-import { learningSessions, materials, modules } from '../src/db/schema.ts';
+import {
+    competencies,
+    learningSessions,
+    materials,
+    modules,
+    sessionCompetencies,
+} from '../src/db/schema.ts';
 import { mathsBook } from '../src/learning/maths-book.ts';
 import { seedBook } from '../src/learning/seed-book.ts';
 import { testApp } from './helpers.ts';
 
-test('the sample maths book lands once in the shared library, with three ready stages in its first chapter', async (t) => {
+test('the sample maths book lands once in the shared library, with three ready stages in its first chapter, each teaching its own competencies', async (t) => {
     const app = await testApp(t);
 
     await seedBook(app.db, mathsBook);
@@ -28,6 +34,25 @@ test('the sample maths book lands once in the shared library, with three ready s
         .from(learningSessions)
         .where(eq(learningSessions.moduleId, chapters[0].id))
         .orderBy(asc(learningSessions.id));
+    const taught = await app.db
+        .select({ sessionId: learningSessions.id, code: competencies.code })
+        .from(sessionCompetencies)
+        .innerJoin(
+            learningSessions,
+            eq(learningSessions.id, sessionCompetencies.learningSessionId),
+        )
+        .innerJoin(
+            competencies,
+            eq(competencies.id, sessionCompetencies.competencyId),
+        )
+        .where(eq(learningSessions.moduleId, chapters[0].id))
+        .orderBy(asc(learningSessions.id), asc(competencies.code));
+    const codesOf = [...new Set(taught.map(({ sessionId }) => sessionId))].map(
+        (id) =>
+            taught
+                .filter(({ sessionId }) => sessionId === id)
+                .map(({ code }) => code),
+    );
 
     assert.equal(again.created, false);
     assert.deepEqual(books, [{ id: books[0].id, ownerId: null }]);
@@ -40,4 +65,5 @@ test('the sample maths book lands once in the shared library, with three ready s
         { title: 'Pembilang dan penyebut', status: 'ready' },
         { title: 'Potongan mana yang lebih besar?', status: 'ready' },
     ]);
+    assert.deepEqual(codesOf, [['C1', 'C2', 'C3'], ['C4'], ['C5']]);
 });

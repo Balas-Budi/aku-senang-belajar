@@ -12,6 +12,16 @@ export const moduleParams = z.object({
 
 export type ModuleParams = z.infer<typeof moduleParams>;
 
+export const sessionBody = z.object({
+    competencyIds: z
+        .array(z.int().positive())
+        .min(1, 'Choose at least one competency')
+        .max(50)
+        .optional(),
+});
+
+export type SessionBody = z.infer<typeof sessionBody>;
+
 export const sessionParams = z.object({
     sessionId: z.coerce.number().int().positive(),
 });

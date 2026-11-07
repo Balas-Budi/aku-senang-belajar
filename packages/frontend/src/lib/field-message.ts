@@ -42,6 +42,10 @@ export function fieldMessage(message: string) {
         return 'Pilihan jawaban tidak bisa ditambah atau dihapus.';
     if (/at least one class/u.test(message))
         return 'Pilih setidaknya satu kelas.';
+    if (/at least one competency/u.test(message))
+        return 'Pilih setidaknya satu kompetensi.';
+    if (/competencies of this chapter/u.test(message))
+        return 'Pilih kompetensi dari bab ini. Muat ulang halaman, lalu coba lagi.';
     const tooLong = /expected string to have <=(\d+)/u.exec(message);
     if (tooLong) return `Paling banyak ${tooLong[1]} karakter.`;
     const pageCount = /The material has (\d+) pages/u.exec(message);

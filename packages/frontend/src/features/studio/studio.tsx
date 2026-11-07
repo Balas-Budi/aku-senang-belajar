@@ -248,9 +248,9 @@ function RevisionForm({ session }: { session: StudioSession }) {
     );
 }
 
-const choiceCard =
+export const choiceCard =
     'border-border has-[:checked]:border-primary has-[:checked]:bg-secondary flex min-h-11 cursor-pointer items-start gap-3 rounded-lg border p-3';
-const choiceBox =
+export const choiceBox =
     'accent-primary focus-visible:outline-ring mt-0.5 size-5 shrink-0 focus-visible:outline-3 focus-visible:outline-offset-2';
 
 function PublishCard({
@@ -526,7 +526,7 @@ export function StudioView({ id }: { id: number }) {
                                 id="competencies-title"
                                 className="text-lg font-semibold"
                             >
-                                Kompetensi modul
+                                Kompetensi sesi ini
                             </h2>
                             <ul className="space-y-1">
                                 {session.competencies.map((competency) => (

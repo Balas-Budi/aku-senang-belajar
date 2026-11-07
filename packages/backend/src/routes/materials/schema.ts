@@ -87,6 +87,7 @@ export const materialDetail = materialSummary.extend({
                     title: z.string(),
                     status: z.enum(learningSessionStatus.enumValues),
                     drafting: z.enum(sessionDrafting.enumValues).nullable(),
+                    competencies: z.array(z.string()),
                 }),
             ),
         }),

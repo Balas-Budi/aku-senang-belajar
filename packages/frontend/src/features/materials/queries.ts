@@ -37,6 +37,7 @@ export type MaterialDetail = Material & {
             title: string;
             status: 'draft' | 'ready';
             drafting: 'generating' | 'failed' | null;
+            competencies: string[];
         }[];
     })[];
 };

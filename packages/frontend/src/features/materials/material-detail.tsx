@@ -4,12 +4,14 @@ import { Link, useNavigate } from 'react-router';
 import { materialMeta } from './library';
 import { ModuleForm } from './module-form';
 import { materialQuery, pageTextQuery, type MaterialDetail } from './queries';
+import { fieldErrorText } from '../../components/form-field';
 import { RequestError } from '../../components/request-error';
 import { Alert } from '../../components/ui/alert';
-import { Button } from '../../components/ui/button';
+import { Button, buttonVariants } from '../../components/ui/button';
 import { Card } from '../../components/ui/card';
 import { textLink } from '../../components/ui/text-link';
 import { useCreateSession } from '../studio/queries';
+import { choiceBox, choiceCard } from '../studio/studio';
 import { StudioError } from '../studio/studio-error';
 
 type Module = MaterialDetail['modules'][number];
@@ -20,9 +22,114 @@ function sessionState(session: Module['sessions'][number]) {
     return session.status === 'ready' ? 'Siap ditugaskan' : 'Draf';
 }
 
-function ModuleItem({ module, own }: { module: Module; own: boolean }) {
+function NewSession({
+    module,
+    uncovered,
+}: {
+    module: Module;
+    uncovered: string[];
+}) {
     const create = useCreateSession(module.id);
     const navigate = useNavigate();
+    const formId = `new-session-${module.id}`;
+    const pickError = fieldErrorText(create.error, 'competencyIds');
+    return (
+        <details className="space-y-3 pt-1">
+            <summary className="focus-visible:outline-ring w-fit cursor-pointer list-none rounded-xl focus-visible:outline-3 focus-visible:outline-offset-3 [&::-webkit-details-marker]:hidden">
+                <span
+                    className={buttonVariants({
+                        variant:
+                            module.sessions.length > 0 ? 'outline' : 'primary',
+                    })}
+                >
+                    {module.sessions.length > 0
+                        ? 'Susun sesi baru'
+                        : 'Susun sesi'}
+                </span>
+            </summary>
+            <form
+                className="space-y-3"
+                onSubmit={(event) => {
+                    event.preventDefault();
+                    create.mutate(
+                        new FormData(event.currentTarget)
+                            .getAll('competencyIds')
+                            .map(Number),
+                        {
+                            onSuccess: ({ id }) =>
+                                void navigate(`/teacher/studio/${id}`),
+                        },
+                    );
+                }}
+            >
+                <fieldset
+                    className="space-y-2"
+                    aria-describedby={
+                        pickError
+                            ? `${formId}-hint ${formId}-error`
+                            : `${formId}-hint`
+                    }
+                >
+                    <legend className="mb-2 font-medium">
+                        Kompetensi yang diajarkan sesi ini
+                    </legend>
+                    <p
+                        id={`${formId}-hint`}
+                        className="text-muted-foreground text-sm"
+                    >
+                        Kompetensi yang belum masuk sesi mana pun sudah
+                        dicentang. Siswa mengerjakan sesi di bab ini sesuai
+                        urutan dibuat.
+                    </p>
+                    {module.competencies.map((competency) => (
+                        <label key={competency.id} className={choiceCard}>
+                            <input
+                                type="checkbox"
+                                name="competencyIds"
+                                value={competency.id}
+                                defaultChecked={uncovered.includes(
+                                    competency.code,
+                                )}
+                                className={choiceBox}
+                            />
+                            <span>
+                                <span className="font-semibold">
+                                    {competency.code}
+                                </span>{' '}
+                                {competency.description}
+                            </span>
+                        </label>
+                    ))}
+                </fieldset>
+                {pickError ? (
+                    <p
+                        id={`${formId}-error`}
+                        role="alert"
+                        className="text-destructive"
+                    >
+                        {pickError}
+                    </p>
+                ) : (
+                    <StudioError
+                        error={create.error}
+                        inline={['competencyIds']}
+                    />
+                )}
+                <Button type="submit" disabled={create.isPending}>
+                    {create.isPending ? 'Menyiapkan sesi…' : 'Mulai susun'}
+                </Button>
+            </form>
+        </details>
+    );
+}
+
+function ModuleItem({ module, own }: { module: Module; own: boolean }) {
+    const covered = new Set(
+        module.sessions.flatMap(({ competencies }) => competencies),
+    );
+    const uncovered = module.competencies
+        .map(({ code }) => code)
+        .filter((code) => !covered.has(code));
     return (
         <li className="space-y-2 py-3">
             <div>
@@ -62,42 +169,31 @@ function ModuleItem({ module, own }: { module: Module; own: boolean }) {
                                 {session.title}
                             </Link>{' '}
                             <span className="text-muted-foreground text-sm">
-                                · {sessionState(session)}
+                                ·{' '}
+                                {[
+                                    ...(session.competencies.length > 0
+                                        ? [listOf(session.competencies)]
+                                        : []),
+                                    sessionState(session),
+                                ].join(' · ')}
                             </span>
                         </li>
                     ))}
                 </ul>
             )}
-            {own && (
-                <div className="space-y-3 pt-1">
-                    <Button
-                        variant={
-                            module.sessions.length > 0 ? 'outline' : 'primary'
-                        }
-                        disabled={create.isPending}
-                        onClick={() =>
-                            create.mutate(undefined, {
-                                onSuccess: ({ id }) =>
-                                    void navigate(`/teacher/studio/${id}`),
-                            })
-                        }
-                    >
-                        {create.isPending
-                            ? 'Menyiapkan sesi…'
-                            : module.sessions.length > 0
-                              ? 'Susun sesi baru'
-                              : 'Susun sesi'}
-                    </Button>
-                    <StudioError error={create.error} />
-                </div>
+            {own && module.sessions.length > 0 && uncovered.length > 0 && (
+                <p className="text-muted-foreground text-sm">
+                    Belum masuk sesi mana pun: {listOf(uncovered)}
+                </p>
             )}
+            {own && <NewSession module={module} uncovered={uncovered} />}
         </li>
     );
 }
 
-function listOf(numbers: number[]) {
-    if (numbers.length === 1) return String(numbers[0]);
-    return `${numbers.slice(0, -1).join(', ')} dan ${numbers.at(-1)}`;
+function listOf(items: (number | string)[]) {
+    if (items.length === 1) return String(items[0]);
+    return `${items.slice(0, -1).join(', ')} dan ${items.at(-1)}`;
 }
 
 function PageText({

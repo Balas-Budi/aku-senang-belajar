@@ -11,6 +11,7 @@ import {
     responseOutcome,
     responses,
     sessionBlocks,
+    sessionCompetencies,
 } from '../db/schema.ts';
 import { sessionBlock } from '../learning/blocks.ts';
 import { competencyRubric, type CompetencyRubric } from '../learning/rubric.ts';
@@ -115,18 +116,16 @@ function selfReportOf(saved: Saved[]): SelfReport | null {
         : null;
 }
 
-// A mission is judged on the competencies its own blocks test, not on every competency of its chapter.
 export function missionCompetencyIds(db: Queryable, assignmentId: number) {
     return db
-        .select({ id: blockCompetencies.competencyId })
-        .from(blockCompetencies)
-        .innerJoin(
-            sessionBlocks,
-            eq(sessionBlocks.id, blockCompetencies.blockId),
-        )
+        .select({ id: sessionCompetencies.competencyId })
+        .from(sessionCompetencies)
         .innerJoin(
             assignments,
-            eq(assignments.learningSessionId, sessionBlocks.learningSessionId),
+            eq(
+                assignments.learningSessionId,
+                sessionCompetencies.learningSessionId,
+            ),
         )
         .where(eq(assignments.id, assignmentId));
 }

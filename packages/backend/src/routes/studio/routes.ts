@@ -19,6 +19,7 @@ import {
     editedBlock,
     moduleParams,
     revisionBody,
+    sessionBody,
     sessionParams,
     studioSession,
 } from './schema.ts';
@@ -29,7 +30,13 @@ export const studioRoutes: FastifyPluginAsyncZod = async (fastify) => {
 
     fastify.post(
         '/modules/:moduleId/sessions',
-        { schema: { params: moduleParams, response: { 202: accepted } } },
+        {
+            schema: {
+                params: moduleParams,
+                body: sessionBody,
+                response: { 202: accepted },
+            },
+        },
         createSession,
     );
     fastify.get(

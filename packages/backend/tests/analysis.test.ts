@@ -233,7 +233,7 @@ test('a citation outside the evidence is sent back for correction', async (t) =>
     );
 });
 
-test('a mission is judged only on the competencies its blocks test, not on the rest of its chapter', async (t) => {
+test('a mission is judged only on the competencies it teaches, not on the rest of its chapter', async (t) => {
     const app = await testApp(t);
     const { attemptId } = await submittedDemo(app, true);
     const provider = await stubProvider(t, [verdicts()]);

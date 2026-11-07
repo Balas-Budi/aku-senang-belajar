@@ -5,6 +5,7 @@ import { learningSessions } from '../src/db/schema.ts';
 import { completion, stubProvider } from './ai-stub.ts';
 import { createUser, loginAs, testApp } from './helpers.ts';
 import {
+    c1,
     draft,
     get,
     post,
@@ -12,6 +13,12 @@ import {
     settled,
     teacherWithModule,
 } from './studio-fixtures.ts';
+
+type Chapter = {
+    id: number;
+    competencies: { id: number; code: string }[];
+    sessions: { competencies: string[] }[];
+};
 
 test('a teacher drafts a session from a module; it is stored with the brain game first, its competencies, and its page sources (FR-010)', async (t) => {
     const provider = await stubProvider(t, [
@@ -230,4 +237,90 @@ test("another teacher's session answers 404, and a session being drafted cannot 
     );
 
     await settled(app, token, id);
+});
+
+test('a teacher chooses the competencies a session teaches: AI drafts only those, and the review checks only those (T-06)', async (t) => {
+    const onlyC1 = {
+        ...draft,
+        blocks: draft.blocks.map((block) => ({
+            ...block,
+            competencies: block.competencies.length > 0 ? ['C1'] : [],
+        })),
+    };
+    const provider = await stubProvider(t, [
+        { body: completion(JSON.stringify(onlyC1)) },
+    ]);
+    const app = await testApp(t, provider.config);
+    const { token, materialId, moduleId } = await teacherWithModule(app);
+    const chapter = async () => {
+        const material: { modules: Chapter[] } = (
+            await get(app, token, `/api/materials/${materialId}`)
+        ).json();
+
+        return material.modules.find(({ id }) => id === moduleId);
+    };
+    const first = (await chapter())?.competencies[0];
+
+    assert.ok(first);
+
+    const response = await post(
+        app,
+        token,
+        `/api/modules/${moduleId}/sessions`,
+        { competencyIds: [first.id] },
+    );
+
+    assert.equal(response.statusCode, 202);
+    await settled(app, token, response.json().id);
+
+    const studio = (
+        await get(app, token, `/api/studio/sessions/${response.json().id}`)
+    ).json();
+    const user = provider.requests[0].body.messages[1].content;
+
+    assert.equal(studio.drafting, null);
+    assert.match(user, /C1: Mengenali 1\/4 pada gambar\./);
+    assert.doesNotMatch(user, /C2: /);
+    assert.deepEqual(studio.competencies, [
+        { code: 'C1', description: c1.description },
+    ]);
+    assert.deepEqual(studio.issues, []);
+    assert.deepEqual(
+        (await chapter())?.sessions.map(({ competencies }) => competencies),
+        [['C1']],
+    );
+});
+
+test('a session needs at least one competency, and only competencies of its own chapter (T-06)', async (t) => {
+    const app = await testApp(t);
+    const { token, materialId, moduleId } = await teacherWithModule(app);
+    const other: { competencies: { id: number }[] } = (
+        await post(app, token, `/api/materials/${materialId}/modules`, {
+            title: 'Comparing fractions',
+            firstPage: 1,
+            lastPage: 4,
+            competencies: [c1],
+        })
+    ).json();
+    const create = (competencyIds: number[]) =>
+        post(app, token, `/api/modules/${moduleId}/sessions`, {
+            competencyIds,
+        });
+
+    for (const response of [
+        await create([]),
+        await create(other.competencies.map(({ id }) => id)),
+    ]) {
+        assert.equal(response.statusCode, 400);
+        assert.equal(response.json().name, 'VALIDATION_ERROR');
+        assert.equal(response.json().details[0].field, 'competencyIds');
+    }
+
+    assert.deepEqual(
+        await app.db
+            .select({ id: learningSessions.id })
+            .from(learningSessions)
+            .where(eq(learningSessions.moduleId, moduleId)),
+        [],
+    );
 });

@@ -11,11 +11,16 @@ import {
     materials,
     modules,
     sessionBlocks,
+    sessionCompetencies,
 } from '../../db/schema.ts';
 import { sessionBlock, type SessionBlock } from '../../learning/blocks.ts';
 import { AppError, notFound } from '../../lib/errors.ts';
 import { fieldError, validationError } from '../../lib/field-error.ts';
-import { blocksWithCodes, startDraft } from '../../studio/drafting.ts';
+import {
+    blocksWithCodes,
+    sessionCompetencyIds,
+    startDraft,
+} from '../../studio/drafting.ts';
 import { reviewSession } from '../../studio/review.ts';
 import type {
     ApprovalBody,
@@ -24,6 +29,7 @@ import type {
     BlockParams,
     ModuleParams,
     RevisionBody,
+    SessionBody,
     SessionParams,
 } from './schema.ts';
 
@@ -76,7 +82,7 @@ async function ownSession(db: Queryable, sessionId: number, userId: number) {
 }
 
 export async function createSession(
-    request: FastifyRequest<{ Params: ModuleParams }>,
+    request: FastifyRequest<{ Params: ModuleParams; Body: SessionBody }>,
     reply: FastifyReply,
 ) {
     const user = currentUser(request);
@@ -93,20 +99,49 @@ export async function createSession(
         );
 
     if (!module) throw notFound('Module not found');
+
+    const chapter = (
+        await db
+            .select({ id: competencies.id })
+            .from(competencies)
+            .where(eq(competencies.moduleId, module.id))
+    ).map(({ id }) => id);
+    const chosen = new Set(request.body.competencyIds ?? chapter);
+
+    if ([...chosen].some((id) => !chapter.includes(id))) {
+        throw fieldError(
+            'competencyIds',
+            'Choose competencies of this chapter',
+        );
+    }
+
     if (!aiConfig(env)) throw aiNotConfigured();
 
-    const [session] = await db
-        .insert(learningSessions)
-        .values({
-            moduleId: module.id,
-            title: module.title,
-            summary: '',
-            status: 'draft',
-            createdBy: user.id,
-            version: 0,
-            drafting: 'generating',
-        })
-        .returning({ id: learningSessions.id });
+    const session = await db.transaction(async (tx) => {
+        const [created] = await tx
+            .insert(learningSessions)
+            .values({
+                moduleId: module.id,
+                title: module.title,
+                summary: '',
+                status: 'draft',
+                createdBy: user.id,
+                version: 0,
+                drafting: 'generating',
+            })
+            .returning({ id: learningSessions.id });
+
+        if (chosen.size > 0) {
+            await tx.insert(sessionCompetencies).values(
+                [...chosen].map((competencyId) => ({
+                    learningSessionId: created.id,
+                    competencyId,
+                })),
+            );
+        }
+
+        return created;
+    });
 
     startDraft(request.server, session.id, null);
 
@@ -168,7 +203,9 @@ async function studioSession(db: Queryable, sessionId: number, userId: number) {
                 description: competencies.description,
             })
             .from(competencies)
-            .where(eq(competencies.moduleId, session.module.id))
+            .where(
+                inArray(competencies.id, sessionCompetencyIds(db, session.id)),
+            )
             .orderBy(asc(competencies.id)),
         blocks: await blocksWithCodes(db, session.id),
         ...review,

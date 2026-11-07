@@ -1,4 +1,4 @@
-import { and, asc, eq, gte, isNotNull, lte, sql } from 'drizzle-orm';
+import { and, asc, eq, gte, inArray, isNotNull, lte, sql } from 'drizzle-orm';
 import type { FastifyInstance } from 'fastify';
 import { z } from 'zod';
 import { AiError, aiConfig, chatJson } from '../ai/chat.ts';
@@ -11,6 +11,7 @@ import {
     materials,
     modules,
     sessionBlocks,
+    sessionCompetencies,
 } from '../db/schema.ts';
 import { competencyRubric } from '../learning/rubric.ts';
 import {
@@ -26,6 +27,13 @@ import {
 const DRAFT_TIMEOUT_MS = 180_000;
 const inFlight = new WeakMap<FastifyInstance, Set<Promise<void>>>();
 const contentOf = z.record(z.string(), z.unknown());
+
+export function sessionCompetencyIds(db: Queryable, sessionId: number) {
+    return db
+        .select({ id: sessionCompetencies.competencyId })
+        .from(sessionCompetencies)
+        .where(eq(sessionCompetencies.learningSessionId, sessionId));
+}
 
 export async function blocksWithCodes(db: Queryable, sessionId: number) {
     const rows = await db
@@ -78,7 +86,7 @@ async function draftContext(db: Queryable, sessionId: number) {
 
     if (!session) throw new Error(`Session ${sessionId} has no module`);
 
-    const moduleCompetencies = await db
+    const missionCompetencies = await db
         .select({
             id: competencies.id,
             code: competencies.code,
@@ -86,7 +94,7 @@ async function draftContext(db: Queryable, sessionId: number) {
             rubric: competencies.rubric,
         })
         .from(competencies)
-        .where(eq(competencies.moduleId, session.moduleId))
+        .where(inArray(competencies.id, sessionCompetencyIds(db, sessionId)))
         .orderBy(asc(competencies.id));
     const pages =
         session.firstPage === null || session.lastPage === null
@@ -110,7 +118,7 @@ async function draftContext(db: Queryable, sessionId: number) {
 
     return {
         session,
-        competencies: moduleCompetencies.map((competency) => ({
+        competencies: missionCompetencies.map((competency) => ({
             ...competency,
             rubric:
                 competency.rubric === null

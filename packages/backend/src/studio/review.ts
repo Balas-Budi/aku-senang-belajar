@@ -1,9 +1,9 @@
-import { and, asc, eq, gte, isNull, lte } from 'drizzle-orm';
+import { and, asc, eq, gte, inArray, isNull, lte } from 'drizzle-orm';
 import type { Queryable } from '../db/index.ts';
 import { competencies, materialPages, modules } from '../db/schema.ts';
 import { sessionBlock } from '../learning/blocks.ts';
 import { competencyRubric } from '../learning/rubric.ts';
-import { blocksWithCodes } from './drafting.ts';
+import { blocksWithCodes, sessionCompetencyIds } from './drafting.ts';
 
 export const warningCodes = ['no_page_source', 'unreadable_pages'] as const;
 
@@ -66,7 +66,7 @@ export async function reviewSession(
     const rows = await db
         .select({ code: competencies.code, rubric: competencies.rubric })
         .from(competencies)
-        .where(eq(competencies.moduleId, moduleId))
+        .where(inArray(competencies.id, sessionCompetencyIds(db, sessionId)))
         .orderBy(asc(competencies.id));
     const tested = new Set(
         blocks

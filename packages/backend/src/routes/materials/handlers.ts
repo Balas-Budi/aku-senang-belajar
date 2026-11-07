@@ -21,6 +21,7 @@ import {
     materialPages,
     materials,
     modules,
+    sessionCompetencies,
 } from '../../db/schema.ts';
 import { AppError, notFound } from '../../lib/errors.ts';
 import { fieldError } from '../../lib/field-error.ts';
@@ -135,6 +136,26 @@ async function materialDetail(
                       ),
                   )
                   .orderBy(asc(learningSessions.id));
+    const taught =
+        sessionRows.length === 0
+            ? []
+            : await db
+                  .select({
+                      sessionId: sessionCompetencies.learningSessionId,
+                      code: competencies.code,
+                  })
+                  .from(sessionCompetencies)
+                  .innerJoin(
+                      competencies,
+                      eq(competencies.id, sessionCompetencies.competencyId),
+                  )
+                  .where(
+                      inArray(
+                          sessionCompetencies.learningSessionId,
+                          sessionRows.map(({ id }) => id),
+                      ),
+                  )
+                  .orderBy(asc(competencies.id));
 
     return {
         ...withPrepared(material),
@@ -150,7 +171,12 @@ async function materialDetail(
                 .map(({ moduleId: _, ...competency }) => competency),
             sessions: sessionRows
                 .filter(({ moduleId }) => moduleId === module.id)
-                .map(({ moduleId: _, ...session }) => session),
+                .map(({ moduleId: _, ...session }) => ({
+                    ...session,
+                    competencies: taught
+                        .filter(({ sessionId }) => sessionId === session.id)
+                        .map(({ code }) => code),
+                })),
         })),
     };
 }

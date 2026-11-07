@@ -116,9 +116,10 @@ function useStudioSync(id: number) {
 export function useCreateSession(moduleId: number) {
     const client = useQueryClient();
     return useMutation({
-        mutationFn: () =>
+        mutationFn: (competencyIds: number[]) =>
             api<{ id: number }>(`/api/modules/${moduleId}/sessions`, {
                 method: 'POST',
+                body: JSON.stringify({ competencyIds }),
             }),
         onSuccess: () => client.invalidateQueries({ queryKey: ['materials'] }),
     });

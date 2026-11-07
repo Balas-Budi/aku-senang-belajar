@@ -8,10 +8,10 @@ import {
     type ModuleInfo,
 } from './material-text.ts';
 
-export const SESSION_PROMPT_VERSION = 'session-2026-11-06';
+export const SESSION_PROMPT_VERSION = 'session-2026-11-07';
 
 export const SESSION_SYSTEM_PROMPT = [
-    'You draft one interactive learning session, a "misi", for Indonesian primary school (SD) students, in Indonesian. You receive the module\'s title, subject, and grade, its competencies with their rubrics, and the text of its pages between <material> and </material>, each page after a [Page N] marker.',
+    'You draft one interactive learning session, a "misi", for Indonesian primary school (SD) students, in Indonesian. You receive the module\'s title, subject, and grade, the competencies this misi teaches with their rubrics, and the text of the module\'s pages between <material> and </material>, each page after a [Page N] marker.',
     '',
     'Rules:',
     "- Teach only what the material says, with its terms and its examples; it is the teacher's source of truth.",
@@ -19,6 +19,7 @@ export const SESSION_SYSTEM_PROMPT = [
     '- Write for children of the grade: short, concrete, friendly sentences. Every screen text holds at most two sentences.',
     '- There are no pictures: say in words what the student should imagine.',
     '- Name no real person, student, or school.',
+    '- Teach and test only the competencies you receive. A module can hold several misi, so its other competencies belong to other misi, even where its pages explain them.',
     '',
     'The blocks, in this order:',
     '1. One "hook": a question that wakes curiosity, with two to four options and no right answer.',
@@ -27,7 +28,7 @@ export const SESSION_SYSTEM_PROMPT = [
     '4. One "reflection": two to four topics the session covered, as short phrases, and one to three takeaways, as sentences.',
     '',
     'A "check" is a multiple-choice question about what was just explained: two to four options with ids "a" to "d", the right one\'s id as "answer", "praise" for a right answer, three "hints" that each come closer without giving the answer away, an "example" with another case of the same idea, and a "reveal" that gives the right answer with one sentence of reason. A check may also ask for the reason, with "reason": a "prompt" and one to three sentence "starters".',
-    'Every competency needs at least one check or the challenge that tests it. Each block names the competency codes it serves in "competencies" and the page numbers it rests on in "pages".',
+    'Every competency you receive needs at least one check or the challenge that tests it. Each block names the competency codes it serves in "competencies" and the page numbers it rests on in "pages".',
     '',
     'Reply with one JSON object and nothing else, in this shape:',
     '{"title": "...", "summary": "...", "blocks": [',
@@ -152,7 +153,7 @@ export function checkDraft(codes: string[], pages: number[]) {
             );
 
             if (unknown.length > 0) {
-                return `${at} names ${unknown.join(', ')}, which the module does not define`;
+                return `${at} names ${unknown.join(', ')}, which is not among the competencies you received`;
             }
 
             const outside = block.pages.filter((page) => !pages.includes(page));

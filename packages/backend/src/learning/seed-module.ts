@@ -8,6 +8,7 @@ import {
     materials,
     modules,
     sessionBlocks,
+    sessionCompetencies,
 } from '../db/schema.ts';
 import { sessionBlock, type SessionBlock } from './blocks.ts';
 import { competencyRubric, type CompetencyRubric } from './rubric.ts';
@@ -108,6 +109,7 @@ export async function insertSession(
         .insert(learningSessions)
         .values({ ...details, moduleId, status: 'ready' })
         .returning({ id: learningSessions.id });
+    const taught = new Set<number>();
 
     for (const [index, { block, codes }] of blocks.entries()) {
         const [row] = await tx
@@ -127,12 +129,22 @@ export async function insertSession(
                 );
             }
 
+            taught.add(competencyId);
             return { blockId: row.id, competencyId };
         });
 
         if (links.length > 0) {
             await tx.insert(blockCompetencies).values(links);
         }
+    }
+
+    if (taught.size > 0) {
+        await tx.insert(sessionCompetencies).values(
+            [...taught].map((competencyId) => ({
+                learningSessionId: session.id,
+                competencyId,
+            })),
+        );
     }
 
     return session.id;

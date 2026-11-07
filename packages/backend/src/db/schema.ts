@@ -248,6 +248,25 @@ export const blockCompetencies = pgTable(
     ],
 );
 
+export const sessionCompetencies = pgTable(
+    'session_competencies',
+    {
+        learningSessionId: integer()
+            .notNull()
+            .references(() => learningSessions.id, { onDelete: 'cascade' }),
+        competencyId: integer()
+            .notNull()
+            .references(() => competencies.id, { onDelete: 'cascade' }),
+    },
+    (table) => [
+        primaryKey({
+            name: 'session_competencies_learning_session_id_competency_id_pk',
+            columns: [table.learningSessionId, table.competencyId],
+        }),
+        index('session_competencies_competency_id_idx').on(table.competencyId),
+    ],
+);
+
 export const assignments = pgTable(
     'assignments',
     {
