@@ -115,14 +115,30 @@ function selfReportOf(saved: Saved[]): SelfReport | null {
         : null;
 }
 
+// A mission is judged on the competencies its own blocks test, not on every competency of its chapter.
+export function missionCompetencyIds(db: Queryable, assignmentId: number) {
+    return db
+        .select({ id: blockCompetencies.competencyId })
+        .from(blockCompetencies)
+        .innerJoin(
+            sessionBlocks,
+            eq(sessionBlocks.id, blockCompetencies.blockId),
+        )
+        .innerJoin(
+            assignments,
+            eq(assignments.learningSessionId, sessionBlocks.learningSessionId),
+        )
+        .where(eq(assignments.id, assignmentId));
+}
+
 export async function evidenceOf(
     db: Queryable,
     attemptId: number,
 ): Promise<CompetencyEvidence[]> {
     const [attempt] = await db
         .select({
+            assignmentId: assignments.id,
             sessionId: learningSessions.id,
-            moduleId: learningSessions.moduleId,
         })
         .from(attempts)
         .innerJoin(assignments, eq(assignments.id, attempts.assignmentId))
@@ -136,7 +152,7 @@ export async function evidenceOf(
         throw new Error(`Attempt ${attemptId} does not exist`);
     }
 
-    const moduleCompetencies = await db
+    const missionCompetencies = await db
         .select({
             id: competencies.id,
             code: competencies.code,
@@ -144,7 +160,12 @@ export async function evidenceOf(
             rubric: competencies.rubric,
         })
         .from(competencies)
-        .where(eq(competencies.moduleId, attempt.moduleId))
+        .where(
+            inArray(
+                competencies.id,
+                missionCompetencyIds(db, attempt.assignmentId),
+            ),
+        )
         .orderBy(asc(competencies.code));
     const blocks = await db
         .select({
@@ -239,7 +260,7 @@ export async function evidenceOf(
         });
     }
 
-    return moduleCompetencies.map((competency) => {
+    return missionCompetencies.map((competency) => {
         const linked = links
             .filter(({ competencyId }) => competencyId === competency.id)
             .map(({ blockId }) => blockId);

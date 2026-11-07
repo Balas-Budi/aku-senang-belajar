@@ -233,7 +233,7 @@ test('a citation outside the evidence is sent back for correction', async (t) =>
     );
 });
 
-test('a competency without answers is Belum teramati without asking the model', async (t) => {
+test('a mission is judged only on the competencies its blocks test, not on the rest of its chapter', async (t) => {
     const app = await testApp(t);
     const { attemptId } = await submittedDemo(app, true);
     const provider = await stubProvider(t, [verdicts()]);
@@ -248,16 +248,40 @@ test('a competency without answers is Belum teramati without asking the model', 
         ['C1', 'C2', 'C3'],
     );
     assert.deepEqual(
-        (await assessmentsOf(app, attemptId)).find(({ code }) => code === 'C4'),
-        {
-            code: 'C4',
+        (await assessmentsOf(app, attemptId)).map(({ code }) => code),
+        ['C1', 'C2', 'C3'],
+    );
+});
+
+test('a competency the mission tests but the student left unanswered is Belum teramati without asking the model', async (t) => {
+    const app = await testApp(t);
+    const { classId, assignmentId } = await demoClass(app);
+    const { token } = await demoStudent(app, classId);
+    const provider = await stubProvider(t, []);
+    const attempt: { id: number } = (
+        await asStudent(
+            app,
+            token,
+            'POST',
+            `/assignments/${assignmentId}/attempt`,
+        )
+    ).json();
+
+    await asStudent(app, token, 'POST', `/attempts/${attempt.id}/submit`);
+    await runFor(app, attempt.id, provider.config);
+
+    assert.equal(provider.requests.length, 0);
+    assert.deepEqual(
+        await assessmentsOf(app, attempt.id),
+        ['C1', 'C2', 'C3'].map((code) => ({
+            code,
             status: 'not_observed',
             reason: 'Belum ada jawaban soal untuk kompetensi ini.',
             uncertainty: 'high',
             flags: ['thin'],
             evidence: [],
             followUps: [],
-        },
+        })),
     );
 });
 

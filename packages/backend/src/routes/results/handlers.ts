@@ -1,6 +1,6 @@
 import { asc, eq, inArray } from 'drizzle-orm';
 import type { FastifyReply, FastifyRequest } from 'fastify';
-import { evidenceOf } from '../../analysis/evidence.ts';
+import { evidenceOf, missionCompetencyIds } from '../../analysis/evidence.ts';
 import { queueAnalysis } from '../../analysis/runner.ts';
 import { currentUser } from '../../auth/guards.ts';
 import {
@@ -90,14 +90,16 @@ export async function sessionResults(
         currentUser(request).id,
         request.params,
     );
-    const moduleCompetencies = await db
+    const missionCompetencies = await db
         .select({
             id: competencies.id,
             code: competencies.code,
             description: competencies.description,
         })
         .from(competencies)
-        .where(eq(competencies.moduleId, assignment.moduleId))
+        .where(
+            inArray(competencies.id, missionCompetencyIds(db, assignment.id)),
+        )
         .orderBy(asc(competencies.code));
     const members = await membersOf(db, assignment.classId);
     const taken = await attemptsOf(
@@ -131,7 +133,7 @@ export async function sessionResults(
 
     return {
         assignment,
-        competencies: moduleCompetencies,
+        competencies: missionCompetencies,
         students: members.map((member) => {
             const attempt = taken.find(
                 ({ studentId }) => studentId === member.id,
@@ -139,7 +141,7 @@ export async function sessionResults(
             const run = attempt ? runs.get(attempt.id) : undefined;
             const cells =
                 run?.status === 'succeeded'
-                    ? moduleCompetencies.flatMap((competency) =>
+                    ? missionCompetencies.flatMap((competency) =>
                           estimates
                               .filter(
                                   ({ runId, competencyId }) =>
