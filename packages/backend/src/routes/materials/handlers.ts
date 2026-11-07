@@ -31,6 +31,7 @@ import {
     COMPETENCY_PROMPT_VERSION,
     COMPETENCY_SYSTEM_PROMPT,
 } from '../../studio/competencies.ts';
+import { visibleTo as sessionVisibleTo } from '../studio/handlers.ts';
 import { readPdfPages } from './pdf.ts';
 import type {
     MaterialParams,
@@ -44,7 +45,7 @@ const SNIPPET_LENGTH = 160;
 const MAX_MODULE_PAGES = 20;
 const AI_TIMEOUT_MS = 90_000;
 
-const visibleTo = (userId: number) =>
+export const visibleTo = (userId: number) =>
     or(isNull(materials.ownerId), eq(materials.ownerId, userId));
 
 const summary = {
@@ -127,7 +128,12 @@ async function materialDetail(
                       drafting: learningSessions.drafting,
                   })
                   .from(learningSessions)
-                  .where(inArray(learningSessions.moduleId, moduleIds))
+                  .where(
+                      and(
+                          inArray(learningSessions.moduleId, moduleIds),
+                          sessionVisibleTo(userId),
+                      ),
+                  )
                   .orderBy(asc(learningSessions.id));
 
     return {

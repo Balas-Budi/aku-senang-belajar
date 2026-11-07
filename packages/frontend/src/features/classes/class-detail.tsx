@@ -5,6 +5,7 @@ import { Button } from '../../components/ui/button';
 import { Card } from '../../components/ui/card';
 import { RequestError } from '../../components/request-error';
 import { ClassMissions } from '../results/class-missions';
+import { ClassChapters } from './class-chapters';
 export function ClassDetail({ id }: { id: number }) {
     const classes = useQuery(classesQuery());
     const roster = useQuery(rosterQuery(id));
@@ -17,6 +18,7 @@ export function ClassDetail({ id }: { id: number }) {
     return (
         <div className="space-y-6">
             <h1 className="text-2xl font-semibold">{classroom.name}</h1>
+            <ClassChapters classId={id} />
             <ClassMissions classId={id} />
             <div className="grid items-start gap-6 lg:grid-cols-12">
                 <Card className="lg:col-span-8">

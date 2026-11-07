@@ -48,7 +48,7 @@ const alreadyPublished = () =>
 const optionIds = ({ content }: SessionBlock) =>
     'options' in content ? content.options.map(({ id }) => id).join(',') : '';
 
-const visibleTo = (userId: number) =>
+export const visibleTo = (userId: number) =>
     or(
         eq(learningSessions.createdBy, userId),
         isNull(learningSessions.createdBy),

@@ -81,6 +81,10 @@
             "seed-demo-module": {
                 "command": "node --env-file-if-exists=.env packages/backend/src/scripts/seed-demo-module.ts",
                 "cache": false
+            },
+            "seed-maths-book": {
+                "command": "node --env-file-if-exists=.env packages/backend/src/scripts/seed-maths-book.ts",
+                "cache": false
             }
         }
     }

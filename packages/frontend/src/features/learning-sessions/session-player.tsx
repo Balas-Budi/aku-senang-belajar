@@ -99,6 +99,7 @@ export function SessionPlayer({ assignmentId }: { assignmentId: number }) {
     const help = useHelp(assignmentId);
     const showError = useErrorToast();
     const { attempt } = session;
+    const chapterLink = `/student/chapters/${session.moduleId}`;
     const block =
         attempt?.status === 'in_progress'
             ? (session.blocks.find((item) => item.id === attempt.checkpoint) ??
@@ -138,13 +139,13 @@ export function SessionPlayer({ assignmentId }: { assignmentId: number }) {
                         </Button>
                     ) : (
                         <Link
-                            to="/student"
+                            to={chapterLink}
                             className={cn(
                                 buttonVariants({ variant: 'outline' }),
                                 tool,
                             )}
                         >
-                            Beranda
+                            Kembali ke bab
                         </Link>
                     )}
                     <div className="flex gap-2">
@@ -243,13 +244,13 @@ export function SessionPlayer({ assignmentId }: { assignmentId: number }) {
                         Lanjut belajar
                     </Button>
                     <Link
-                        to="/student"
+                        to={chapterLink}
                         className={buttonVariants({
                             variant: 'outline',
                             feel: 'chunky',
                         })}
                     >
-                        Keluar ke beranda
+                        Kembali ke bab
                     </Link>
                 </div>
             </Dialog>

@@ -3,8 +3,8 @@ import { useRef, useState } from 'react';
 import { studentClassQuery, useJoinClass, useLeaveClass } from './queries';
 import { ClassCodeField, inviteCodeMessages } from './class-code-field';
 import { meQuery } from '../auth/queries';
-import { AssignmentList } from '../assignments/assignment-list';
-import { studentAssignmentsQuery } from '../assignments/queries';
+import { PathOverview } from '../path/path-overview';
+import { studentPathQuery } from '../path/queries';
 import { PerchedJalak } from '../student/perched-jalak';
 import { SchoolBag } from '../student/school-bag';
 import { EmptyClassIllustration } from '../student/empty-class-illustration';
@@ -18,7 +18,7 @@ import {
 } from '../../components/request-error';
 export function StudentClass() {
     const query = useQuery(studentClassQuery());
-    const assignments = useQuery(studentAssignmentsQuery());
+    const path = useQuery(studentPathQuery());
     const { data: user } = useQuery(meQuery());
     const join = useJoinClass();
     const leave = useLeaveClass();
@@ -52,7 +52,10 @@ export function StudentClass() {
             </div>
         );
     const classroom = query.data.classroom;
-    const sessionCount = assignments.data?.length ?? 0;
+    const openChapters =
+        path.data?.subjects
+            .flatMap(({ chapters }) => chapters)
+            .filter(({ open }) => open).length ?? 0;
     return (
         <div className="space-y-6">
             <section
@@ -70,9 +73,9 @@ export function StudentClass() {
                     <p className="text-muted-foreground mt-2 max-w-md text-lg leading-relaxed text-pretty sm:text-xl">
                         {!classroom
                             ? 'Masukkan kode kelas dari gurumu untuk mulai belajar.'
-                            : sessionCount
-                              ? `Gurumu sudah membagikan ${sessionCount} misi belajar.`
-                              : 'Kelasmu sudah siap. Tunggu misi pertama dari gurumu, ya.'}
+                            : openChapters
+                              ? `Gurumu sudah membuka ${openChapters} bab untukmu.`
+                              : 'Kelasmu sudah siap. Tunggu gurumu membuka bab pertama, ya.'}
                     </p>
                 </div>
                 <SchoolBag
@@ -152,9 +155,7 @@ export function StudentClass() {
                                     Sudah bergabung
                                 </p>
                             </div>
-                            <AssignmentList
-                                teacherName={classroom.teacherName}
-                            />
+                            <PathOverview teacherName={classroom.teacherName} />
                             <details className="text-base">
                                 <summary className="text-muted-foreground focus-visible:outline-ring min-h-12 cursor-pointer rounded-lg py-3 underline underline-offset-4 focus-visible:outline-3">
                                     Ingin pindah kelas?

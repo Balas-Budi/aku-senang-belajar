@@ -1,18 +1,13 @@
-import { and, asc, desc, eq } from 'drizzle-orm';
+import { and, eq } from 'drizzle-orm';
 import type { FastifyReply, FastifyRequest } from 'fastify';
 import { queueAnalysis } from '../../analysis/runner.ts';
 import { currentUser } from '../../auth/guards.ts';
 import {
-    assignments,
     attempts,
     classes,
     classMembers,
     helpEvents,
-    learningSessions,
-    materials,
-    modules,
     responses,
-    sessionBlocks,
 } from '../../db/schema.ts';
 import { stepOfKind } from '../../learning/blocks.ts';
 import { AppError, notFound } from '../../lib/errors.ts';
@@ -36,6 +31,7 @@ import {
     openAttempt,
     stateOf,
 } from './attempts.ts';
+import { isStageLocked, pathOf, stageLocked } from './path.ts';
 import type {
     AssignmentParams,
     AttemptParams,
@@ -93,49 +89,8 @@ export async function joinClass(
         .send({ classroom: await classroomOf(db, student.id) });
 }
 
-export async function myAssignments(request: FastifyRequest) {
-    const rows = await request.server.db
-        .select({
-            id: assignments.id,
-            title: learningSessions.title,
-            summary: learningSessions.summary,
-            subject: materials.subject,
-            moduleTitle: modules.title,
-            status: attempts.status,
-            checkpointKind: sessionBlocks.kind,
-        })
-        .from(classMembers)
-        .innerJoin(assignments, eq(assignments.classId, classMembers.classId))
-        .innerJoin(
-            learningSessions,
-            eq(learningSessions.id, assignments.learningSessionId),
-        )
-        .innerJoin(modules, eq(modules.id, learningSessions.moduleId))
-        .innerJoin(materials, eq(materials.id, modules.materialId))
-        .leftJoin(
-            attempts,
-            and(
-                eq(attempts.assignmentId, assignments.id),
-                eq(attempts.studentId, classMembers.studentId),
-            ),
-        )
-        .leftJoin(sessionBlocks, eq(sessionBlocks.id, attempts.currentBlockId))
-        .where(
-            and(
-                eq(classMembers.studentId, currentUser(request).id),
-                eq(learningSessions.status, 'ready'),
-            ),
-        )
-        .orderBy(desc(assignments.assignedAt), asc(assignments.id));
-
-    return rows.map(({ status, checkpointKind, ...assignment }) => ({
-        ...assignment,
-        progress: status ?? ('not_started' as const),
-        step:
-            status === 'in_progress' && checkpointKind
-                ? stepOfKind[checkpointKind]
-                : null,
-    }));
+export async function myPath(request: FastifyRequest) {
+    return pathOf(request.server.db, currentUser(request).id);
 }
 
 export async function leaveClass(request: FastifyRequest, reply: FastifyReply) {
@@ -173,6 +128,10 @@ export async function assignmentDetail(
         currentUser(request).id,
         request.params.assignmentId,
     );
+    if (await isStageLocked(db, currentUser(request).id, assignment.id)) {
+        throw stageLocked();
+    }
+
     const blocks = await blocksOf(db, sessionId);
     const attempt = await attemptOf(request, assignment.id);
     const history = attempt
@@ -205,6 +164,11 @@ export async function startAttempt(
         studentId,
         request.params.assignmentId,
     );
+
+    if (await isStageLocked(db, studentId, assignment.id)) {
+        throw stageLocked();
+    }
+
     const blocks = await blocksOf(db, assignment.sessionId);
 
     if (blocks.length === 0) {

@@ -50,6 +50,7 @@ export async function assignmentFor(
             title: learningSessions.title,
             summary: learningSessions.summary,
             subject: materials.subject,
+            moduleId: modules.id,
             moduleTitle: modules.title,
         })
         .from(assignments)

@@ -1,7 +1,11 @@
 import { dehydrate, HydrationBoundary } from '@tanstack/react-query';
 import { data, Link } from 'react-router';
 import { requireUser } from '../lib/require-user.server';
-import { classesQuery, rosterQuery } from '../features/classes/queries';
+import {
+    classChaptersQuery,
+    classesQuery,
+    rosterQuery,
+} from '../features/classes/queries';
 import { ClassDetail } from '../features/classes/class-detail';
 import { classMissionsQuery } from '../features/results/queries';
 import { ApiError } from '../lib/api';
@@ -17,6 +21,7 @@ export async function loader({ request, params }: Route.LoaderArgs) {
             client.fetchQuery(classesQuery(cookie)),
             client.fetchQuery(rosterQuery(id, cookie)),
             client.prefetchQuery(classMissionsQuery(id, cookie)),
+            client.prefetchQuery(classChaptersQuery(id, cookie)),
         ]);
     } catch (error) {
         if (error instanceof ApiError && error.status === 404)

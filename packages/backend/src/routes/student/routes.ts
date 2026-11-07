@@ -7,15 +7,14 @@ import {
     joinClass,
     leaveClass,
     moveCheckpoint,
-    myAssignments,
     myClass,
+    myPath,
     startAttempt,
     submitAttempt,
 } from './handlers.ts';
 import {
     assignmentParams,
     assignmentResponse,
-    assignmentsResponse,
     attemptParams,
     attemptResponse,
     checkpointBody,
@@ -25,6 +24,7 @@ import {
     helpBody,
     helpResponse,
     joinClassBody,
+    pathResponse,
     responseBody,
 } from './schema.ts';
 
@@ -54,9 +54,9 @@ export const studentRoutes: FastifyPluginAsyncZod = async (fastify) => {
     );
     fastify.delete('/class', leaveClass);
     fastify.get(
-        '/assignments',
-        { schema: { response: { 200: assignmentsResponse } } },
-        myAssignments,
+        '/path',
+        { schema: { response: { 200: pathResponse } } },
+        myPath,
     );
     fastify.get(
         '/assignments/:assignmentId',

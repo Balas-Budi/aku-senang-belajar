@@ -634,17 +634,24 @@ test('finishing returns the takeaways and the topics to practise, and the attemp
     assert.deepEqual(detail.attempt.done, done.json());
 });
 
-test('the assigned list shows each session progress and step (FR-016)', async (t) => {
+test('the learning path shows each session progress and step (FR-016)', async (t) => {
     const app = await testApp(t);
     const classId = await newClass(app);
     const { assignmentId } = await assignLesson(app, classId);
     const token = await studentIn(app, classId);
     const progress = async () => {
-        const list: { progress: string; step: string | null }[] = (
-            await call(app, token, 'GET', '/assignments')
-        ).json();
+        const path: {
+            subjects: {
+                chapters: {
+                    stages: { progress: string; step: string | null }[];
+                }[];
+            }[];
+        } = (await call(app, token, 'GET', '/path')).json();
 
-        return list.map(({ progress: status, step }) => [status, step]);
+        return path.subjects
+            .flatMap(({ chapters }) => chapters)
+            .flatMap(({ stages }) => stages)
+            .map(({ progress: status, step }) => [status, step]);
     };
 
     const before = await progress();

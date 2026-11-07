@@ -4,6 +4,7 @@ import {
     useQueryClient,
 } from '@tanstack/react-query';
 import { api } from '../../lib/api';
+import type { Subject } from '../assignments/queries';
 export type Classroom = { id: number; name: string; teacherName: string };
 export type TeacherClass = {
     id: number;
@@ -70,5 +71,41 @@ export function useChangeCode(id: number) {
         mutationFn: (method: 'POST' | 'DELETE') =>
             api(`/api/classes/${id}/invite-code`, { method }),
         onSuccess: () => client.invalidateQueries({ queryKey: ['classes'] }),
+    });
+}
+export type ClassBook = {
+    id: number;
+    title: string;
+    subject: Subject;
+    prepared: boolean;
+    chapters: {
+        id: number;
+        title: string;
+        openStages: number;
+        waitingStages: number;
+        started: boolean;
+    }[];
+};
+export const classChaptersQuery = (id: number, cookie?: string | null) =>
+    queryOptions({
+        queryKey: ['classes', id, 'chapters'],
+        queryFn: () =>
+            api<ClassBook[]>(`/api/classes/${id}/chapters`, {
+                headers: headers(cookie),
+            }),
+    });
+export function useChapterAccess(classId: number) {
+    const client = useQueryClient();
+    return useMutation({
+        mutationFn: ({
+            chapterId,
+            method,
+        }: {
+            chapterId: number;
+            method: 'PUT' | 'DELETE';
+        }) => api(`/api/classes/${classId}/chapters/${chapterId}`, { method }),
+        // Opening and closing change the class missions list as well.
+        onSuccess: () =>
+            client.invalidateQueries({ queryKey: ['classes', classId] }),
     });
 }

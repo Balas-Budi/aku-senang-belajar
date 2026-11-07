@@ -1,3 +1,4 @@
+import { useQuery } from '@tanstack/react-query';
 import { Link } from 'react-router';
 import { CheckIcon } from '../../components/icons/check-icon';
 import { LottieMoment } from '../../components/lottie-moment';
@@ -6,6 +7,7 @@ import { Button, buttonVariants } from '../../components/ui/button';
 import { useErrorToast } from '../../components/ui/toast';
 import { cn } from '../../lib/cn';
 import { SubjectArt, subjects } from '../assignments/subject-art';
+import { findChapter, studentPathQuery } from '../path/queries';
 import { useStartAttempt, type Done, type LearningSession } from './queries';
 import { ReactingJalak, ScreenCard, ScreenHeading } from './session-ui';
 import { stepLabels, stepOrder } from './steps';
@@ -81,7 +83,10 @@ export function SessionIntro({
                 >
                     {start.isPending ? 'Menyiapkan…' : 'Mulai misi'}
                 </Button>
-                <Link to="/student" className={homeButton('outline')}>
+                <Link
+                    to={`/student/chapters/${session.moduleId}`}
+                    className={homeButton('outline')}
+                >
                     Nanti saja
                 </Link>
             </div>
@@ -98,6 +103,14 @@ export function SessionDone({
     done: Done;
     teacher: string;
 }) {
+    const path = useQuery(studentPathQuery());
+    const stages =
+        (path.data &&
+            findChapter(path.data, session.moduleId)?.chapter.stages) ??
+        [];
+    const next = stages
+        .slice(stages.findIndex((stage) => stage.id === session.id) + 1)
+        .find((stage) => stage.progress !== 'submitted' && !stage.locked);
     return (
         <ScreenCard aria-labelledby="done-title" className="relative">
             <LottieMoment
@@ -158,9 +171,22 @@ export function SessionDone({
             <p className="text-center leading-relaxed">
                 Jawabanmu sudah tersimpan untuk {teacher}.
             </p>
-            <Link to="/student" className={homeButton('primary')}>
-                Kembali ke beranda
-            </Link>
+            <div className="flex flex-col gap-3 sm:flex-row">
+                {next && (
+                    <Link
+                        to={`/student/sessions/${next.id}`}
+                        className={homeButton('primary')}
+                    >
+                        Lanjut ke misi berikutnya
+                    </Link>
+                )}
+                <Link
+                    to={`/student/chapters/${session.moduleId}`}
+                    className={homeButton(next ? 'outline' : 'primary')}
+                >
+                    Kembali ke bab
+                </Link>
+            </div>
         </ScreenCard>
     );
 }

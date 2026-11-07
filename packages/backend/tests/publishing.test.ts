@@ -33,11 +33,14 @@ async function draftingApp(t: TestContext, replies = [draft]) {
 }
 
 async function titlesFor(app: FastifyInstance, token: string) {
-    const list: { title: string }[] = (
-        await get(app, token, '/api/student/assignments')
-    ).json();
+    const path: {
+        subjects: { chapters: { stages: { title: string }[] }[] }[];
+    } = (await get(app, token, '/api/student/path')).json();
 
-    return list.map(({ title }) => title);
+    return path.subjects
+        .flatMap(({ chapters }) => chapters)
+        .flatMap(({ stages }) => stages)
+        .map(({ title }) => title);
 }
 
 test('publishing needs every warning acknowledged, then records who approved it and when (FR-011)', async (t) => {

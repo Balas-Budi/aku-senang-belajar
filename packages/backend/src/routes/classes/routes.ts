@@ -2,13 +2,18 @@ import { z } from 'zod';
 import type { FastifyPluginAsyncZod } from 'fastify-type-provider-zod';
 import { requireRole } from '../../auth/guards.ts';
 import {
+    closeChapter,
     createClass,
+    listChapters,
     listClasses,
     listStudents,
+    openChapter,
     regenerateInviteCode,
     revokeInviteCode,
 } from './handlers.ts';
 import {
+    bookResponse,
+    chapterParams,
     classParams,
     classResponse,
     createClassBody,
@@ -53,5 +58,25 @@ export const classRoutes: FastifyPluginAsyncZod = async (fastify) => {
         '/:classId/invite-code',
         { schema: { params: classParams } },
         revokeInviteCode,
+    );
+    fastify.get(
+        '/:classId/chapters',
+        {
+            schema: {
+                params: classParams,
+                response: { 200: z.array(bookResponse) },
+            },
+        },
+        listChapters,
+    );
+    fastify.put(
+        '/:classId/chapters/:moduleId',
+        { schema: { params: chapterParams } },
+        openChapter,
+    );
+    fastify.delete(
+        '/:classId/chapters/:moduleId',
+        { schema: { params: chapterParams } },
+        closeChapter,
     );
 };

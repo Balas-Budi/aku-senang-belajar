@@ -1,5 +1,5 @@
 import { dehydrate, HydrationBoundary } from '@tanstack/react-query';
-import { data } from 'react-router';
+import { data, redirect } from 'react-router';
 import { ToastProvider } from '../components/ui/toast';
 import { studentClassQuery } from '../features/classes/queries';
 import { sessionQuery } from '../features/learning-sessions/queries';
@@ -20,6 +20,9 @@ export async function loader({ request, params }: Route.LoaderArgs) {
     } catch (error) {
         if (error instanceof ApiError && error.status === 404)
             throw data('Misi tidak ditemukan', { status: 404 });
+        // A locked stage is not linked anywhere, so only a typed address lands here.
+        if (error instanceof ApiError && error.body.name === 'STAGE_LOCKED')
+            throw redirect('/student');
         throw error;
     }
     return { id, dehydratedState: dehydrate(client) };

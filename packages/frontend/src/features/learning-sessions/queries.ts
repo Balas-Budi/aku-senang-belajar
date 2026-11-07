@@ -100,6 +100,7 @@ export type LearningSession = {
     title: string;
     summary: string;
     subject: Subject;
+    moduleId: number;
     moduleTitle: string;
     blocks: Block[];
     attempt: Attempt | null;
@@ -125,7 +126,7 @@ export function answersFor(attempt: Attempt, blockId: number) {
     return attempt.answers.filter((saved) => saved.blockId === blockId);
 }
 
-const listKey = ['student', 'assignments'];
+const listKey = ['student', 'path'];
 
 function useSession(assignmentId: number) {
     const client = useQueryClient();

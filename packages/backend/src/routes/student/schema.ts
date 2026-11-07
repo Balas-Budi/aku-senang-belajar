@@ -26,16 +26,43 @@ const assignmentFields = {
     title: z.string(),
     summary: z.string(),
     subject: z.enum(subject.enumValues),
+    moduleId: z.number(),
     moduleTitle: z.string(),
 };
 
-export const assignmentsResponse = z.array(
-    z.object({
-        ...assignmentFields,
-        progress: z.enum(['not_started', 'in_progress', 'submitted']),
-        step: z.enum(steps).nullable(),
-    }),
-);
+const stage = z.object({
+    id: z.number(),
+    title: z.string(),
+    summary: z.string(),
+    progress: z.enum(['not_started', 'in_progress', 'submitted']),
+    step: z.enum(steps).nullable(),
+    locked: z.boolean(),
+});
+
+export const pathResponse = z.object({
+    next: z
+        .object({
+            chapterId: z.number(),
+            chapterTitle: z.string(),
+            subject: z.enum(subject.enumValues),
+            stage,
+        })
+        .nullable(),
+    subjects: z.array(
+        z.object({
+            subject: z.enum(subject.enumValues),
+            chapters: z.array(
+                z.object({
+                    id: z.number(),
+                    title: z.string(),
+                    book: z.string(),
+                    open: z.boolean(),
+                    stages: z.array(stage),
+                }),
+            ),
+        }),
+    ),
+});
 
 export const assignmentParams = z.object({
     assignmentId: z.coerce.number().int().positive(),

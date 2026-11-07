@@ -33,6 +33,51 @@ type ParsedCompetency = {
 
 type ParsedBlock = { block: SessionBlock; codes: string[] };
 
+export function parseCompetencies(
+    list: PreparedModule['competencies'],
+): ParsedCompetency[] {
+    return list.map(({ code, description, rubric }) => ({
+        code,
+        description,
+        rubric: rubric ? competencyRubric.parse(rubric) : null,
+    }));
+}
+
+export function parseBlocks(list: PreparedModule['blocks']): ParsedBlock[] {
+    return list.map((block) => ({
+        block: sessionBlock.parse(block),
+        codes: block.competencies,
+    }));
+}
+
+export async function insertChapter(
+    tx: Queryable,
+    chapter: typeof modules.$inferInsert,
+    parsed: ParsedCompetency[],
+) {
+    const [row] = await tx
+        .insert(modules)
+        .values(chapter)
+        .returning({ id: modules.id });
+    const stored =
+        parsed.length === 0
+            ? []
+            : await tx
+                  .insert(competencies)
+                  .values(
+                      parsed.map((competency) => ({
+                          ...competency,
+                          moduleId: row.id,
+                      })),
+                  )
+                  .returning({ id: competencies.id, code: competencies.code });
+
+    return {
+        moduleId: row.id,
+        competencyIds: new Map(stored.map(({ code, id }) => [code, id])),
+    };
+}
+
 async function insertModule(
     tx: Queryable,
     prepared: PreparedModule,
@@ -43,23 +88,25 @@ async function insertModule(
         .insert(materials)
         .values({ subject: prepared.subject, title: prepared.material })
         .returning({ id: materials.id });
-    const [chapter] = await tx
-        .insert(modules)
-        .values({ materialId: material.id, title: prepared.module })
-        .returning({ id: modules.id });
-    const stored = await tx
-        .insert(competencies)
-        .values(
-            parsed.map((competency) => ({
-                ...competency,
-                moduleId: chapter.id,
-            })),
-        )
-        .returning({ id: competencies.id, code: competencies.code });
-    const competencyIds = new Map(stored.map(({ code, id }) => [code, id]));
+    const { moduleId, competencyIds } = await insertChapter(
+        tx,
+        { materialId: material.id, title: prepared.module },
+        parsed,
+    );
+
+    return insertSession(tx, moduleId, competencyIds, prepared.session, blocks);
+}
+
+export async function insertSession(
+    tx: Queryable,
+    moduleId: number,
+    competencyIds: Map<string, number>,
+    details: PreparedModule['session'],
+    blocks: ParsedBlock[],
+) {
     const [session] = await tx
         .insert(learningSessions)
-        .values({ ...prepared.session, moduleId: chapter.id, status: 'ready' })
+        .values({ ...details, moduleId, status: 'ready' })
         .returning({ id: learningSessions.id });
 
     for (const [index, { block, codes }] of blocks.entries()) {
@@ -114,17 +161,8 @@ export async function seedModule(
     classId: number,
     prepared: PreparedModule,
 ) {
-    const parsed = prepared.competencies.map(
-        ({ code, description, rubric }) => ({
-            code,
-            description,
-            rubric: rubric ? competencyRubric.parse(rubric) : null,
-        }),
-    );
-    const blocks = prepared.blocks.map((block) => ({
-        block: sessionBlock.parse(block),
-        codes: block.competencies,
-    }));
+    const parsed = parseCompetencies(prepared.competencies);
+    const blocks = parseBlocks(prepared.blocks);
 
     return db.transaction(async (tx) => {
         const [existing] = await tx
