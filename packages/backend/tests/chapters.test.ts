@@ -31,11 +31,11 @@ async function teacher(app: FastifyInstance) {
 async function chapterIn(app: FastifyInstance, ownerId: number | null = null) {
     const [material] = await app.db
         .insert(materials)
-        .values({ subject: 'mathematics', title: 'Matematika 5', ownerId })
+        .values({ subject: 'mathematics', title: 'Maths 5', ownerId })
         .returning({ id: materials.id });
     const [row] = await app.db
         .insert(modules)
-        .values({ materialId: material.id, title: 'Pecahan', firstPage: 1 })
+        .values({ materialId: material.id, title: 'Fractions', firstPage: 1 })
         .returning({ id: modules.id });
 
     return { materialId: material.id, moduleId: row.id };
@@ -136,13 +136,13 @@ test('opening a chapter gives the class every ready stage the teacher can use, o
         before.json().find((entry: { id: number }) => entry.id === materialId),
         {
             id: materialId,
-            title: 'Matematika 5',
+            title: 'Maths 5',
             subject: 'mathematics',
             prepared: true,
             chapters: [
                 {
                     id: moduleId,
-                    title: 'Pecahan',
+                    title: 'Fractions',
                     openStages: 0,
                     waitingStages: 2,
                     started: false,
@@ -157,7 +157,7 @@ test('opening a chapter gives the class every ready stage the teacher can use, o
             .chapters[0],
         {
             id: moduleId,
-            title: 'Pecahan',
+            title: 'Fractions',
             openStages: 2,
             waitingStages: 0,
             started: false,
@@ -283,4 +283,23 @@ test('the material page lists only the stages the teacher can use', async (t) =>
             .modules[0].sessions.map(({ title }: { title: string }) => title),
         ['Prepared', 'Mine'],
     );
+});
+
+test('a chapter address that is not a positive number answers 400', async (t) => {
+    const app = await testApp(t);
+    const owner = await teacher(app);
+    const cases = [
+        ['GET', '/api/classes/abc/chapters', 'classId'],
+        ['PUT', `/api/classes/${owner.classId}/chapters/abc`, 'moduleId'],
+        ['DELETE', `/api/classes/${owner.classId}/chapters/0`, 'moduleId'],
+        ['PUT', '/api/classes/0/chapters/1', 'classId'],
+    ] as const;
+
+    for (const [method, url, field] of cases) {
+        const response = await send(app, owner.token, method, url);
+
+        assert.equal(response.statusCode, 400, `${method} ${url}`);
+        assert.equal(response.json().name, 'VALIDATION_ERROR');
+        assert.equal(response.json().details[0].field, field);
+    }
 });
