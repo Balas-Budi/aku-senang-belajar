@@ -1,13 +1,10 @@
 import { useQuery } from '@tanstack/react-query';
 import { Link } from 'react-router';
-import {
-    RequestError,
-    requestErrorMessage,
-} from '../../components/request-error';
+import { RequestError } from '../../components/request-error';
+import { Alert } from '../../components/ui/alert';
 import { Button } from '../../components/ui/button';
 import { Card } from '../../components/ui/card';
 import { textLink } from '../../components/ui/text-link';
-import { useErrorToast } from '../../components/ui/toast';
 import { ApiError } from '../../lib/api';
 import type { Subject } from '../assignments/queries';
 import { subjects } from '../assignments/subject-art';
@@ -23,7 +20,6 @@ const refusals: Record<string, string> = {
         'Bab ini tidak bisa ditutup karena sudah ada siswa yang mulai mengerjakannya.',
 };
 
-// ownBookId is null for a prepared book, whose missions the admin prepares.
 function ChapterRow({
     classId,
     ownBookId,
@@ -34,19 +30,12 @@ function ChapterRow({
     chapter: ClassBook['chapters'][number];
 }) {
     const access = useChapterAccess(classId);
-    const showError = useErrorToast();
     const change = (method: 'PUT' | 'DELETE') =>
-        access.mutate(
-            { chapterId: chapter.id, method },
-            {
-                onError: (error) =>
-                    showError(
-                        (error instanceof ApiError &&
-                            refusals[error.body.name]) ||
-                            requestErrorMessage(error),
-                    ),
-            },
-        );
+        access.mutate({ chapterId: chapter.id, method });
+    const refusal =
+        access.error instanceof ApiError
+            ? refusals[access.error.body.name]
+            : undefined;
     const opened = chapter.openStages > 0;
     return (
         <li className="flex flex-wrap items-center justify-between gap-x-4 gap-y-2 py-3">
@@ -99,6 +88,17 @@ function ChapterRow({
                     </Link>
                 )}
             </div>
+            {access.error && (
+                <div className="basis-full">
+                    {refusal ? (
+                        <Alert tone="attention" role="alert">
+                            {refusal}
+                        </Alert>
+                    ) : (
+                        <RequestError error={access.error} />
+                    )}
+                </div>
+            )}
         </li>
     );
 }
