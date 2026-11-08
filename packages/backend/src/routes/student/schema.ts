@@ -188,6 +188,35 @@ export const feedbackResponse = z.object({
 
 export const helpResponse = z.object({ earned: earned.nullable() });
 
+export const INTERESTS = [
+    'animals',
+    'football',
+    'superheroes',
+    'space',
+    'music',
+    'drawing',
+    'cooking',
+    'nature',
+] as const;
+
+export const profileBody = z.object({
+    interests: z
+        .array(z.enum(INTERESTS))
+        .refine(
+            (chosen) => new Set(chosen).size === chosen.length,
+            'Each interest can be chosen once',
+        ),
+});
+
+export const profileResponse = z.object({
+    profile: z
+        .object({
+            interests: z.array(z.enum(INTERESTS)),
+            updatedAt: z.date(),
+        })
+        .nullable(),
+});
+
 export type JoinClassBody = z.infer<typeof joinClassBody>;
 export type AssignmentParams = z.infer<typeof assignmentParams>;
 export type AttemptParams = z.infer<typeof attemptParams>;
@@ -195,3 +224,4 @@ export type Answer = z.infer<typeof answer>;
 export type CheckpointBody = z.infer<typeof checkpointBody>;
 export type ResponseBody = z.infer<typeof responseBody>;
 export type HelpBody = z.infer<typeof helpBody>;
+export type ProfileBody = z.infer<typeof profileBody>;

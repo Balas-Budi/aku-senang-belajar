@@ -110,6 +110,15 @@ export const classMembers = pgTable(
     (table) => [index('class_members_class_id_idx').on(table.classId)],
 );
 
+export const studentProfiles = pgTable('student_profiles', {
+    studentId: integer()
+        .primaryKey()
+        .references(() => users.id, { onDelete: 'cascade' }),
+    interests: text().array().notNull(),
+    createdAt: timestamp({ withTimezone: true }).notNull().defaultNow(),
+    updatedAt: timestamp({ withTimezone: true }).notNull().defaultNow(),
+});
+
 export const materials = pgTable(
     'materials',
     {

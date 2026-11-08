@@ -7,6 +7,7 @@ export function GreetingJalak({
     lookAt,
     watching = false,
     covering = false,
+    cheers = 0,
     greeting,
     bubbleClassName,
     className,
@@ -14,6 +15,7 @@ export function GreetingJalak({
     lookAt?: RefObject<HTMLElement | null>;
     watching?: boolean;
     covering?: boolean;
+    cheers?: number;
     greeting: string;
     bubbleClassName: string;
     className?: string;
@@ -25,6 +27,7 @@ export function GreetingJalak({
         watching,
         lookAt,
         covering,
+        cheers,
         chirps,
     });
     return (

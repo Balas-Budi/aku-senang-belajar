@@ -8,6 +8,7 @@ import {
     classMembers,
     helpEvents,
     responses,
+    studentProfiles,
 } from '../../db/schema.ts';
 import { stepOfKind } from '../../learning/blocks.ts';
 import { AppError, notFound } from '../../lib/errors.ts';
@@ -32,12 +33,14 @@ import {
     stateOf,
 } from './attempts.ts';
 import { isStageLocked, pathOf, stageLocked } from './path.ts';
+import { INTERESTS } from './schema.ts';
 import type {
     AssignmentParams,
     AttemptParams,
     CheckpointBody,
     HelpBody,
     JoinClassBody,
+    ProfileBody,
     ResponseBody,
 } from './schema.ts';
 
@@ -354,4 +357,41 @@ export async function submitAttempt(
             await historyOf(tx, attempt.id),
         );
     });
+}
+
+const inOrder = (chosen: readonly string[]) =>
+    INTERESTS.filter((key) => chosen.includes(key));
+
+const profileColumns = {
+    interests: studentProfiles.interests,
+    updatedAt: studentProfiles.updatedAt,
+};
+
+export async function myProfile(request: FastifyRequest) {
+    const [profile] = await request.server.db
+        .select(profileColumns)
+        .from(studentProfiles)
+        .where(eq(studentProfiles.studentId, currentUser(request).id));
+
+    return {
+        profile: profile
+            ? { ...profile, interests: inOrder(profile.interests) }
+            : null,
+    };
+}
+
+export async function saveProfile(
+    request: FastifyRequest<{ Body: ProfileBody }>,
+) {
+    const interests = inOrder(request.body.interests);
+    const [profile] = await request.server.db
+        .insert(studentProfiles)
+        .values({ studentId: currentUser(request).id, interests })
+        .onConflictDoUpdate({
+            target: studentProfiles.studentId,
+            set: { interests, updatedAt: new Date() },
+        })
+        .returning(profileColumns);
+
+    return { profile: { ...profile, interests } };
 }
