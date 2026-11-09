@@ -40,14 +40,6 @@ const stage = z.object({
 });
 
 export const pathResponse = z.object({
-    next: z
-        .object({
-            chapterId: z.number(),
-            chapterTitle: z.string(),
-            subject: z.enum(subject.enumValues),
-            stage,
-        })
-        .nullable(),
     subjects: z.array(
         z.object({
             subject: z.enum(subject.enumValues),

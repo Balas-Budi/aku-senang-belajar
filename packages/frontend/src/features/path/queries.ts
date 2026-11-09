@@ -19,12 +19,6 @@ export type Chapter = {
     stages: Stage[];
 };
 export type LearningPath = {
-    next: {
-        chapterId: number;
-        chapterTitle: string;
-        subject: Subject;
-        stage: Stage;
-    } | null;
     subjects: { subject: Subject; chapters: Chapter[] }[];
 };
 
@@ -56,3 +50,32 @@ export function findChapter(path: LearningPath, chapterId: number) {
 
 export const finished = (stages: Stage[]) =>
     stages.filter(({ progress }) => progress === 'submitted').length;
+
+export function subjectStages(path: LearningPath, chapterId: number) {
+    return (
+        path.subjects
+            .find(({ chapters }) => chapters.some(({ id }) => id === chapterId))
+            ?.chapters.flatMap(({ stages }) => stages) ?? []
+    );
+}
+
+export function visibleChapters(chapters: Chapter[]) {
+    const lastOpen = chapters.reduce(
+        (last, chapter, index) => (chapter.open ? index : last),
+        -1,
+    );
+    return chapters.slice(0, lastOpen + 2);
+}
+
+export function currentStage(chapters: Chapter[]) {
+    const stages = chapters.flatMap((chapter) =>
+        chapter.stages.map((stage) => ({ chapter, stage })),
+    );
+    return (
+        stages.find(({ stage }) => stage.progress === 'in_progress') ??
+        stages.find(
+            ({ stage }) => stage.progress !== 'submitted' && !stage.locked,
+        ) ??
+        null
+    );
+}

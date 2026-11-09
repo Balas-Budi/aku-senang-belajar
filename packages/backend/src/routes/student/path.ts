@@ -19,7 +19,6 @@ type ChapterRow = { id: number; title: string; book: string; subject: Subject };
 
 type StageRow = {
     id: number;
-    assignedAt: Date;
     title: string;
     summary: string;
     moduleId: number;
@@ -56,36 +55,10 @@ function buildPath(chapterRows: ChapterRow[], stageRows: StageRow[]) {
             };
         });
 
-        return {
-            ...chapter,
-            open: rows.length > 0,
-            openedAt: Math.max(0, ...rows.map((row) => +row.assignedAt)),
-            stages,
-        };
+        return { ...chapter, open: rows.length > 0, stages };
     });
-    const [next] = chapters
-        .flatMap((chapter) =>
-            chapter.stages
-                .filter((stage) => stage.progress !== 'submitted')
-                .filter((stage) => !stage.locked)
-                .map((stage) => ({ chapter, stage })),
-        )
-        .sort(
-            (a, b) =>
-                Number(b.stage.progress === 'in_progress') -
-                    Number(a.stage.progress === 'in_progress') ||
-                b.chapter.openedAt - a.chapter.openedAt,
-        );
 
     return {
-        next: next
-            ? {
-                  chapterId: next.chapter.id,
-                  chapterTitle: next.chapter.title,
-                  subject: next.chapter.subject,
-                  stage: next.stage,
-              }
-            : null,
         subjects: subject.enumValues
             .map((name) => ({
                 subject: name,
@@ -107,7 +80,6 @@ export async function pathOf(db: Queryable, studentId: number) {
     const stageRows = await db
         .select({
             id: assignments.id,
-            assignedAt: assignments.assignedAt,
             title: learningSessions.title,
             summary: learningSessions.summary,
             moduleId: modules.id,

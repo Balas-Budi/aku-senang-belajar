@@ -7,7 +7,7 @@ import { Button, buttonVariants } from '../../components/ui/button';
 import { useErrorToast } from '../../components/ui/toast';
 import { cn } from '../../lib/cn';
 import { SubjectArt, subjects } from '../assignments/subject-art';
-import { findChapter, studentPathQuery } from '../path/queries';
+import { studentPathQuery, subjectStages } from '../path/queries';
 import { useStartAttempt, type Done, type LearningSession } from './queries';
 import { ReactingJalak, ScreenCard, ScreenHeading } from './session-ui';
 import { stepLabels, stepOrder } from './steps';
@@ -104,10 +104,7 @@ export function SessionDone({
     teacher: string;
 }) {
     const path = useQuery(studentPathQuery());
-    const stages =
-        (path.data &&
-            findChapter(path.data, session.moduleId)?.chapter.stages) ??
-        [];
+    const stages = path.data ? subjectStages(path.data, session.moduleId) : [];
     const next = stages
         .slice(stages.findIndex((stage) => stage.id === session.id) + 1)
         .find((stage) => stage.progress !== 'submitted' && !stage.locked);

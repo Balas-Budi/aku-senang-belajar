@@ -149,18 +149,6 @@ test('the path lists chapters in book order with stages in order, later stages l
 
     assert.equal(response.statusCode, 200);
     assert.deepEqual(response.json(), {
-        next: {
-            chapterId: plants,
-            chapterTitle: 'Plants',
-            subject: 'natural_and_social_science',
-            stage: {
-                id: roots,
-                title: 'Roots',
-                summary: 'About Roots',
-                ...fresh,
-                locked: false,
-            },
-        },
         subjects: [
             {
                 subject: 'mathematics',
@@ -234,7 +222,7 @@ test('the path lists chapters in book order with stages in order, later stages l
     });
 });
 
-test('a locked stage opens only after the stage before it is submitted, and the stage in progress comes next', async (t) => {
+test('a locked stage opens only after the stage before it is submitted', async (t) => {
     const app = await testApp(t);
     const { classId, token } = await studentInClass(app);
     const fractions = await chapter(app, await book(app), 'Fractions', 1);
@@ -242,8 +230,6 @@ test('a locked stage opens only after the stage before it is submitted, and the 
         await stage(app, fractions, 'Halves'),
         await stage(app, fractions, 'Quarters'),
     ]);
-    const nextId = async () =>
-        (await call(app, token, 'GET', '/path')).json().next?.stage.id;
 
     const lockedDetail = await call(
         app,
@@ -266,7 +252,6 @@ test('a locked stage opens only after the stage before it is submitted, and the 
         'POST',
         `/assignments/${second}/attempt`,
     );
-    const nextWhileRunning = await nextId();
 
     await call(app, token, 'POST', `/attempts/${attempt.id}/submit`);
 
@@ -283,11 +268,9 @@ test('a locked stage opens only after the stage before it is submitted, and the 
     assert.equal(lockedStart.statusCode, 409);
     assert.equal(lockedStart.json().name, 'STAGE_LOCKED');
     assert.equal(whileFirstRuns.statusCode, 409);
-    assert.equal(nextWhileRunning, first);
     assert.equal(opened.statusCode, 200);
     assert.equal(opened.json().moduleId, fractions);
     assert.equal(started.statusCode, 201);
-    assert.equal(await nextId(), second);
 });
 
 test('a student sees neither draft sessions nor those of another class (AT-03)', async (t) => {
@@ -326,7 +309,7 @@ test('a student without a class has an empty path', async (t) => {
     );
 
     assert.equal(response.statusCode, 200);
-    assert.deepEqual(response.json(), { next: null, subjects: [] });
+    assert.deepEqual(response.json(), { subjects: [] });
 });
 
 test('only a signed-in student reads the path', async (t) => {

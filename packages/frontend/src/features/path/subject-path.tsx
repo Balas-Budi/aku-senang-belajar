@@ -8,10 +8,19 @@ import { RequestError } from '../../components/request-error';
 import { Button, buttonVariants } from '../../components/ui/button';
 import { textLink } from '../../components/ui/text-link';
 import { cn } from '../../lib/cn';
+import type { Subject } from '../assignments/queries';
 import { SubjectArt, subjects } from '../assignments/subject-art';
 import { studentClassQuery } from '../classes/queries';
 import { stepLabels } from '../learning-sessions/steps';
-import { findChapter, finished, studentPathQuery, type Stage } from './queries';
+import {
+    chaptersOf,
+    currentStage,
+    finished,
+    studentPathQuery,
+    visibleChapters,
+    type Chapter,
+    type Stage,
+} from './queries';
 import { StageBar } from './stage-bar';
 
 const lanes = [50, 70, 50, 30];
@@ -194,14 +203,100 @@ function Mission({
     );
 }
 
-export function ChapterPath({ chapterId }: { chapterId: number }) {
+function OpenChapter({
+    chapter,
+    number,
+    current,
+}: {
+    chapter: Chapter;
+    number: number;
+    current: Stage | undefined;
+}) {
+    const { stages } = chapter;
+    const done = finished(stages) === stages.length;
+    return (
+        <section
+            id={`bab-${chapter.id}`}
+            aria-labelledby={`bab-${chapter.id}-title`}
+            className="scroll-mt-4 space-y-2"
+        >
+            <header className="border-paper-edge rounded-[24px] border-2 border-b-[6px] bg-white p-4 sm:p-5">
+                <p className="text-muted-foreground text-base">
+                    Bab {number}
+                    {done && ' · Selesai'}
+                </p>
+                <h2
+                    id={`bab-${chapter.id}-title`}
+                    className="font-display text-primary-deep text-2xl leading-tight font-semibold break-words sm:text-3xl"
+                >
+                    {chapter.title}
+                </h2>
+                <StageBar stages={stages} className="mt-2" />
+            </header>
+            <ol
+                aria-label={`Misi di bab ${chapter.title}`}
+                className="relative mx-auto max-w-lg"
+            >
+                <Trail stages={stages} />
+                {stages.map((stage, index) => (
+                    <Mission
+                        key={stage.id}
+                        stage={stage}
+                        number={index + 1}
+                        lane={lanes[index % lanes.length]}
+                        current={stage === current}
+                    />
+                ))}
+            </ol>
+        </section>
+    );
+}
+
+function LockedChapter({
+    chapter,
+    number,
+    teacher,
+}: {
+    chapter: Chapter;
+    number: number;
+    teacher: string;
+}) {
+    return (
+        <section
+            id={`bab-${chapter.id}`}
+            aria-labelledby={`bab-${chapter.id}-title`}
+            className="border-paper-edge bg-student-surface flex scroll-mt-4 items-center gap-4 rounded-[24px] border-2 border-dashed p-4 sm:p-5"
+        >
+            <span className="bg-secondary text-muted-foreground flex size-14 shrink-0 items-center justify-center rounded-full">
+                <LockIcon className="size-7" />
+            </span>
+            <span className="min-w-0">
+                <span className="text-muted-foreground block text-base">
+                    Bab {number} · Terkunci
+                </span>
+                <h2
+                    id={`bab-${chapter.id}-title`}
+                    className="font-display text-primary-deep text-xl leading-snug font-semibold break-words"
+                >
+                    {chapter.title}
+                </h2>
+                <span className="text-muted-foreground block text-base">
+                    Misinya muncul saat {teacher} membuka bab ini.
+                </span>
+            </span>
+        </section>
+    );
+}
+
+export function SubjectPath({ subject }: { subject: Subject }) {
     const query = useQuery(studentPathQuery());
     const classroom = useQuery(studentClassQuery());
-    const list = useRef<HTMLOListElement>(null);
+    const path = useRef<HTMLDivElement>(null);
+    const { label, tint } = subjects[subject];
     useEffect(() => {
         function openMission() {
             return (
-                list.current?.querySelector<HTMLDetailsElement>(
+                path.current?.querySelector<HTMLDetailsElement>(
                     'details[open]',
                 ) ?? null
             );
@@ -231,7 +326,7 @@ export function ChapterPath({ chapterId }: { chapterId: number }) {
     if (query.isPending)
         return (
             <p role="status" className="text-muted-foreground">
-                Sebentar, kita siapkan jalur babmu…
+                Sebentar, kita siapkan jalur {label}…
             </p>
         );
     if (query.isError)
@@ -244,75 +339,85 @@ export function ChapterPath({ chapterId }: { chapterId: number }) {
                         void query.refetch();
                     }}
                 >
-                    Muat ulang bab
+                    Muat ulang jalur
                 </Button>
             </div>
         );
-    const found = findChapter(query.data, chapterId);
-    if (!found)
-        return (
-            <div className="space-y-4">
-                <p className="text-lg">Bab ini tidak ada di kelasmu.</p>
-                <Link to="/student" className={textLink}>
-                    Kembali ke beranda
-                </Link>
-            </div>
-        );
-    const { subject, chapter, number } = found;
-    const { stages } = chapter;
-    const current = stages.find(
-        (stage) => stage.progress !== 'submitted' && !stage.locked,
-    );
+    const chapters = chaptersOf(query.data, subject) ?? [];
+    const books = [...new Set(chapters.map(({ book }) => book))];
+    const stages = chapters.flatMap((chapter) => chapter.stages);
+    const current = currentStage(chapters)?.stage;
     const teacher = classroom.data?.classroom?.teacherName ?? 'gurumu';
     return (
         <div className="space-y-6">
-            <Link to={`/student/subjects/${subject}`} className={textLink}>
-                Kembali ke {subjects[subject].label}
+            <Link to="/student" className={textLink}>
+                Kembali ke beranda
             </Link>
-            <header className="border-paper-edge flex items-center gap-4 rounded-[24px] border-2 border-b-[6px] bg-white p-5 sm:gap-6 sm:p-7">
-                <SubjectArt subject={subject} className="size-16 sm:size-20" />
+            <header
+                className={cn(
+                    'border-primary-deep/10 flex items-center gap-4 rounded-[24px] border-2 p-5 sm:gap-6 sm:p-7',
+                    tint,
+                )}
+            >
+                <SubjectArt
+                    subject={subject}
+                    className="size-16 bg-white sm:size-20"
+                />
                 <div className="min-w-0">
-                    <p className="text-muted-foreground text-base">
-                        {subjects[subject].label} · Bab {number}
-                    </p>
                     <h1 className="font-display text-primary-deep text-3xl leading-tight font-semibold break-words sm:text-4xl">
-                        {chapter.title}
+                        {label}
                     </h1>
-                    {chapter.open && (
-                        <StageBar stages={stages} className="mt-2" />
+                    {stages.length > 0 && (
+                        <p className="text-muted-foreground mt-1 text-lg">
+                            {finished(stages)} dari {stages.length} misi selesai
+                        </p>
                     )}
                 </div>
             </header>
-            {!chapter.open ? (
+            {stages.length === 0 ? (
                 <p className="bg-student-accent-soft rounded-2xl p-4 text-lg leading-relaxed sm:p-5">
-                    Bab ini belum dibuka. Saat {teacher} membukanya, misinya
-                    muncul di sini.
+                    Belum ada bab {label} yang dibuka. Coba lihat mata pelajaran
+                    lain di beranda.
                 </p>
             ) : (
-                <>
-                    <ol
-                        ref={list}
-                        aria-label={`Misi di bab ${chapter.title}`}
-                        className="relative mx-auto max-w-lg"
-                    >
-                        <Trail stages={stages} />
-                        {stages.map((stage, index) => (
-                            <Mission
-                                key={stage.id}
-                                stage={stage}
-                                number={index + 1}
-                                lane={lanes[index % lanes.length]}
-                                current={stage === current}
-                            />
-                        ))}
-                    </ol>
-                    {finished(stages) === stages.length && (
+                <div ref={path} className="space-y-8">
+                    {!current && (
                         <p className="bg-student-surface border-paper-edge rounded-2xl border-2 p-4 text-center text-lg leading-relaxed sm:p-5">
-                            Semua misi di bab ini sudah selesai. Tunggu bab
+                            Semua misi yang dibuka sudah selesai. Tunggu bab
                             berikutnya dari {teacher}, ya.
                         </p>
                     )}
-                </>
+                    {books.map((book) => (
+                        <div key={book} className="space-y-8">
+                            {books.length > 1 && (
+                                <p className="font-display text-primary-deep text-xl font-semibold">
+                                    {book}
+                                </p>
+                            )}
+                            {visibleChapters(
+                                chapters.filter(
+                                    (chapter) => chapter.book === book,
+                                ),
+                            ).map((chapter, index) =>
+                                chapter.open ? (
+                                    <OpenChapter
+                                        key={chapter.id}
+                                        chapter={chapter}
+                                        number={index + 1}
+                                        current={current}
+                                    />
+                                ) : (
+                                    <LockedChapter
+                                        key={chapter.id}
+                                        chapter={chapter}
+                                        number={index + 1}
+                                        teacher={teacher}
+                                    />
+                                ),
+                            )}
+                        </div>
+                    ))}
+                </div>
             )}
         </div>
     );
