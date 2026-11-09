@@ -176,7 +176,7 @@ export function ChapterReport({
                             tabIndex={0}
                             className="border-paper-edge focus-visible:outline-ring relative overflow-x-auto rounded-lg border focus-visible:outline-3 print:overflow-visible"
                         >
-                            <Table className="min-w-[42rem]">
+                            <Table className="min-w-[42rem] print:min-w-0">
                                 <TableHeader>
                                     <tr>
                                         <TableHead

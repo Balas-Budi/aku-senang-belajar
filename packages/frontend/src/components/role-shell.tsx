@@ -138,7 +138,7 @@ export function RoleShell({ role }: { role: Role }) {
         >
             <RequestError error={logout.error} />
             <Outlet />
-            <footer className="border-paper-edge text-muted-foreground border-t pt-6">
+            <footer className="border-paper-edge text-muted-foreground border-t pt-6 print:hidden">
                 <button
                     type="button"
                     className="focus-visible:outline-ring min-h-12 underline underline-offset-4 focus-visible:outline-3"

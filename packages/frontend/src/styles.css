@@ -437,10 +437,10 @@
     }
 }
 @media print {
-    body * {
+    :where(body:has(.credential-sheet)) * {
         visibility: hidden;
     }
-    body
+    :where(body:has(.credential-sheet))
         *:not(:has(.credential-sheet), .credential-sheet, .credential-sheet *) {
         display: none;
     }
