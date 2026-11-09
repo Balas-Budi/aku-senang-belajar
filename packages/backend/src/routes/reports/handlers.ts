@@ -20,6 +20,7 @@ import {
     chapterMap,
     ownedReport,
     ownedSummary,
+    practiceOf,
     reportIn,
     type Scope,
     scopeOf,
@@ -240,6 +241,11 @@ export async function studentReport(
             request.server.db,
             { classId, moduleId: null, studentId: history.student.id },
             summaries.map(({ id }) => id),
+        ),
+        reviews: await practiceOf(
+            request.server.db,
+            classId,
+            history.student.id,
         ),
     };
 }

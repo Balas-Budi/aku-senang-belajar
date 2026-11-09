@@ -492,6 +492,30 @@ export const learnerSummaries = pgTable('learner_summaries', {
     createdAt: timestamp({ withTimezone: true }).notNull().defaultNow(),
 });
 
+export const reviewTries = pgTable(
+    'review_tries',
+    {
+        id: integer().primaryKey().generatedAlwaysAsIdentity(),
+        studentId: integer()
+            .notNull()
+            .references(() => users.id, { onDelete: 'cascade' }),
+        blockId: integer()
+            .notNull()
+            .references(() => sessionBlocks.id, { onDelete: 'cascade' }),
+        tryNumber: integer().notNull(),
+        answer: jsonb().notNull(),
+        outcome: responseOutcome().notNull(),
+        help: helpKind(),
+        createdAt: timestamp({ withTimezone: true }).notNull().defaultNow(),
+    },
+    (table) => [
+        index('review_tries_student_id_block_id_idx').on(
+            table.studentId,
+            table.blockId,
+        ),
+    ],
+);
+
 export const reports = pgTable(
     'reports',
     {

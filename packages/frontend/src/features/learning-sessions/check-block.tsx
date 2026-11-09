@@ -18,7 +18,13 @@ import { useAnswerSender } from './use-answer-sender';
 
 const HINTS = 3;
 
-function HelpCard({ title, picture }: { title: string; picture: Picture }) {
+export function HelpCard({
+    title,
+    picture,
+}: {
+    title: string;
+    picture: Picture;
+}) {
     return (
         <div className="bg-student-accent-soft flex flex-col gap-3 rounded-2xl p-4 sm:flex-row sm:items-center">
             {picture.illustration && (
@@ -35,7 +41,7 @@ function HelpCard({ title, picture }: { title: string; picture: Picture }) {
     );
 }
 
-function Feedback({
+export function Feedback({
     earned,
     cheers,
     chirps,

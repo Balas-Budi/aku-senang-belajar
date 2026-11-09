@@ -10,6 +10,7 @@ export default [
         route('profile', 'routes/student-profile.tsx'),
         route('cards', 'routes/student-cards.tsx'),
         route('subjects/:subject', 'routes/student-subject.tsx'),
+        route('subjects/:subject/review', 'routes/student-review.tsx'),
         route('chapters/:chapterId', 'routes/student-chapter.tsx'),
     ]),
     route('student/sessions/:assignmentId', 'routes/student-session.tsx'),

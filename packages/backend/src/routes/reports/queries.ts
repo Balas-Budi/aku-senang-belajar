@@ -3,12 +3,17 @@ import { z } from 'zod';
 import type { Queryable } from '../../db/index.ts';
 import {
     analysisRuns,
+    assignments,
     assessments,
     classes,
     competencies,
     learnerSummaries,
+    learningSessions,
     reports,
+    reviewTries,
+    sessionBlocks,
 } from '../../db/schema.ts';
+import { sessionBlock } from '../../learning/blocks.ts';
 import { notFound } from '../../lib/errors.ts';
 import { membersOf } from '../classes/queries.ts';
 import {
@@ -21,6 +26,11 @@ import {
 } from '../results/queries.ts';
 
 type Status = typeof assessments.$inferSelect.status;
+type Round = {
+    tries: number;
+    result: 'correct' | 'revealed' | 'open';
+    at: Date;
+};
 
 export type Scope = {
     classId: number;
@@ -422,4 +432,79 @@ export async function ownedSummary(
     }
 
     return summary;
+}
+
+export async function practiceOf(
+    db: Queryable,
+    classId: number,
+    studentId: number,
+) {
+    const tries = await db
+        .select({
+            blockId: reviewTries.blockId,
+            outcome: reviewTries.outcome,
+            help: reviewTries.help,
+            at: reviewTries.createdAt,
+            kind: sessionBlocks.kind,
+            content: sessionBlocks.content,
+            mission: learningSessions.title,
+        })
+        .from(reviewTries)
+        .innerJoin(sessionBlocks, eq(sessionBlocks.id, reviewTries.blockId))
+        .innerJoin(
+            learningSessions,
+            eq(learningSessions.id, sessionBlocks.learningSessionId),
+        )
+        .innerJoin(
+            assignments,
+            and(
+                eq(assignments.learningSessionId, learningSessions.id),
+                eq(assignments.classId, classId),
+            ),
+        )
+        .where(eq(reviewTries.studentId, studentId))
+        .orderBy(asc(reviewTries.id));
+    const questions = new Map<
+        number,
+        {
+            blockId: number;
+            mission: string;
+            prompt: string;
+            rounds: Round[];
+        }
+    >();
+
+    for (const item of tries) {
+        const block = sessionBlock.safeParse({
+            kind: item.kind,
+            content: item.content,
+        });
+
+        if (!block.success || block.data.kind !== 'check') continue;
+
+        const question = questions.get(item.blockId) ?? {
+            blockId: item.blockId,
+            mission: item.mission,
+            prompt: block.data.content.prompt,
+            rounds: [],
+        };
+        const open = question.rounds.at(-1);
+        const round: Round =
+            open?.result === 'open'
+                ? open
+                : { tries: 0, result: 'open', at: item.at };
+
+        if (round !== open) question.rounds.push(round);
+        round.tries += 1;
+        round.at = item.at;
+        round.result =
+            item.outcome === 'correct'
+                ? 'correct'
+                : item.help === 'reveal'
+                  ? 'revealed'
+                  : 'open';
+        questions.set(item.blockId, question);
+    }
+
+    return [...questions.values()];
 }

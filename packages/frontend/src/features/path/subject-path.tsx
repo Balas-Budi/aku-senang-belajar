@@ -11,6 +11,7 @@ import { cn } from '../../lib/cn';
 import type { Subject } from '../assignments/queries';
 import { SubjectArt, subjects } from '../assignments/subject-art';
 import { studentClassQuery } from '../classes/queries';
+import { studentReviewQuery } from '../review/queries';
 import { stepLabels } from '../learning-sessions/steps';
 import {
     chaptersOf,
@@ -302,6 +303,7 @@ function LockedChapter({
 export function SubjectPath({ subject }: { subject: Subject }) {
     const query = useQuery(studentPathQuery());
     const classroom = useQuery(studentClassQuery());
+    const review = useQuery(studentReviewQuery(subject));
     const path = useRef<HTMLDivElement>(null);
     const { label, tint } = subjects[subject];
     useEffect(() => {
@@ -359,6 +361,7 @@ export function SubjectPath({ subject }: { subject: Subject }) {
     const stages = chapters.flatMap((chapter) => chapter.stages);
     const current = currentStage(chapters)?.stage;
     const teacher = classroom.data?.classroom?.teacherName ?? 'gurumu';
+    const reviewCount = review.data?.questions.length ?? 0;
     return (
         <div className="space-y-6">
             <Link to="/student" className={textLink}>
@@ -385,6 +388,31 @@ export function SubjectPath({ subject }: { subject: Subject }) {
                     )}
                 </div>
             </header>
+            {reviewCount > 0 && (
+                <section
+                    aria-labelledby="review-title"
+                    className="border-paper-edge bg-student-accent-soft flex flex-col gap-3 rounded-2xl border-2 border-b-[5px] p-4 sm:flex-row sm:items-center sm:p-5"
+                >
+                    <div className="min-w-0 flex-1">
+                        <h2
+                            id="review-title"
+                            className="font-display text-primary-deep text-xl font-semibold"
+                        >
+                            Ulang Yuk
+                        </h2>
+                        <p className="text-lg leading-relaxed">
+                            {reviewCount} soal singkat dari misi yang sudah kamu
+                            kerjakan.
+                        </p>
+                    </div>
+                    <Link
+                        to={`/student/subjects/${subject}/review`}
+                        className={buttonVariants({ feel: 'chunky' })}
+                    >
+                        Mulai Ulang Yuk
+                    </Link>
+                </section>
+            )}
             {stages.length === 0 ? (
                 <p className="bg-student-accent-soft rounded-2xl p-4 text-lg leading-relaxed sm:p-5">
                     Belum ada bab {label} yang dibuka. Coba lihat mata pelajaran

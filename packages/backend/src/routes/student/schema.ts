@@ -200,6 +200,35 @@ export const feedbackResponse = z.object({
 
 export const helpResponse = z.object({ earned: earned.nullable() });
 
+export const reviewQuery = z.object({ subject: z.enum(subject.enumValues) });
+
+export const reviewResponse = z.object({
+    questions: z.array(
+        z.object({
+            id: z.number(),
+            mission: z.string(),
+            content: blockContent.check.omit({
+                answer: true,
+                praise: true,
+                hints: true,
+                example: true,
+                reveal: true,
+            }),
+            earned,
+            tries: z.number(),
+        }),
+    ),
+});
+
+export const reviewTryBody = z.object({
+    blockId: z.int().positive(),
+    tryNumber: z.int().min(1).max(TRY_LIMIT),
+    answer,
+});
+
+export type ReviewQuery = z.infer<typeof reviewQuery>;
+export type ReviewTryBody = z.infer<typeof reviewTryBody>;
+
 export const INTERESTS = [
     'animals',
     'football',

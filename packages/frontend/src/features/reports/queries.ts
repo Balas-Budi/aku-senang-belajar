@@ -76,6 +76,16 @@ export type StudentReport = {
     missions: MissionHistory[];
     summaryCount: number;
     report: Report;
+    reviews: {
+        blockId: number;
+        mission: string;
+        prompt: string;
+        rounds: {
+            tries: number;
+            result: 'correct' | 'revealed' | 'open';
+            at: string;
+        }[];
+    }[];
 };
 
 const headers = (cookie?: string | null) => (cookie ? { cookie } : undefined);

@@ -28,6 +28,12 @@ import { ReportText } from './report-text';
 
 const day = new Intl.DateTimeFormat('id-ID', { dateStyle: 'medium' });
 
+const roundResults = {
+    correct: 'benar',
+    revealed: 'jawaban ditunjukkan',
+    open: 'belum selesai',
+};
+
 function ChapterHistory({
     classId,
     studentId,
@@ -329,6 +335,53 @@ export function StudentReport({
                                     classId={classId}
                                     mission={mission}
                                 />
+                            ))}
+                        </ul>
+                    </section>
+                </Card>
+            )}
+            {query.data.reviews.length > 0 && (
+                <Card>
+                    <section
+                        aria-labelledby="practice-title"
+                        className="space-y-3"
+                    >
+                        <div className="space-y-1">
+                            <h2
+                                id="practice-title"
+                                className="text-lg font-semibold"
+                            >
+                                Ulang Yuk
+                            </h2>
+                            <p className="text-muted-foreground text-sm">
+                                Latihan siswa dengan soal misi yang sudah
+                                disetujui, pada kompetensi yang masih Berkembang
+                                atau Perlu verifikasi. Latihan ini tidak
+                                dianalisis AI.
+                            </p>
+                        </div>
+                        <ul className="divide-paper-edge divide-y">
+                            {query.data.reviews.map((review) => (
+                                <li
+                                    key={review.blockId}
+                                    className="space-y-1 py-3"
+                                >
+                                    <p className="font-semibold">
+                                        {review.prompt}
+                                    </p>
+                                    <p className="text-muted-foreground text-sm">
+                                        {review.mission}
+                                    </p>
+                                    <ul className="text-sm tabular-nums">
+                                        {review.rounds.map((round) => (
+                                            <li key={round.at}>
+                                                {day.format(new Date(round.at))}
+                                                : {round.tries} percobaan,{' '}
+                                                {roundResults[round.result]}
+                                            </li>
+                                        ))}
+                                    </ul>
+                                </li>
                             ))}
                         </ul>
                     </section>

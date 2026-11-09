@@ -7,10 +7,12 @@ import {
     joinClass,
     leaveClass,
     moveCheckpoint,
+    answerReviewQuestion,
     myCards,
     myClass,
     myPath,
     myProfile,
+    myReview,
     saveProfile,
     startAttempt,
     submitAttempt,
@@ -32,6 +34,9 @@ import {
     profileBody,
     profileResponse,
     responseBody,
+    reviewQuery,
+    reviewResponse,
+    reviewTryBody,
 } from './schema.ts';
 
 export const studentRoutes: FastifyPluginAsyncZod = async (fastify) => {
@@ -68,6 +73,26 @@ export const studentRoutes: FastifyPluginAsyncZod = async (fastify) => {
         '/cards',
         { schema: { response: { 200: cardsResponse } } },
         myCards,
+    );
+    fastify.get(
+        '/review',
+        {
+            schema: {
+                querystring: reviewQuery,
+                response: { 200: reviewResponse },
+            },
+        },
+        myReview,
+    );
+    fastify.post(
+        '/review/tries',
+        {
+            schema: {
+                body: reviewTryBody,
+                response: { 201: feedbackResponse },
+            },
+        },
+        answerReviewQuestion,
     );
     fastify.get(
         '/profile',

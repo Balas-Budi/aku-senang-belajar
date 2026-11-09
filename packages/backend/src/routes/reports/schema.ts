@@ -116,6 +116,20 @@ export const studentReportResponse = z.object({
     ),
     summaryCount: z.number(),
     report,
+    reviews: z.array(
+        z.object({
+            blockId: z.number(),
+            mission: z.string(),
+            prompt: z.string(),
+            rounds: z.array(
+                z.object({
+                    tries: z.number(),
+                    result: z.enum(['correct', 'revealed', 'open']),
+                    at: z.date(),
+                }),
+            ),
+        }),
+    ),
 });
 
 export const draftingResponse = z.object({ drafting: z.literal('generating') });

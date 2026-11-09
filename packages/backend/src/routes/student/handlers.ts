@@ -34,6 +34,7 @@ import {
 } from './attempts.ts';
 import { cardsOf } from './cards.ts';
 import { isStageLocked, pathOf, stageLocked } from './path.ts';
+import { answerReview, reviewOf } from './review.ts';
 import { INTERESTS } from './schema.ts';
 import type {
     AssignmentParams,
@@ -43,6 +44,8 @@ import type {
     JoinClassBody,
     ProfileBody,
     ResponseBody,
+    ReviewQuery,
+    ReviewTryBody,
 } from './schema.ts';
 
 const alreadyInClass = () =>
@@ -399,4 +402,29 @@ export async function saveProfile(
         .returning(profileColumns);
 
     return { profile: { ...profile, interests } };
+}
+
+export async function myReview(
+    request: FastifyRequest<{ Querystring: ReviewQuery }>,
+) {
+    return reviewOf(
+        request.server.db,
+        currentUser(request).id,
+        request.query.subject,
+    );
+}
+
+export async function answerReviewQuestion(
+    request: FastifyRequest<{ Body: ReviewTryBody }>,
+    reply: FastifyReply,
+) {
+    return reply
+        .code(201)
+        .send(
+            await answerReview(
+                request.server.db,
+                currentUser(request).id,
+                request.body,
+            ),
+        );
 }
