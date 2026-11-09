@@ -2,7 +2,8 @@ import { and, asc, eq, lt, lte } from 'drizzle-orm';
 import type { FastifyInstance } from 'fastify';
 import { type AiConfig, aiConfig, AiError, chatJson } from '../ai/chat.ts';
 import type { Queryable } from '../db/index.ts';
-import { analysisRuns, assessments } from '../db/schema.ts';
+import { analysisRuns, assessments, learnerSummaries } from '../db/schema.ts';
+import { runNextSummary } from '../memory/summaries.ts';
 import { type CompetencyEvidence, evidenceOf } from './evidence.ts';
 import {
     checkAnswer,
@@ -181,6 +182,10 @@ export async function processRun(
                     finishedAt: new Date(),
                 })
                 .where(eq(analysisRuns.id, run.id));
+
+            if (result.model) {
+                await tx.insert(learnerSummaries).values({ runId: run.id });
+            }
         });
     } catch (error) {
         const failure = error instanceof AiError ? error.failure : 'error';
@@ -245,7 +250,9 @@ export function startAnalysisRunner(
     async function drain() {
         try {
             for (let more = true; more && !closing;) {
-                more = await runNextAnalysis(app, { attemptId });
+                more =
+                    (await runNextAnalysis(app, { attemptId })) ||
+                    (await runNextSummary(app, { attemptId }));
             }
         } catch (error) {
             app.log.error(error, 'The analysis runner stopped a round');

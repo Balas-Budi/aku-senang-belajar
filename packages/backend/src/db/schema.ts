@@ -472,6 +472,23 @@ export const verifications = pgTable(
     ],
 );
 
+export const learnerSummaries = pgTable('learner_summaries', {
+    id: integer().primaryKey().generatedAlwaysAsIdentity(),
+    runId: integer()
+        .notNull()
+        .unique('learner_summaries_run_id_unique')
+        .references(() => analysisRuns.id, { onDelete: 'cascade' }),
+    text: text(),
+    model: text(),
+    promptVersion: text(),
+    embedding: vector({ dimensions: EMBEDDING_DIMENSIONS }),
+    tries: integer().notNull().default(0),
+    runAfter: timestamp({ withTimezone: true }).notNull().defaultNow(),
+    writtenAt: timestamp({ withTimezone: true }),
+    embeddedAt: timestamp({ withTimezone: true }),
+    createdAt: timestamp({ withTimezone: true }).notNull().defaultNow(),
+});
+
 export const sessions = pgTable(
     'sessions',
     {

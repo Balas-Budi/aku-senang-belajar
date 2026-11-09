@@ -89,6 +89,10 @@
             "chunk-materials": {
                 "command": "node --env-file-if-exists=.env packages/backend/src/scripts/chunk-materials.ts",
                 "cache": false
+            },
+            "summarise-attempts": {
+                "command": "node --env-file-if-exists=.env packages/backend/src/scripts/summarise-attempts.ts",
+                "cache": false
             }
         }
     }
