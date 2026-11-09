@@ -169,3 +169,20 @@ test('the AI settings come from the env, and a blank or missing one leaves AI of
         failsWith('not_configured'),
     );
 });
+
+test('the backend refuses to start with LangSmith tracing on, so no student data leaves for tracing', () => {
+    const base = { DATABASE_URL: 'postgresql://app@localhost:5432/app' };
+
+    for (const name of [
+        'LANGSMITH_TRACING',
+        'LANGSMITH_TRACING_V2',
+        'LANGCHAIN_TRACING',
+        'LANGCHAIN_TRACING_V2',
+    ]) {
+        assert.throws(
+            () => loadEnv({ ...base, [name]: 'true' }),
+            new RegExp(name),
+        );
+    }
+    assert.doesNotThrow(() => loadEnv({ ...base, LANGSMITH_TRACING: 'false' }));
+});

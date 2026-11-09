@@ -1,4 +1,12 @@
-import { z, type ZodType } from 'zod';
+import {
+    AIMessage,
+    HumanMessage,
+    SystemMessage,
+    type BaseMessage,
+} from '@langchain/core/messages';
+import { Annotation, END, START, StateGraph } from '@langchain/langgraph';
+import { ChatOpenAICompletions } from '@langchain/openai';
+import type { ZodType } from 'zod';
 import type { Env } from '../env.ts';
 
 export type AiConfig = { baseUrl: string; apiKey: string; model: string };
@@ -25,16 +33,18 @@ export type ChatJsonRequest<T> = {
     check?: (value: T) => string | null;
 };
 
-type Message = { role: 'system' | 'user' | 'assistant'; content: string };
-
-const completion = z.object({
-    model: z.string().optional(),
-    choices: z
-        .array(z.object({ message: z.object({ content: z.string() }) }))
-        .min(1),
-});
-
 const defaultTimeout = 60_000;
+const maxTurns = 2;
+
+const Turn = Annotation.Root({
+    messages: Annotation<BaseMessage[]>({
+        reducer: (current, added) => current.concat(added),
+        default: () => [],
+    }),
+    reply: Annotation<string>,
+    problem: Annotation<string | null>,
+    turns: Annotation<number>,
+});
 
 export function aiConfig(env: Env): AiConfig | null {
     const { AI_BASE_URL: baseUrl, AI_API_KEY: apiKey, AI_MODEL: model } = env;
@@ -55,61 +65,30 @@ export function requireAiConfig(env: Env): AiConfig {
     return config;
 }
 
-async function complete(
-    config: AiConfig,
-    messages: Message[],
-    timeoutMs: number,
-) {
-    try {
-        const response = await fetch(`${config.baseUrl}/chat/completions`, {
-            method: 'POST',
-            headers: {
-                authorization: `Bearer ${config.apiKey}`,
-                'content-type': 'application/json',
-            },
-            body: JSON.stringify({
-                model: config.model,
-                messages,
-                response_format: { type: 'json_object' },
-            }),
-            signal: AbortSignal.timeout(timeoutMs),
-        });
-
-        if (!response.ok) {
-            await response.body?.cancel();
-            throw new AiError(
-                'http',
-                `The AI provider answered ${response.status}`,
-                response.status,
-            );
-        }
-
-        const reply = completion.safeParse(await response.json());
-
-        if (!reply.success) {
-            throw new AiError(
-                'invalid_output',
-                'The AI provider replied without message content',
-            );
-        }
-
-        return {
-            content: reply.data.choices[0].message.content,
-            model: reply.data.model ?? config.model,
-        };
-    } catch (error) {
-        if (error instanceof AiError) throw error;
-        if (error instanceof Error && error.name === 'TimeoutError') {
-            throw new AiError('timeout', `No reply within ${timeoutMs} ms`);
-        }
-        if (error instanceof SyntaxError) {
-            throw new AiError(
-                'invalid_output',
-                'The AI provider replied with something other than JSON',
-            );
-        }
-        throw new AiError('network', 'The AI provider could not be reached');
+function failureOf(error: unknown, timeoutMs: number): AiError {
+    if (error instanceof AiError) return error;
+    if (error instanceof Error && error.name === 'TimeoutError') {
+        return new AiError('timeout', `No reply within ${timeoutMs} ms`);
     }
+    if (error instanceof SyntaxError) {
+        return new AiError(
+            'invalid_output',
+            'The AI provider replied with something other than JSON',
+        );
+    }
+    if (
+        error instanceof Error &&
+        'status' in error &&
+        typeof error.status === 'number'
+    ) {
+        return new AiError(
+            'http',
+            `The AI provider answered ${error.status}`,
+            error.status,
+        );
+    }
+
+    return new AiError('network', 'The AI provider could not be reached');
 }
 
 function readReply<T>(
@@ -151,31 +130,68 @@ export async function chatJson<T>(
     request: ChatJsonRequest<T>,
     timeoutMs = defaultTimeout,
 ) {
-    const messages: Message[] = [
-        { role: 'system', content: request.system },
-        { role: 'user', content: request.user },
-    ];
-    const first = await complete(config, messages, timeoutMs);
-    const firstReply = readReply(first.content, request);
+    const model = new ChatOpenAICompletions({
+        model: config.model,
+        apiKey: config.apiKey,
+        configuration: { baseURL: config.baseUrl },
+        timeout: timeoutMs,
+        maxRetries: 0,
+    });
+    let accepted: { value: T; model: string } | undefined;
+    const graph = new StateGraph(Turn)
+        .addNode('ask', async (state) => {
+            const reply = await model.invoke(state.messages, {
+                response_format: { type: 'json_object' },
+            });
+            const name = reply.response_metadata.model_name;
+            const result = readReply(reply.text, request);
 
-    if ('value' in firstReply) {
-        return { value: firstReply.value, model: first.model };
+            if ('value' in result) {
+                accepted = {
+                    value: result.value,
+                    model: typeof name === 'string' ? name : config.model,
+                };
+            }
+
+            return {
+                reply: reply.text,
+                problem: 'problem' in result ? result.problem : null,
+                turns: state.turns + 1,
+            };
+        })
+        .addNode('repair', (state) => ({
+            messages: [
+                new AIMessage(state.reply),
+                new HumanMessage(
+                    `${state.problem} Reply again with only the corrected JSON object.`,
+                ),
+            ],
+        }))
+        .addEdge(START, 'ask')
+        .addConditionalEdges('ask', (state) =>
+            state.problem && state.turns < maxTurns ? 'repair' : END,
+        )
+        .addEdge('repair', 'ask')
+        .compile();
+    let final: typeof Turn.State;
+
+    try {
+        final = await graph.invoke({
+            messages: [
+                new SystemMessage(request.system),
+                new HumanMessage(request.user),
+            ],
+            problem: null,
+            turns: 0,
+        });
+    } catch (error) {
+        throw failureOf(error, timeoutMs);
     }
 
-    messages.push(
-        { role: 'assistant', content: first.content },
-        {
-            role: 'user',
-            content: `${firstReply.problem} Reply again with only the corrected JSON object.`,
-        },
+    if (accepted) return accepted;
+
+    throw new AiError(
+        'invalid_output',
+        final.problem ?? 'The AI provider gave no usable reply',
     );
-
-    const second = await complete(config, messages, timeoutMs);
-    const secondReply = readReply(second.content, request);
-
-    if ('value' in secondReply) {
-        return { value: secondReply.value, model: second.model };
-    }
-
-    throw new AiError('invalid_output', secondReply.problem);
 }

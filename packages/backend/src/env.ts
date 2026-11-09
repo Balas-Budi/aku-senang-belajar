@@ -31,7 +31,24 @@ const envSchema = z.object({
 
 export type Env = z.infer<typeof envSchema>;
 
+const tracingSwitches = [
+    'LANGSMITH_TRACING',
+    'LANGSMITH_TRACING_V2',
+    'LANGCHAIN_TRACING',
+    'LANGCHAIN_TRACING_V2',
+];
+
 export function loadEnv(source: NodeJS.ProcessEnv = process.env): Env {
+    const tracing = tracingSwitches.filter(
+        (name) => source[name]?.trim().toLowerCase() === 'true',
+    );
+
+    if (tracing.length > 0) {
+        throw new Error(
+            `Invalid environment: ${tracing.join(', ')} would send student data to LangSmith; leave tracing off`,
+        );
+    }
+
     const result = envSchema.safeParse(source);
 
     if (!result.success) {
