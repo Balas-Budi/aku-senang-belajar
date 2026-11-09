@@ -92,6 +92,20 @@
             "when": 1794186413090,
             "tag": "0012_broad_shooting_star",
             "breakpoints": true
+        },
+        {
+            "idx": 13,
+            "version": "7",
+            "when": 1794193955500,
+            "tag": "0013_enable_vector",
+            "breakpoints": true
+        },
+        {
+            "idx": 14,
+            "version": "7",
+            "when": 1794194006551,
+            "tag": "0014_material_chunks",
+            "breakpoints": true
         }
     ]
 }

@@ -85,6 +85,10 @@
             "seed-maths-book": {
                 "command": "node --env-file-if-exists=.env packages/backend/src/scripts/seed-maths-book.ts",
                 "cache": false
+            },
+            "chunk-materials": {
+                "command": "node --env-file-if-exists=.env packages/backend/src/scripts/chunk-materials.ts",
+                "cache": false
             }
         }
     }

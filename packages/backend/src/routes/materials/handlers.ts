@@ -18,6 +18,7 @@ import type { Queryable } from '../../db/index.ts';
 import {
     competencies,
     learningSessions,
+    materialChunks,
     materialPages,
     materials,
     modules,
@@ -25,6 +26,7 @@ import {
 } from '../../db/schema.ts';
 import { AppError, notFound } from '../../lib/errors.ts';
 import { fieldError } from '../../lib/field-error.ts';
+import { chunkPages } from '../../materials/chunks.ts';
 import {
     checkProposal,
     competencyMessage,
@@ -395,6 +397,7 @@ export async function uploadMaterial(
     }
 
     const { title, subject, grade } = request.query;
+    const chunks = await chunkPages(pages);
     const materialId = await request.server.db.transaction(async (tx) => {
         const [material] = await tx
             .insert(materials)
@@ -414,6 +417,14 @@ export async function uploadMaterial(
                 text,
             })),
         );
+        if (chunks.length > 0) {
+            await tx.insert(materialChunks).values(
+                chunks.map((chunk) => ({
+                    ...chunk,
+                    materialId: material.id,
+                })),
+            );
+        }
 
         return material.id;
     });

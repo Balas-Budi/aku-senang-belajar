@@ -2,6 +2,7 @@ import { existsSync } from 'node:fs';
 import { startAnalysisRunner } from './analysis/runner.ts';
 import { buildApp } from './app.ts';
 import { loadEnv } from './env.ts';
+import { startEmbeddingRunner } from './materials/chunks.ts';
 import { failInterruptedDrafts } from './studio/drafting.ts';
 
 if (existsSync('.env')) process.loadEnvFile('.env');
@@ -11,6 +12,7 @@ const app = await buildApp(env);
 
 await failInterruptedDrafts(app.db);
 startAnalysisRunner(app);
+startEmbeddingRunner(app);
 
 for (const signal of ['SIGINT', 'SIGTERM'] as const) {
     process.once(signal, async () => {

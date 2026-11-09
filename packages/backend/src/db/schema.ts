@@ -9,6 +9,7 @@ import {
     text,
     timestamp,
     unique,
+    vector,
 } from 'drizzle-orm/pg-core';
 
 export const role = pgEnum('role', ['teacher', 'student', 'admin']);
@@ -147,6 +148,36 @@ export const materialPages = pgTable(
             name: 'material_pages_material_id_number_pk',
             columns: [table.materialId, table.number],
         }),
+    ],
+);
+
+export const EMBEDDING_DIMENSIONS = 1536;
+
+export const materialChunks = pgTable(
+    'material_chunks',
+    {
+        id: integer().primaryKey().generatedAlwaysAsIdentity(),
+        materialId: integer()
+            .notNull()
+            .references(() => materials.id, { onDelete: 'cascade' }),
+        pageNumber: integer().notNull(),
+        position: integer().notNull(),
+        text: text().notNull(),
+        embedding: vector({ dimensions: EMBEDDING_DIMENSIONS }),
+        tries: integer().notNull().default(0),
+        embedAfter: timestamp({ withTimezone: true }).notNull().defaultNow(),
+        embeddedAt: timestamp({ withTimezone: true }),
+    },
+    (table) => [
+        unique('material_chunks_material_id_page_number_position_unique').on(
+            table.materialId,
+            table.pageNumber,
+            table.position,
+        ),
+        index('material_chunks_embedding_idx').using(
+            'hnsw',
+            table.embedding.op('vector_cosine_ops'),
+        ),
     ],
 );
 

@@ -65,7 +65,7 @@ export function requireAiConfig(env: Env): AiConfig {
     return config;
 }
 
-function failureOf(error: unknown, timeoutMs: number): AiError {
+export function aiFailureOf(error: unknown, timeoutMs: number): AiError {
     if (error instanceof AiError) return error;
     if (error instanceof Error && error.name === 'TimeoutError') {
         return new AiError('timeout', `No reply within ${timeoutMs} ms`);
@@ -185,7 +185,7 @@ export async function chatJson<T>(
             turns: 0,
         });
     } catch (error) {
-        throw failureOf(error, timeoutMs);
+        throw aiFailureOf(error, timeoutMs);
     }
 
     if (accepted) return accepted;

@@ -27,6 +27,23 @@ const envSchema = z.object({
     ),
     AI_API_KEY: z.preprocess(blankAsUnset, z.string().trim().min(1).optional()),
     AI_MODEL: z.preprocess(blankAsUnset, z.string().trim().min(1).optional()),
+    AI_EMBED_BASE_URL: z.preprocess(
+        blankAsUnset,
+        z
+            .url()
+            .transform((value) =>
+                value.replace(/\/+$/, '').replace(/\/embeddings$/, ''),
+            )
+            .optional(),
+    ),
+    AI_EMBED_API_KEY: z.preprocess(
+        blankAsUnset,
+        z.string().trim().min(1).optional(),
+    ),
+    AI_EMBED_MODEL: z.preprocess(
+        blankAsUnset,
+        z.string().trim().min(1).optional(),
+    ),
 });
 
 export type Env = z.infer<typeof envSchema>;
