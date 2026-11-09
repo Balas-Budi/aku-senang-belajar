@@ -32,7 +32,9 @@ const envSchema = z.object({
         z
             .url()
             .transform((value) =>
-                value.replace(/\/+$/, '').replace(/\/embeddings$/, ''),
+                value
+                    .replace(/\/+$/, '')
+                    .replace(/\/(embeddings|chat\/completions)$/, ''),
             )
             .optional(),
     ),

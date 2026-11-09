@@ -91,6 +91,13 @@ test('the embedding settings come from their own env, and a blank or missing one
         apiKey: 'secret',
         model: 'an-embedding-model',
     });
+    assert.equal(
+        loadEnv({
+            ...base,
+            AI_EMBED_BASE_URL: 'https://embed.example/v1/chat/completions',
+        }).AI_EMBED_BASE_URL,
+        'https://embed.example/v1',
+    );
     assert.equal(embedConfig(blankKey), null);
     assert.equal(embedConfig(loadEnv(base)), null);
 });
