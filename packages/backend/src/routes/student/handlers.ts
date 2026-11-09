@@ -2,6 +2,7 @@ import { and, eq } from 'drizzle-orm';
 import type { FastifyReply, FastifyRequest } from 'fastify';
 import { queueAnalysis } from '../../analysis/runner.ts';
 import { currentUser } from '../../auth/guards.ts';
+import type { Queryable } from '../../db/index.ts';
 import {
     attempts,
     classes,
@@ -9,6 +10,7 @@ import {
     helpEvents,
     responses,
     studentProfiles,
+    studentSettings,
 } from '../../db/schema.ts';
 import { stepOfKind } from '../../learning/blocks.ts';
 import { AppError, notFound } from '../../lib/errors.ts';
@@ -35,7 +37,7 @@ import {
 import { cardsOf } from './cards.ts';
 import { isStageLocked, pathOf, stageLocked } from './path.ts';
 import { answerReview, reviewOf } from './review.ts';
-import { INTERESTS } from './schema.ts';
+import { DEFAULT_SETTINGS, INTERESTS, settingsBody } from './schema.ts';
 import type {
     AssignmentParams,
     AttemptParams,
@@ -46,6 +48,7 @@ import type {
     ResponseBody,
     ReviewQuery,
     ReviewTryBody,
+    SettingsBody,
 } from './schema.ts';
 
 const alreadyInClass = () =>
@@ -186,12 +189,14 @@ export async function startAttempt(
         throw notFound('This session has no content yet');
     }
 
+    const { readAloud } = await settingsOf(db, studentId);
     const [created] = await db
         .insert(attempts)
         .values({
             assignmentId: assignment.id,
             studentId,
             currentBlockId: blocks[0].id,
+            readAloud,
         })
         .onConflictDoNothing()
         .returning({ id: attempts.id });
@@ -318,7 +323,11 @@ export async function askForHelp(
         const block = await blockOf(tx, attempt.sessionId, blockId);
         const before = forBlock(await historyOf(tx, attempt.id), block.id);
 
-        if (kind !== 'ask_teacher') {
+        if (kind === 'listen') {
+            if (block.kind !== 'check' && block.kind !== 'challenge') {
+                throw fieldError('kind', 'Only a question can be listened to');
+            }
+        } else if (kind !== 'ask_teacher') {
             if (block.kind !== 'check') {
                 throw fieldError('kind', 'This block has no hints or examples');
             }
@@ -402,6 +411,56 @@ export async function saveProfile(
         .returning(profileColumns);
 
     return { profile: { ...profile, interests } };
+}
+
+const settingsColumns = {
+    textSize: studentSettings.textSize,
+    readAloud: studentSettings.readAloud,
+    speechRate: studentSettings.speechRate,
+};
+
+async function settingsOf(db: Queryable, studentId: number) {
+    const [settings] = await db
+        .select(settingsColumns)
+        .from(studentSettings)
+        .where(eq(studentSettings.studentId, studentId));
+
+    return settings ? settingsBody.parse(settings) : DEFAULT_SETTINGS;
+}
+
+export async function mySettings(request: FastifyRequest) {
+    return settingsOf(request.server.db, currentUser(request).id);
+}
+
+export async function saveSettings(
+    request: FastifyRequest<{ Body: SettingsBody }>,
+) {
+    const studentId = currentUser(request).id;
+    const settings = request.body;
+
+    await request.server.db.transaction(async (tx) => {
+        await tx
+            .insert(studentSettings)
+            .values({ studentId, ...settings })
+            .onConflictDoUpdate({
+                target: studentSettings.studentId,
+                set: { ...settings, updatedAt: new Date() },
+            });
+
+        if (settings.readAloud) {
+            await tx
+                .update(attempts)
+                .set({ readAloud: true })
+                .where(
+                    and(
+                        eq(attempts.studentId, studentId),
+                        eq(attempts.status, 'in_progress'),
+                    ),
+                );
+        }
+    });
+
+    return settings;
 }
 
 export async function myReview(

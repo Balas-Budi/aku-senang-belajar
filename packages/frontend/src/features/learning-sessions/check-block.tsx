@@ -1,8 +1,14 @@
-import { useState } from 'react';
+import { useId, useState } from 'react';
 import { requestErrorMessage } from '../../components/request-error';
 import { Button } from '../../components/ui/button';
 import { useErrorToast } from '../../components/ui/toast';
 import { cn } from '../../lib/cn';
+import {
+    NarrationControls,
+    optionBeingRead,
+    Spoken,
+    useNarration,
+} from '../narration/narration';
 import { Illustration } from './illustration';
 import { answersFor, useHelp, type Earned, type Picture } from './queries';
 import {
@@ -21,10 +27,13 @@ const HINTS = 3;
 export function HelpCard({
     title,
     picture,
+    onListen,
 }: {
     title: string;
     picture: Picture;
+    onListen?: () => void;
 }) {
+    const narration = useNarration(useId(), [picture.text]);
     return (
         <div className="bg-student-accent-soft flex flex-col gap-3 rounded-2xl p-4 sm:flex-row sm:items-center">
             {picture.illustration && (
@@ -33,9 +42,19 @@ export function HelpCard({
                     className="w-full max-w-40 shrink-0"
                 />
             )}
-            <div>
+            <div className="space-y-2">
                 <p className="text-student-accent-ink font-bold">{title}</p>
-                <p className="mt-1 leading-relaxed">{picture.text}</p>
+                <p className="leading-relaxed">
+                    <Spoken
+                        text={picture.text}
+                        sentence={narration.sentenceIn(0)}
+                    />
+                </p>
+                <NarrationControls
+                    narration={narration}
+                    onListen={onListen}
+                    quiet
+                />
             </div>
         </div>
     );
@@ -50,28 +69,42 @@ export function Feedback({
     cheers: number;
     chirps: number;
 }) {
+    const message =
+        earned.praise ??
+        (earned.reveal
+            ? 'Tidak apa-apa. Ini jawabannya.'
+            : 'Hampir! Yuk, lihat lagi.');
+    const narration = useNarration(useId(), [
+        message,
+        earned.reveal?.text ?? '',
+    ]);
     return (
         <div
             className={cn(
-                'flex items-center gap-3 rounded-2xl p-4',
+                'space-y-3 rounded-2xl p-4',
                 earned.praise ? 'bg-activity-green/15' : 'bg-student-surface',
             )}
         >
-            <ReactingJalak cheers={cheers} chirps={chirps} />
-            <div className="space-y-1">
-                <p
-                    role="status"
-                    className="font-display text-primary-deep text-[1.2em] leading-snug font-semibold"
-                >
-                    {earned.praise ??
-                        (earned.reveal
-                            ? 'Tidak apa-apa. Ini jawabannya.'
-                            : 'Hampir! Yuk, lihat lagi.')}
-                </p>
-                {earned.reveal && (
-                    <p className="leading-relaxed">{earned.reveal.text}</p>
-                )}
+            <div className="flex items-center gap-3">
+                <ReactingJalak cheers={cheers} chirps={chirps} />
+                <div className="min-w-0 space-y-1">
+                    <p
+                        role="status"
+                        className="font-display text-primary-deep text-[1.2em] leading-snug font-semibold"
+                    >
+                        {message}
+                    </p>
+                    {earned.reveal && (
+                        <p className="leading-relaxed">
+                            <Spoken
+                                text={earned.reveal.text}
+                                sentence={narration.sentenceIn(1)}
+                            />
+                        </p>
+                    )}
+                </div>
             </div>
+            <NarrationControls narration={narration} quiet />
         </div>
     );
 }
@@ -99,6 +132,23 @@ export function CheckBlock({
     const { content, earned } = block;
     const closed = earned.praise !== null || earned.reveal !== null;
     const reasonMissing = Boolean(content.reason) && !reason.trim();
+    const listen = useHelp(assignmentId);
+    const [heard, setHeard] = useState<number | null>(null);
+    const narration = useNarration(
+        `block-${block.id}`,
+        [content.prompt, ...content.options.map(({ label }) => label)],
+        true,
+    );
+
+    function listenOnce() {
+        if (closed || heard === tries.length) return;
+        setHeard(tries.length);
+        listen.mutate({
+            attemptId: attempt.id,
+            blockId: block.id,
+            kind: 'listen',
+        });
+    }
 
     function check() {
         if (!choice || reasonMissing) return;
@@ -142,6 +192,7 @@ export function CheckBlock({
             >
                 Cek sebentar!
             </ScreenHeading>
+            <NarrationControls narration={narration} onListen={listenOnce} />
             {content.illustration && (
                 <Illustration
                     name={content.illustration}
@@ -149,7 +200,10 @@ export function CheckBlock({
                 />
             )}
             <p className="font-display text-primary-deep text-[1.35em] leading-snug font-medium text-pretty">
-                {content.prompt}
+                <Spoken
+                    text={content.prompt}
+                    sentence={narration.sentenceIn(0)}
+                />
             </p>
             <OptionPicker
                 name={`check-${block.id}`}
@@ -161,6 +215,7 @@ export function CheckBlock({
                 correct={
                     earned.reveal?.answer ?? (earned.praise ? choice : null)
                 }
+                reading={optionBeingRead(narration, content.options, 1)}
             />
             {content.reason && !closed && (
                 <ReasonField
@@ -179,10 +234,15 @@ export function CheckBlock({
                     key={hint.text}
                     title={`Petunjuk ${index + 1} dari ${HINTS}`}
                     picture={hint}
+                    onListen={listenOnce}
                 />
             ))}
             {earned.example && (
-                <HelpCard title="Contoh lain" picture={earned.example} />
+                <HelpCard
+                    title="Contoh lain"
+                    picture={earned.example}
+                    onListen={listenOnce}
+                />
             )}
             {!closed && (
                 <div className="flex flex-wrap gap-2">

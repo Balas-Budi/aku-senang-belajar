@@ -122,6 +122,19 @@ export function StudentShell({
                                 Kartu pengetahuanku
                             </Link>
                             <Link
+                                to="/student/settings"
+                                onClick={() => {
+                                    if (menu.current) menu.current.open = false;
+                                }}
+                                className={buttonVariants({
+                                    variant: 'outline',
+                                    feel: 'chunky',
+                                    className: 'w-full',
+                                })}
+                            >
+                                Pengaturan belajar
+                            </Link>
+                            <Link
                                 to="/account"
                                 className={buttonVariants({
                                     variant: 'outline',

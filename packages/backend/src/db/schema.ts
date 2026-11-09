@@ -1,5 +1,6 @@
 import { sql } from 'drizzle-orm';
 import {
+    boolean,
     check,
     index,
     integer,
@@ -7,6 +8,7 @@ import {
     pgEnum,
     pgTable,
     primaryKey,
+    real,
     text,
     timestamp,
     unique,
@@ -50,7 +52,9 @@ export const helpKind = pgEnum('help_kind', [
     'example',
     'ask_teacher',
     'reveal',
+    'listen',
 ]);
+export const textSize = pgEnum('text_size', ['normal', 'large', 'larger']);
 export const analysisRunStatus = pgEnum('analysis_run_status', [
     'queued',
     'running',
@@ -118,6 +122,16 @@ export const studentProfiles = pgTable('student_profiles', {
         .references(() => users.id, { onDelete: 'cascade' }),
     interests: text().array().notNull(),
     createdAt: timestamp({ withTimezone: true }).notNull().defaultNow(),
+    updatedAt: timestamp({ withTimezone: true }).notNull().defaultNow(),
+});
+
+export const studentSettings = pgTable('student_settings', {
+    studentId: integer()
+        .primaryKey()
+        .references(() => users.id, { onDelete: 'cascade' }),
+    textSize: textSize().notNull().default('normal'),
+    readAloud: boolean().notNull().default(false),
+    speechRate: real().notNull().default(1),
     updatedAt: timestamp({ withTimezone: true }).notNull().defaultNow(),
 });
 
@@ -346,6 +360,7 @@ export const attempts = pgTable(
         startedAt: timestamp({ withTimezone: true }).notNull().defaultNow(),
         submittedAt: timestamp({ withTimezone: true }),
         memoryDeletedAt: timestamp({ withTimezone: true }),
+        readAloud: boolean().notNull().default(false),
     },
     (table) => [
         unique('attempts_assignment_id_student_id_unique').on(

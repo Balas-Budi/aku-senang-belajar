@@ -253,7 +253,7 @@ export function useHelp(assignmentId: number) {
         }: {
             attemptId: number;
             blockId: number;
-            kind: 'hint' | 'example' | 'ask_teacher';
+            kind: 'hint' | 'example' | 'ask_teacher' | 'listen';
         }) =>
             api<{ earned: Earned | null }>(
                 `/api/student/attempts/${attemptId}/help`,

@@ -13,7 +13,9 @@ import {
     myPath,
     myProfile,
     myReview,
+    mySettings,
     saveProfile,
+    saveSettings,
     startAttempt,
     submitAttempt,
 } from './handlers.ts';
@@ -37,6 +39,7 @@ import {
     reviewQuery,
     reviewResponse,
     reviewTryBody,
+    settingsBody,
 } from './schema.ts';
 
 export const studentRoutes: FastifyPluginAsyncZod = async (fastify) => {
@@ -103,6 +106,16 @@ export const studentRoutes: FastifyPluginAsyncZod = async (fastify) => {
         '/profile',
         { schema: { body: profileBody, response: { 200: profileResponse } } },
         saveProfile,
+    );
+    fastify.get(
+        '/settings',
+        { schema: { response: { 200: settingsBody } } },
+        mySettings,
+    );
+    fastify.put(
+        '/settings',
+        { schema: { body: settingsBody, response: { 200: settingsBody } } },
+        saveSettings,
     );
     fastify.get(
         '/assignments/:assignmentId',

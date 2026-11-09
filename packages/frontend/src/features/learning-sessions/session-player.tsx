@@ -1,5 +1,5 @@
 import { useSuspenseQuery } from '@tanstack/react-query';
-import { useEffect, useState } from 'react';
+import { useState } from 'react';
 import { Link } from 'react-router';
 import { HelpIcon } from '../../components/icons/help-icon';
 import { PauseIcon } from '../../components/icons/pause-icon';
@@ -9,9 +9,10 @@ import { Dialog } from '../../components/ui/dialog';
 import { useErrorToast } from '../../components/ui/toast';
 import { cn } from '../../lib/cn';
 import { studentClassQuery } from '../classes/queries';
+import { LearningSettingsForm } from '../settings/learning-settings';
+import { TextScale } from '../settings/text-scale';
 import { ChallengeBlock } from './challenge-block';
 import { CheckBlock } from './check-block';
-import { readStored, store } from './device-storage';
 import { HookBlock } from './hook-block';
 import { MemoryGame } from './memory-game';
 import {
@@ -27,19 +28,8 @@ import { SessionDone, SessionIntro, SessionPreparing } from './session-screens';
 import { stepLabels, stepOrder } from './steps';
 import { StoryBlock } from './story-block';
 
-const textSizeKey = 'aku-senang-belajar:text-size';
 const tool =
     'text-primary-deep min-h-12 rounded-xl border-2 px-3 font-semibold';
-
-function useLargeText() {
-    const [large, setLarge] = useState(false);
-    useEffect(() => setLarge(readStored(textSizeKey) === 'large'), []);
-    function toggle() {
-        setLarge(!large);
-        store(textSizeKey, large ? null : 'large');
-    }
-    return [large, toggle] as const;
-}
 
 function CurrentBlock({
     session,
@@ -92,7 +82,7 @@ export function SessionPlayer({ assignmentId }: { assignmentId: number }) {
     const { data: session } = useSuspenseQuery(sessionQuery(assignmentId));
     const { data: mine } = useSuspenseQuery(studentClassQuery());
     const teacher = mine.classroom?.teacherName ?? 'gurumu';
-    const [large, toggleLarge] = useLargeText();
+    const [adjusting, setAdjusting] = useState(false);
     const [pausing, setPausing] = useState(false);
     const [helping, setHelping] = useState(false);
     const [askedAt, setAskedAt] = useState<number | null>(null);
@@ -120,14 +110,10 @@ export function SessionPlayer({ assignmentId }: { assignmentId: number }) {
     }
 
     return (
-        <div
-            className={cn(
-                'bg-student-surface font-rounded min-h-svh',
-                large ? 'text-[1.375rem]' : 'text-lg',
-            )}
-        >
+        <div className="bg-student-surface font-rounded min-h-svh text-lg">
+            <TextScale />
             <header className="border-paper-edge border-b-2 bg-white">
-                <div className="mx-auto flex max-w-2xl items-center justify-between gap-2 px-4 py-2">
+                <div className="mx-auto flex max-w-2xl flex-wrap items-center justify-between gap-2 px-4 py-2">
                     {block ? (
                         <Button
                             variant="outline"
@@ -151,10 +137,9 @@ export function SessionPlayer({ assignmentId }: { assignmentId: number }) {
                     <div className="flex gap-2">
                         <Button
                             variant="outline"
-                            aria-pressed={large}
-                            aria-label="Huruf lebih besar"
+                            aria-label="Pengaturan belajar"
                             className={cn(tool, 'font-display min-w-12')}
-                            onClick={toggleLarge}
+                            onClick={() => setAdjusting(true)}
                         >
                             Aa
                         </Button>
@@ -296,6 +281,27 @@ export function SessionPlayer({ assignmentId }: { assignmentId: number }) {
                         {askedAt === block?.id ? 'Kembali belajar' : 'Tutup'}
                     </Button>
                 </div>
+            </Dialog>
+            <Dialog
+                open={adjusting}
+                onClose={() => setAdjusting(false)}
+                aria-labelledby="settings-title"
+                className="font-rounded max-h-[calc(100svh-2rem)] max-w-lg overflow-y-auto"
+            >
+                <h2
+                    id="settings-title"
+                    className="font-display text-primary-deep mb-5 text-[1.4em] font-semibold"
+                >
+                    Pengaturan belajar
+                </h2>
+                <LearningSettingsForm />
+                <Button
+                    feel="chunky"
+                    className="mt-6 w-full"
+                    onClick={() => setAdjusting(false)}
+                >
+                    Selesai
+                </Button>
             </Dialog>
         </div>
     );

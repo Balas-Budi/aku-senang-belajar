@@ -1,6 +1,11 @@
 import { z } from 'zod';
 import { INVITE_CODE_LENGTH, normalizeCode } from '../../auth/codes.ts';
-import { attemptStatus, responseOutcome, subject } from '../../db/schema.ts';
+import {
+    attemptStatus,
+    responseOutcome,
+    subject,
+    textSize,
+} from '../../db/schema.ts';
 import { blockContent, steps } from '../../learning/blocks.ts';
 
 export const TRY_LIMIT = 3;
@@ -113,8 +118,20 @@ export const responseBody = z.object({
 
 export const helpBody = z.object({
     blockId: z.int().positive(),
-    kind: z.enum(['hint', 'example', 'ask_teacher']),
+    kind: z.enum(['hint', 'example', 'ask_teacher', 'listen']),
 });
+
+export const settingsBody = z.object({
+    textSize: z.enum(textSize.enumValues),
+    readAloud: z.boolean(),
+    speechRate: z.union([z.literal(0.75), z.literal(1), z.literal(1.25)]),
+});
+
+export const DEFAULT_SETTINGS: SettingsBody = {
+    textSize: 'normal',
+    readAloud: false,
+    speechRate: 1,
+};
 
 const picture = blockContent.check.shape.example;
 
@@ -266,3 +283,4 @@ export type CheckpointBody = z.infer<typeof checkpointBody>;
 export type ResponseBody = z.infer<typeof responseBody>;
 export type HelpBody = z.infer<typeof helpBody>;
 export type ProfileBody = z.infer<typeof profileBody>;
+export type SettingsBody = z.infer<typeof settingsBody>;

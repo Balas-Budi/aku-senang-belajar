@@ -26,7 +26,7 @@ import {
     responses,
 } from '../db/schema.ts';
 
-export const SUMMARY_PROMPT_VERSION = 'summary-2026-11-09';
+export const SUMMARY_PROMPT_VERSION = 'summary-2026-11-09b';
 
 export const MAX_SUMMARY_TRIES = 3;
 
@@ -35,7 +35,7 @@ const MODEL_TIMEOUT = 60_000;
 export const SUMMARY_PROMPT = [
     "You write a short memory note on one Indonesian primary school student's work in one lesson, for their teacher and for planning the student's next lessons. You receive, as JSON, the lesson's competencies; for each competency its description, the AI estimate the teacher may still change (status, reason, uncertainty), the questions that test it with every try in order and the help the student asked before each try, the help asked after the last try, and the student's own reflection.",
     '',
-    'Help kinds, with the Indonesian words to use for them: "hint" is a hint ("petunjuk"), "example" is another example ("contoh lain"), "ask_teacher" means the student asked the teacher ("bertanya ke guru"), and "reveal" means the answer was shown ("jawaban ditunjukkan").',
+    'Help kinds, with the Indonesian words to use for them: "hint" is a hint ("petunjuk"), "example" is another example ("contoh lain"), "ask_teacher" means the student asked the teacher ("bertanya ke guru"), "reveal" means the answer was shown ("jawaban ditunjukkan"), and "listen" means the student had the question read aloud ("mendengarkan soal"). "readAloud": true means every screen was read aloud without the student asking. Hearing a question helps with reading, not with the answer.',
     '',
     'Write two to four short sentences in Indonesian, without English words, that say:',
     '- what the answers show for each competency, naming its code;',
@@ -75,8 +75,12 @@ function helpBetween(
 
 export async function summaryMessage(db: Queryable, runId: number) {
     const [run] = await db
-        .select({ attemptId: analysisRuns.attemptId })
+        .select({
+            attemptId: analysisRuns.attemptId,
+            readAloud: attempts.readAloud,
+        })
         .from(analysisRuns)
+        .innerJoin(attempts, eq(attempts.id, analysisRuns.attemptId))
         .where(eq(analysisRuns.id, runId));
 
     if (!run) {
@@ -116,6 +120,7 @@ export async function summaryMessage(db: Queryable, runId: number) {
         .orderBy(asc(helpEvents.createdAt), asc(helpEvents.id));
 
     return JSON.stringify({
+        readAloud: run.readAloud,
         competencies: evidence.map((competency) => {
             const estimate = estimates.find(
                 ({ competencyId }) => competencyId === competency.id,

@@ -1,8 +1,14 @@
 import { useEffect, useState } from 'react';
 import { Button } from '../../components/ui/button';
+import {
+    NarrationControls,
+    optionBeingRead,
+    Spoken,
+    useNarration,
+} from '../narration/narration';
 import { readStored, store } from './device-storage';
 import { Illustration } from './illustration';
-import { answersFor } from './queries';
+import { answersFor, useHelp } from './queries';
 import {
     OfflineNote,
     OptionPicker,
@@ -28,6 +34,27 @@ export function ChallengeBlock({
     const sender = useAnswerSender(assignmentId);
     const { content } = block;
     const ready = choice !== null && reason.trim().length > 0;
+    const listen = useHelp(assignmentId);
+    const [heard, setHeard] = useState(false);
+    const narration = useNarration(
+        `block-${block.id}`,
+        [
+            content.prompt,
+            content.question,
+            ...content.options.map(({ label }) => label),
+        ],
+        true,
+    );
+
+    function listenOnce() {
+        if (sent || heard) return;
+        setHeard(true);
+        listen.mutate({
+            attemptId: attempt.id,
+            blockId: block.id,
+            kind: 'listen',
+        });
+    }
 
     useEffect(() => {
         if (sent) return;
@@ -61,7 +88,13 @@ export function ChallengeBlock({
             >
                 Tantangan
             </ScreenHeading>
-            <p className="leading-relaxed text-pretty">{content.prompt}</p>
+            <NarrationControls narration={narration} onListen={listenOnce} />
+            <p className="leading-relaxed text-pretty">
+                <Spoken
+                    text={content.prompt}
+                    sentence={narration.sentenceIn(0)}
+                />
+            </p>
             {content.illustration && (
                 <Illustration
                     name={content.illustration}
@@ -69,7 +102,10 @@ export function ChallengeBlock({
                 />
             )}
             <p className="font-display text-primary-deep text-[1.35em] leading-snug font-medium text-pretty">
-                {content.question}
+                <Spoken
+                    text={content.question}
+                    sentence={narration.sentenceIn(1)}
+                />
             </p>
             <OptionPicker
                 name={`challenge-${block.id}`}
@@ -78,6 +114,7 @@ export function ChallengeBlock({
                 value={choice}
                 onChange={setChoice}
                 disabled={Boolean(sent)}
+                reading={optionBeingRead(narration, content.options, 2)}
             />
             <ReasonField
                 id={`reason-${block.id}`}

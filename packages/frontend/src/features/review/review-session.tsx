@@ -13,6 +13,12 @@ import { subjects } from '../assignments/subject-art';
 import { Feedback, HelpCard } from '../learning-sessions/check-block';
 import { Illustration } from '../learning-sessions/illustration';
 import {
+    NarrationControls,
+    optionBeingRead,
+    Spoken,
+    useNarration,
+} from '../narration/narration';
+import {
     OptionPicker,
     ReactingJalak,
     ReasonField,
@@ -48,6 +54,11 @@ function Question({
     const showError = useErrorToast();
     const closed = earned.praise !== null || earned.reveal !== null;
     const reasonMissing = Boolean(content.reason) && !reason.trim();
+    const narration = useNarration(
+        `review-${question.id}`,
+        [content.prompt, ...content.options.map(({ label }) => label)],
+        true,
+    );
 
     function check() {
         if (!choice || reasonMissing) return;
@@ -87,6 +98,7 @@ function Question({
             >
                 Ulang Yuk!
             </ScreenHeading>
+            <NarrationControls narration={narration} />
             {content.illustration && (
                 <Illustration
                     name={content.illustration}
@@ -94,7 +106,10 @@ function Question({
                 />
             )}
             <p className="font-display text-primary-deep text-[1.35em] leading-snug font-medium text-pretty">
-                {content.prompt}
+                <Spoken
+                    text={content.prompt}
+                    sentence={narration.sentenceIn(0)}
+                />
             </p>
             <OptionPicker
                 name={`review-${question.id}-choice`}
@@ -106,6 +121,7 @@ function Question({
                 correct={
                     earned.reveal?.answer ?? (earned.praise ? choice : null)
                 }
+                reading={optionBeingRead(narration, content.options, 1)}
             />
             {content.reason && !closed && (
                 <ReasonField

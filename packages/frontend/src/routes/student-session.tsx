@@ -4,6 +4,7 @@ import { ToastProvider } from '../components/ui/toast';
 import { studentClassQuery } from '../features/classes/queries';
 import { sessionQuery } from '../features/learning-sessions/queries';
 import { SessionPlayer } from '../features/learning-sessions/session-player';
+import { studentSettingsQuery } from '../features/settings/queries';
 import { ApiError } from '../lib/api';
 import { requireUser } from '../lib/require-user.server';
 import type { Route } from './+types/student-session';
@@ -16,6 +17,7 @@ export async function loader({ request, params }: Route.LoaderArgs) {
         await Promise.all([
             client.fetchQuery(sessionQuery(id, cookie)),
             client.fetchQuery(studentClassQuery(cookie)),
+            client.prefetchQuery(studentSettingsQuery(cookie)),
         ]);
     } catch (error) {
         if (error instanceof ApiError && error.status === 404)

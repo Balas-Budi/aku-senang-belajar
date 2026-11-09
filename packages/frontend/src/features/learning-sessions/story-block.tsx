@@ -1,4 +1,9 @@
 import { Button } from '../../components/ui/button';
+import {
+    NarrationControls,
+    Spoken,
+    useNarration,
+} from '../narration/narration';
 import { Illustration } from './illustration';
 import type { BlockOf } from './queries';
 import { ScreenCard, ScreenHeading } from './session-ui';
@@ -49,6 +54,7 @@ export function StoryBlock({
     onNext: () => void;
 }) {
     const { content } = block;
+    const narration = useNarration(`block-${block.id}`, [content.text], true);
     return (
         <ScreenCard aria-labelledby={`block-${block.id}`}>
             <ScreenHeading
@@ -57,6 +63,7 @@ export function StoryBlock({
             >
                 Cerita {number} dari {total}
             </ScreenHeading>
+            <NarrationControls narration={narration} />
             {content.illustration && (
                 <Illustration
                     name={content.illustration}
@@ -64,7 +71,10 @@ export function StoryBlock({
                 />
             )}
             <p className="font-display text-primary-deep text-[1.35em] leading-snug font-medium text-pretty">
-                {content.text}
+                <Spoken
+                    text={content.text}
+                    sentence={narration.sentenceIn(0)}
+                />
             </p>
             {content.fraction && <FractionNote fraction={content.fraction} />}
             <Button feel="chunky" className="w-full sm:w-auto" onClick={onNext}>

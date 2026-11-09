@@ -1,5 +1,11 @@
 import { useState } from 'react';
 import { Button } from '../../components/ui/button';
+import {
+    NarrationControls,
+    optionBeingRead,
+    Spoken,
+    useNarration,
+} from '../narration/narration';
 import { Illustration } from './illustration';
 import { answersFor } from './queries';
 import {
@@ -23,6 +29,11 @@ export function HookBlock({
     );
     const sender = useAnswerSender(assignmentId);
     const { content } = block;
+    const narration = useNarration(
+        `block-${block.id}`,
+        [content.prompt, ...content.options.map(({ label }) => label)],
+        true,
+    );
 
     function choose() {
         if (saved) return onNext();
@@ -41,8 +52,12 @@ export function HookBlock({
     return (
         <ScreenCard aria-labelledby={`block-${block.id}`}>
             <ScreenHeading id={`block-${block.id}`}>
-                {content.prompt}
+                <Spoken
+                    text={content.prompt}
+                    sentence={narration.sentenceIn(0)}
+                />
             </ScreenHeading>
+            <NarrationControls narration={narration} />
             {content.illustration && (
                 <Illustration
                     name={content.illustration}
@@ -56,6 +71,7 @@ export function HookBlock({
                 value={choice}
                 onChange={setChoice}
                 disabled={Boolean(saved)}
+                reading={optionBeingRead(narration, content.options, 1)}
             />
             <p className="bg-student-surface text-primary-deep rounded-2xl px-4 py-3 font-semibold">
                 Ini pemanasan. Semua jawaban boleh.

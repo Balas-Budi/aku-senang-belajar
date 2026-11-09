@@ -51,6 +51,7 @@ export function OptionPicker({
     onChange,
     disabled = false,
     correct = null,
+    reading = null,
 }: {
     name: string;
     legend: string;
@@ -59,6 +60,7 @@ export function OptionPicker({
     onChange: (id: string) => void;
     disabled?: boolean;
     correct?: string | null;
+    reading?: string | null;
 }) {
     const pictures = options.some((option) => option.illustration);
     return (
@@ -80,6 +82,8 @@ export function OptionPicker({
                                 : 'flex-wrap items-center px-4',
                             correct === option.id &&
                                 'border-primary-deep bg-activity-green/15 has-checked:bg-activity-green/15',
+                            reading === option.id &&
+                                'ring-activity-orange/50 ring-4',
                         )}
                     >
                         <input
