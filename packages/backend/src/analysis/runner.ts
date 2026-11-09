@@ -2,7 +2,12 @@ import { and, asc, eq, lt, lte } from 'drizzle-orm';
 import type { FastifyInstance } from 'fastify';
 import { type AiConfig, aiConfig, AiError, chatJson } from '../ai/chat.ts';
 import type { Queryable } from '../db/index.ts';
-import { analysisRuns, assessments, learnerSummaries } from '../db/schema.ts';
+import {
+    analysisRuns,
+    assessments,
+    attempts,
+    learnerSummaries,
+} from '../db/schema.ts';
 import { runNextSummary } from '../memory/summaries.ts';
 import { type CompetencyEvidence, evidenceOf } from './evidence.ts';
 import {
@@ -184,7 +189,15 @@ export async function processRun(
                 .where(eq(analysisRuns.id, run.id));
 
             if (result.model) {
-                await tx.insert(learnerSummaries).values({ runId: run.id });
+                const [attempt] = await tx
+                    .select({ memoryDeletedAt: attempts.memoryDeletedAt })
+                    .from(attempts)
+                    .where(eq(attempts.id, run.attemptId))
+                    .for('share');
+
+                if (attempt?.memoryDeletedAt === null) {
+                    await tx.insert(learnerSummaries).values({ runId: run.id });
+                }
             }
         });
     } catch (error) {

@@ -2,12 +2,14 @@ import { useRef, useState } from 'react';
 import { useQuery } from '@tanstack/react-query';
 import {
     adminClassesQuery,
+    useDeleteMemory,
     useMoveStudent,
     useResetPassword,
     type ManagedUser,
 } from './queries';
 import { CredentialSheet } from './credential-sheet';
 import { Button } from '../../components/ui/button';
+import { Dialog } from '../../components/ui/dialog';
 import { TableCell, TableRow } from '../../components/ui/table';
 import { RequestError } from '../../components/request-error';
 import { cn } from '../../lib/cn';
@@ -83,6 +85,74 @@ function ClassPlacement({
         </div>
     );
 }
+function ForgetMemory({
+    user,
+    open,
+    onClose,
+    onDone,
+}: {
+    user: ManagedUser;
+    open: boolean;
+    onClose: () => void;
+    onDone: () => void;
+}) {
+    const forget = useDeleteMemory();
+    const close = () => {
+        if (forget.isPending) return;
+        forget.reset();
+        onClose();
+    };
+    return (
+        <Dialog
+            open={open}
+            onClose={close}
+            onCancel={(event) => {
+                if (forget.isPending) event.preventDefault();
+            }}
+            aria-labelledby={`forget-${user.id}-title`}
+            aria-describedby={`forget-${user.id}-description`}
+        >
+            <h2
+                id={`forget-${user.id}-title`}
+                className="text-primary-deep text-xl font-bold"
+            >
+                Hapus memori belajar {user.name}?
+            </h2>
+            <p
+                id={`forget-${user.id}-description`}
+                className="text-muted-foreground mt-2 leading-relaxed"
+            >
+                Ringkasan setiap misi dan laporan siswa yang disusun AI dihapus
+                dan tidak bisa dipulihkan. Misi yang sudah dikerjakan tidak
+                diringkas lagi. Jawaban, hasil misi, dan keputusan guru tetap
+                tersimpan.
+            </p>
+            <div className="mt-5 space-y-4">
+                <RequestError error={forget.error} />
+                <div className="flex flex-wrap gap-3">
+                    <Button
+                        variant="outline"
+                        disabled={forget.isPending}
+                        onClick={close}
+                    >
+                        Batal
+                    </Button>
+                    <Button
+                        variant="destructive"
+                        disabled={forget.isPending}
+                        onClick={() =>
+                            forget.mutate(user.id, { onSuccess: onDone })
+                        }
+                    >
+                        {forget.isPending
+                            ? 'Menghapus…'
+                            : 'Hapus memori belajar'}
+                    </Button>
+                </div>
+            </div>
+        </Dialog>
+    );
+}
 export function AccountRow({
     user,
     onClassSave,
@@ -91,6 +161,8 @@ export function AccountRow({
     onClassSave: () => void;
 }) {
     const [open, setOpen] = useState<'reset' | 'class' | null>(null);
+    const [forgetting, setForgetting] = useState<boolean | null>(null);
+    const [forgotten, setForgotten] = useState(false);
     const reset = useResetPassword();
     const resetToggle = useRef<HTMLButtonElement>(null);
     const student = user.role === 'student';
@@ -154,7 +226,43 @@ export function AccountRow({
                                 <span className="sr-only"> {user.name}</span>
                             </Button>
                         )}
+                        {student && (
+                            <Button
+                                variant="outline"
+                                className="text-destructive"
+                                onClick={() => {
+                                    setForgotten(false);
+                                    setForgetting(true);
+                                }}
+                            >
+                                Hapus memori belajar
+                                <span className="sr-only"> {user.name}</span>
+                            </Button>
+                        )}
                     </div>
+                    {student && (
+                        <>
+                            {forgetting !== null && (
+                                <ForgetMemory
+                                    user={user}
+                                    open={forgetting}
+                                    onClose={() => setForgetting(false)}
+                                    onDone={() => {
+                                        setForgetting(false);
+                                        setForgotten(true);
+                                    }}
+                                />
+                            )}
+                            <p
+                                role="status"
+                                className="mt-2 empty:mt-0 @xl:text-right"
+                            >
+                                {forgotten
+                                    ? `Memori belajar ${user.name} sudah dihapus.`
+                                    : ''}
+                            </p>
+                        </>
+                    )}
                 </TableCell>
             </TableRow>
             {expanded && (

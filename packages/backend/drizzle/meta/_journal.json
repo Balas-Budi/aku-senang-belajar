@@ -127,6 +127,13 @@
             "when": 1794207571564,
             "tag": "0017_review_tries",
             "breakpoints": true
+        },
+        {
+            "idx": 18,
+            "version": "7",
+            "when": 1794210788219,
+            "tag": "0018_attempt_memory_deleted",
+            "breakpoints": true
         }
     ]
 }

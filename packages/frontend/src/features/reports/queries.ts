@@ -64,6 +64,7 @@ export type MissionHistory = {
     submittedAt: string | null;
     analysis: RunStatus | null;
     summary: { id: number; text: string; excluded: boolean } | null;
+    memoryDeleted: boolean;
     competencies: (Competency & {
         assessmentId: number;
         estimate: UnderstandingStatus;

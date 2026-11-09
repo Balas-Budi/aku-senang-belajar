@@ -205,9 +205,11 @@ function MissionSummary({
                 </>
             ) : (
                 <p className="text-muted-foreground">
-                    {mission.analysis === 'succeeded'
-                        ? 'Ringkasan misi ini belum ditulis.'
-                        : 'Misi ini belum dianalisis.'}
+                    {mission.memoryDeleted
+                        ? 'Ringkasan misi ini dihapus bersama memori belajar siswa.'
+                        : mission.analysis === 'succeeded'
+                          ? 'Ringkasan misi ini belum ditulis.'
+                          : 'Misi ini belum dianalisis.'}
                 </p>
             )}
         </li>

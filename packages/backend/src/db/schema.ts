@@ -345,6 +345,7 @@ export const attempts = pgTable(
             .references(() => sessionBlocks.id, { onDelete: 'cascade' }),
         startedAt: timestamp({ withTimezone: true }).notNull().defaultNow(),
         submittedAt: timestamp({ withTimezone: true }),
+        memoryDeletedAt: timestamp({ withTimezone: true }),
     },
     (table) => [
         unique('attempts_assignment_id_student_id_unique').on(

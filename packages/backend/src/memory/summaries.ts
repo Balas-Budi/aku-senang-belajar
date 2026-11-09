@@ -20,6 +20,7 @@ import type { Database, Queryable } from '../db/index.ts';
 import {
     analysisRuns,
     assessments,
+    attempts,
     helpEvents,
     learnerSummaries,
     responses,
@@ -317,10 +318,12 @@ export async function queueMissingSummaries(
     const missing = await db
         .select({ runId: analysisRuns.id })
         .from(analysisRuns)
+        .innerJoin(attempts, eq(attempts.id, analysisRuns.attemptId))
         .where(
             and(
                 eq(analysisRuns.status, 'succeeded'),
                 isNotNull(analysisRuns.model),
+                isNull(attempts.memoryDeletedAt),
                 only.attemptId === undefined
                     ? undefined
                     : eq(analysisRuns.attemptId, only.attemptId),

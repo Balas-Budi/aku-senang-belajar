@@ -1,0 +1,1 @@
+ALTER TABLE "attempts" ADD COLUMN "memory_deleted_at" timestamp with time zone;

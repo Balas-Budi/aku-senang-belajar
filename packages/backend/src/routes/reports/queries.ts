@@ -289,6 +289,7 @@ export async function studentHistory(
                                     excluded: summary.excludedAt !== null,
                                 }
                               : null,
+                          memoryDeleted: attempt.memoryDeletedAt !== null,
                           competencies: estimates
                               .filter(
                                   ({ attemptId }) => attemptId === attempt.id,

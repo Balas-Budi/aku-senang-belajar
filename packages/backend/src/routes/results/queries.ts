@@ -87,6 +87,7 @@ export async function attemptsOf(
             studentId: attempts.studentId,
             status: attempts.status,
             submittedAt: attempts.submittedAt,
+            memoryDeletedAt: attempts.memoryDeletedAt,
         })
         .from(attempts)
         .where(

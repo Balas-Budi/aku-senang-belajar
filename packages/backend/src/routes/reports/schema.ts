@@ -96,6 +96,7 @@ export const studentReportResponse = z.object({
                     excluded: z.boolean(),
                 })
                 .nullable(),
+            memoryDeleted: z.boolean(),
             competencies: z.array(
                 competency.extend({
                     assessmentId: z.number(),

@@ -4,6 +4,7 @@ import { requireRole } from '../../auth/guards.ts';
 import { classroomResponse } from '../student/schema.ts';
 import {
     createUser,
+    deleteMemory,
     importUsers,
     importUsersFile,
     listClasses,
@@ -86,6 +87,11 @@ export const adminRoutes: FastifyPluginAsyncZod = async (fastify) => {
             },
         },
         moveStudent,
+    );
+    fastify.delete(
+        '/students/:studentId/memory',
+        { schema: { params: studentParams } },
+        deleteMemory,
     );
     fastify.get(
         '/classes',

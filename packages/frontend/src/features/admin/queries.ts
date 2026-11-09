@@ -84,6 +84,12 @@ export function useResetPassword() {
         gcTime: 0,
     });
 }
+export function useDeleteMemory() {
+    return useMutation({
+        mutationFn: (id: number) =>
+            api(`/api/admin/students/${id}/memory`, { method: 'DELETE' }),
+    });
+}
 export function useMoveStudent() {
     const client = useQueryClient();
     return useMutation({

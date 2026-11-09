@@ -5,7 +5,15 @@ import { generatePassword } from '../../auth/codes.ts';
 import { hashPassword } from '../../auth/password.ts';
 import { deleteUserSessions } from '../../auth/sessions.ts';
 import type { Queryable } from '../../db/index.ts';
-import { classes, classMembers, users } from '../../db/schema.ts';
+import {
+    analysisRuns,
+    attempts,
+    classes,
+    classMembers,
+    learnerSummaries,
+    reports,
+    users,
+} from '../../db/schema.ts';
 import { AppError } from '../../lib/errors.ts';
 import { fieldError, validationError } from '../../lib/field-error.ts';
 import { isUniqueViolation } from '../../lib/unique-violation.ts';
@@ -290,6 +298,39 @@ export async function moveStudent(
     });
 
     return { classroom: await classroomOf(db, student.id) };
+}
+
+export async function deleteMemory(
+    request: FastifyRequest<{ Params: StudentParams }>,
+    reply: FastifyReply,
+) {
+    const { db } = request.server;
+    const student = await managedUser(db, request.params.studentId, 'student');
+
+    await db.transaction(async (tx) => {
+        await tx
+            .update(attempts)
+            .set({ memoryDeletedAt: new Date() })
+            .where(eq(attempts.studentId, student.id));
+        await tx
+            .delete(learnerSummaries)
+            .where(
+                inArray(
+                    learnerSummaries.runId,
+                    tx
+                        .select({ id: analysisRuns.id })
+                        .from(analysisRuns)
+                        .innerJoin(
+                            attempts,
+                            eq(attempts.id, analysisRuns.attemptId),
+                        )
+                        .where(eq(attempts.studentId, student.id)),
+                ),
+            );
+        await tx.delete(reports).where(eq(reports.studentId, student.id));
+    });
+
+    return reply.code(204).send();
 }
 
 export async function resetPassword(
