@@ -1,6 +1,6 @@
 import type { FastifyPluginAsyncZod } from 'fastify-type-provider-zod';
 import { requireRole } from '../../auth/guards.ts';
-import { trackDrafts } from '../../studio/drafting.ts';
+import { trackBackground } from '../../lib/background.ts';
 import {
     approveSession,
     assignSession,
@@ -26,7 +26,7 @@ import {
 
 export const studioRoutes: FastifyPluginAsyncZod = async (fastify) => {
     fastify.addHook('preHandler', requireRole('teacher'));
-    trackDrafts(fastify);
+    trackBackground(fastify);
 
     fastify.post(
         '/modules/:moduleId/sessions',

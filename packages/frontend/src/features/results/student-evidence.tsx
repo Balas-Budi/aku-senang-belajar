@@ -433,7 +433,7 @@ export function StudentEvidence({
         );
     }
 
-    const { student, assignment, competencies } = evidence.data;
+    const { student, assignment, competencies, summary } = evidence.data;
 
     return (
         <div className="space-y-6">
@@ -445,6 +445,26 @@ export function StudentEvidence({
                     {assignment.moduleTitle}
                 </p>
                 <AnalysisSummary classId={classId} evidence={evidence.data} />
+                {summary && (
+                    <p
+                        className={cn(
+                            'leading-relaxed',
+                            summary.excluded && 'text-muted-foreground',
+                        )}
+                    >
+                        <span className="text-ai-suggestion font-medium">
+                            Ringkasan misi, saran AI:
+                        </span>{' '}
+                        {summary.text}
+                        {summary.excluded && ' (ditandai tidak sesuai)'}
+                    </p>
+                )}
+                <Link
+                    to={`/teacher/classes/${classId}/students/${student.id}`}
+                    className={textLink}
+                >
+                    Lihat laporan {student.name}
+                </Link>
             </div>
             {competencies.map((competency) => (
                 <CompetencyCard

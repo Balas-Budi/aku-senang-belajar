@@ -1,4 +1,4 @@
-import { asc, eq, inArray } from 'drizzle-orm';
+import { and, asc, eq, inArray, isNotNull } from 'drizzle-orm';
 import type { FastifyReply, FastifyRequest } from 'fastify';
 import { evidenceOf, missionCompetencyIds } from '../../analysis/evidence.ts';
 import { queueAnalysis } from '../../analysis/runner.ts';
@@ -7,6 +7,7 @@ import {
     assessments,
     classes,
     competencies,
+    learnerSummaries,
     verifications,
 } from '../../db/schema.ts';
 import { AppError, notFound } from '../../lib/errors.ts';
@@ -203,6 +204,7 @@ export async function studentEvidence(
             progress: 'not_started' as const,
             attemptId: null,
             analysis: null,
+            summary: null,
             competencies: [],
         };
     }
@@ -215,6 +217,22 @@ export async function studentEvidence(
                   .from(assessments)
                   .where(eq(assessments.runId, run.id))
             : [];
+    const [summary] =
+        run?.status === 'succeeded'
+            ? await db
+                  .select({
+                      id: learnerSummaries.id,
+                      text: learnerSummaries.text,
+                      excludedAt: learnerSummaries.excludedAt,
+                  })
+                  .from(learnerSummaries)
+                  .where(
+                      and(
+                          eq(learnerSummaries.runId, run.id),
+                          isNotNull(learnerSummaries.text),
+                      ),
+                  )
+            : [];
     const decisions = await decisionsOn(
         db,
         estimates.map(({ id }) => id),
@@ -226,6 +244,13 @@ export async function studentEvidence(
         progress: attempt.status,
         attemptId: attempt.id,
         analysis: run?.status ?? null,
+        summary: summary
+            ? {
+                  id: summary.id,
+                  text: summary.text ?? '',
+                  excluded: summary.excludedAt !== null,
+              }
+            : null,
         competencies: evidence.map((competency) => {
             const estimate = estimates.find(
                 ({ competencyId }) => competencyId === competency.id,

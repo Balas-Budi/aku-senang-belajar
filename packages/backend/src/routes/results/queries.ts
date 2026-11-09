@@ -86,6 +86,7 @@ export async function attemptsOf(
             assignmentId: attempts.assignmentId,
             studentId: attempts.studentId,
             status: attempts.status,
+            submittedAt: attempts.submittedAt,
         })
         .from(attempts)
         .where(
@@ -143,7 +144,7 @@ export function shownOf(
         : { status: estimate, decision: null };
 }
 
-function reachableAttempts(db: Queryable, teacherId: number) {
+export function reachableAttempts(db: Queryable, teacherId: number) {
     return db
         .select({ id: attempts.id })
         .from(attempts)

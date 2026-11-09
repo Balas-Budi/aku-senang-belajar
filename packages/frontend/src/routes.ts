@@ -27,6 +27,14 @@ export default [
             'classes/:classId/sessions/:assignmentId/students/:studentId',
             'routes/teacher-evidence.tsx',
         ),
+        route(
+            'classes/:classId/chapters/:moduleId',
+            'routes/teacher-chapter-report.tsx',
+        ),
+        route(
+            'classes/:classId/students/:studentId',
+            'routes/teacher-student-report.tsx',
+        ),
     ]),
     route('admin', 'routes/admin-layout.tsx', [index('routes/admin-home.tsx')]),
     route('*', 'routes/not-found.tsx'),

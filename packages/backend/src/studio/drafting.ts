@@ -14,6 +14,7 @@ import {
     sessionCompetencies,
 } from '../db/schema.ts';
 import { competencyRubric } from '../learning/rubric.ts';
+import { inBackground } from '../lib/background.ts';
 import {
     checkDraft,
     SESSION_PROMPT_VERSION,
@@ -25,7 +26,6 @@ import {
 } from './session-draft.ts';
 
 const DRAFT_TIMEOUT_MS = 180_000;
-const inFlight = new WeakMap<FastifyInstance, Set<Promise<void>>>();
 const contentOf = z.record(z.string(), z.unknown());
 
 export function sessionCompetencyIds(db: Queryable, sessionId: number) {
@@ -250,25 +250,17 @@ async function draftSession(
     }
 }
 
-export function trackDrafts(app: FastifyInstance) {
-    inFlight.set(app, new Set());
-    app.addHook('onClose', async () => {
-        await Promise.allSettled([...(inFlight.get(app) ?? [])]);
-    });
-}
-
 export function startDraft(
     app: FastifyInstance,
     sessionId: number,
     note: string | null,
 ) {
-    const running = draftSession(app, sessionId, note).catch((error) =>
-        app.log.error({ err: error, sessionId }, 'session draft crashed'),
+    inBackground(
+        app,
+        draftSession(app, sessionId, note).catch((error) =>
+            app.log.error({ err: error, sessionId }, 'session draft crashed'),
+        ),
     );
-    const drafts = inFlight.get(app);
-
-    drafts?.add(running);
-    void running.finally(() => drafts?.delete(running));
 }
 
 export async function failInterruptedDrafts(db: Queryable) {

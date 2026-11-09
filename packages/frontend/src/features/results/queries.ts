@@ -111,6 +111,7 @@ export type StudentEvidence = {
     progress: Progress;
     attemptId: number | null;
     analysis: RunStatus | null;
+    summary: { id: number; text: string; excluded: boolean } | null;
     competencies: CompetencyEvidence[];
 };
 

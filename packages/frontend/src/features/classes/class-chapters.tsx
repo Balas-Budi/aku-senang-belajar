@@ -2,7 +2,7 @@ import { useQuery } from '@tanstack/react-query';
 import { Link } from 'react-router';
 import { RequestError } from '../../components/request-error';
 import { Alert } from '../../components/ui/alert';
-import { Button } from '../../components/ui/button';
+import { Button, buttonVariants } from '../../components/ui/button';
 import { Card } from '../../components/ui/card';
 import { textLink } from '../../components/ui/text-link';
 import { ApiError } from '../../lib/api';
@@ -53,7 +53,15 @@ function ChapterRow({
                     {chapter.started && ' · Siswa sudah mulai'}
                 </p>
             </div>
-            <div className="flex flex-wrap gap-2">
+            <div className="flex flex-wrap items-center gap-2">
+                {opened && (
+                    <Link
+                        to={`/teacher/classes/${classId}/chapters/${chapter.id}`}
+                        className={buttonVariants({ variant: 'outline' })}
+                    >
+                        Laporan bab
+                    </Link>
+                )}
                 {chapter.waitingStages > 0 && (
                     <Button
                         variant={opened ? 'outline' : 'primary'}

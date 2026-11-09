@@ -1,5 +1,6 @@
 import { sql } from 'drizzle-orm';
 import {
+    check,
     index,
     integer,
     jsonb,
@@ -486,8 +487,46 @@ export const learnerSummaries = pgTable('learner_summaries', {
     runAfter: timestamp({ withTimezone: true }).notNull().defaultNow(),
     writtenAt: timestamp({ withTimezone: true }),
     embeddedAt: timestamp({ withTimezone: true }),
+    excludedAt: timestamp({ withTimezone: true }),
+    excludedBy: integer().references(() => users.id),
     createdAt: timestamp({ withTimezone: true }).notNull().defaultNow(),
 });
+
+export const reports = pgTable(
+    'reports',
+    {
+        id: integer().primaryKey().generatedAlwaysAsIdentity(),
+        classId: integer()
+            .notNull()
+            .references(() => classes.id, { onDelete: 'cascade' }),
+        moduleId: integer().references(() => modules.id, {
+            onDelete: 'cascade',
+        }),
+        studentId: integer().references(() => users.id, {
+            onDelete: 'cascade',
+        }),
+        draft: text(),
+        text: text(),
+        drafting: sessionDrafting(),
+        draftError: text(),
+        model: text(),
+        promptVersion: text(),
+        summaryIds: jsonb().notNull().default([]),
+        draftedAt: timestamp({ withTimezone: true }),
+        checkedBy: integer().references(() => users.id),
+        checkedAt: timestamp({ withTimezone: true }),
+        createdAt: timestamp({ withTimezone: true }).notNull().defaultNow(),
+    },
+    (table) => [
+        unique('reports_class_id_module_id_student_id_unique')
+            .on(table.classId, table.moduleId, table.studentId)
+            .nullsNotDistinct(),
+        check(
+            'reports_scope_check',
+            sql`(${table.moduleId} is null) <> (${table.studentId} is null)`,
+        ),
+    ],
+);
 
 export const sessions = pgTable(
     'sessions',

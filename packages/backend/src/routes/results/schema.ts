@@ -126,6 +126,9 @@ export const evidenceResponse = z.object({
     progress,
     attemptId: z.number().nullable(),
     analysis,
+    summary: z
+        .object({ id: z.number(), text: z.string(), excluded: z.boolean() })
+        .nullable(),
     competencies: z.array(
         z.object({
             id: z.number(),

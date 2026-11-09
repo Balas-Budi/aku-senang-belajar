@@ -118,7 +118,7 @@ export function WorkspaceShell({
             >
                 Langsung ke isi
             </a>
-            <aside className="bg-background border-paper-edge hidden w-64 shrink-0 flex-col gap-6 border-r px-3 py-6 md:sticky md:top-0 md:flex md:h-screen">
+            <aside className="bg-background border-paper-edge hidden w-64 shrink-0 flex-col gap-6 border-r px-3 py-6 md:sticky md:top-0 md:flex md:h-screen print:hidden">
                 <div className="px-3">{brand}</div>
                 <nav
                     aria-label="Navigasi utama"
@@ -134,7 +134,7 @@ export function WorkspaceShell({
                 />
             </aside>
             <div className="min-w-0 flex-1">
-                <header className="bg-background border-paper-edge border-b md:hidden">
+                <header className="bg-background border-paper-edge border-b md:hidden print:hidden">
                     <div className="flex items-center justify-between gap-3 px-4 py-3">
                         {brand}
                         <Button
