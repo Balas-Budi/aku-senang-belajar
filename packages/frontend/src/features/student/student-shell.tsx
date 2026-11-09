@@ -91,7 +91,7 @@ export function StudentShell({
                                 />
                             </svg>
                         </summary>
-                        <div className="student-menu border-paper-edge absolute right-0 z-20 mt-2 w-64 max-w-[calc(100vw-2rem)] space-y-3 rounded-2xl border-2 bg-white p-4 shadow-lg">
+                        <div className="student-menu border-paper-edge absolute right-0 z-20 mt-2 w-72 max-w-[calc(100vw-2rem)] space-y-3 rounded-2xl border-2 bg-white p-4 shadow-lg">
                             <p className="font-display text-primary-deep text-lg font-semibold break-words">
                                 {name}
                             </p>
@@ -107,6 +107,19 @@ export function StudentShell({
                                 })}
                             >
                                 Minatku
+                            </Link>
+                            <Link
+                                to="/student/cards"
+                                onClick={() => {
+                                    if (menu.current) menu.current.open = false;
+                                }}
+                                className={buttonVariants({
+                                    variant: 'outline',
+                                    feel: 'chunky',
+                                    className: 'w-full',
+                                })}
+                            >
+                                Kartu pengetahuanku
                             </Link>
                             <Link
                                 to="/account"

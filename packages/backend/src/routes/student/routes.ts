@@ -7,6 +7,7 @@ import {
     joinClass,
     leaveClass,
     moveCheckpoint,
+    myCards,
     myClass,
     myPath,
     myProfile,
@@ -19,6 +20,7 @@ import {
     assignmentResponse,
     attemptParams,
     attemptResponse,
+    cardsResponse,
     checkpointBody,
     classroomResponse,
     doneResponse,
@@ -61,6 +63,11 @@ export const studentRoutes: FastifyPluginAsyncZod = async (fastify) => {
         '/path',
         { schema: { response: { 200: pathResponse } } },
         myPath,
+    );
+    fastify.get(
+        '/cards',
+        { schema: { response: { 200: cardsResponse } } },
+        myCards,
     );
     fastify.get(
         '/profile',

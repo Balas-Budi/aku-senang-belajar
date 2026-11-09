@@ -56,6 +56,26 @@ export const pathResponse = z.object({
     ),
 });
 
+export const cardsResponse = z.object({
+    cards: z.array(
+        z.object({
+            id: z.number(),
+            title: z.string(),
+            chapter: z.string(),
+            subject: z.enum(subject.enumValues),
+            takeaways: z.array(z.string()),
+        }),
+    ),
+    stickers: z.array(
+        z.object({
+            id: z.number(),
+            title: z.string(),
+            book: z.string(),
+            subject: z.enum(subject.enumValues),
+        }),
+    ),
+});
+
 export const assignmentParams = z.object({
     assignmentId: z.coerce.number().int().positive(),
 });

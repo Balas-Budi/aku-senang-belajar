@@ -21,6 +21,7 @@ import {
     type Chapter,
     type Stage,
 } from './queries';
+import { ChapterSticker } from './chapter-sticker';
 import { StageBar } from './stage-bar';
 
 const lanes = [50, 70, 50, 30];
@@ -204,10 +205,12 @@ function Mission({
 }
 
 function OpenChapter({
+    subject,
     chapter,
     number,
     current,
 }: {
+    subject: Subject;
     chapter: Chapter;
     number: number;
     current: Stage | undefined;
@@ -220,18 +223,26 @@ function OpenChapter({
             aria-labelledby={`bab-${chapter.id}-title`}
             className="scroll-mt-4 space-y-2"
         >
-            <header className="border-paper-edge rounded-[24px] border-2 border-b-[6px] bg-white p-4 sm:p-5">
-                <p className="text-muted-foreground text-base">
-                    Bab {number}
-                    {done && ' · Selesai'}
-                </p>
-                <h2
-                    id={`bab-${chapter.id}-title`}
-                    className="font-display text-primary-deep text-2xl leading-tight font-semibold break-words sm:text-3xl"
-                >
-                    {chapter.title}
-                </h2>
-                <StageBar stages={stages} className="mt-2" />
+            <header className="border-paper-edge flex items-center gap-4 rounded-[24px] border-2 border-b-[6px] bg-white p-4 sm:p-5">
+                <div className="min-w-0 flex-1">
+                    <p className="text-muted-foreground text-base">
+                        Bab {number}
+                        {done && ' · Selesai, stikernya sudah kamu dapat'}
+                    </p>
+                    <h2
+                        id={`bab-${chapter.id}-title`}
+                        className="font-display text-primary-deep text-2xl leading-tight font-semibold break-words sm:text-3xl"
+                    >
+                        {chapter.title}
+                    </h2>
+                    <StageBar stages={stages} className="mt-2" />
+                </div>
+                {done && (
+                    <ChapterSticker
+                        subject={subject}
+                        className="size-16 sm:size-20"
+                    />
+                )}
             </header>
             <ol
                 aria-label={`Misi di bab ${chapter.title}`}
@@ -402,6 +413,7 @@ export function SubjectPath({ subject }: { subject: Subject }) {
                                 chapter.open ? (
                                     <OpenChapter
                                         key={chapter.id}
+                                        subject={subject}
                                         chapter={chapter}
                                         number={index + 1}
                                         current={current}

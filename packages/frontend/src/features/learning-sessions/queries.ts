@@ -139,7 +139,11 @@ function useSession(assignmentId: number) {
             if (error instanceof ApiError && error.status === 409)
                 void client.invalidateQueries({ queryKey: key });
         },
-        refreshList: () => client.invalidateQueries({ queryKey: listKey }),
+        refreshList: () =>
+            Promise.all([
+                client.invalidateQueries({ queryKey: listKey }),
+                client.invalidateQueries({ queryKey: ['student', 'cards'] }),
+            ]),
     };
 }
 

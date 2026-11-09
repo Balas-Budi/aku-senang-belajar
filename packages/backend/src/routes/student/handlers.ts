@@ -32,6 +32,7 @@ import {
     openAttempt,
     stateOf,
 } from './attempts.ts';
+import { cardsOf } from './cards.ts';
 import { isStageLocked, pathOf, stageLocked } from './path.ts';
 import { INTERESTS } from './schema.ts';
 import type {
@@ -94,6 +95,10 @@ export async function joinClass(
 
 export async function myPath(request: FastifyRequest) {
     return pathOf(request.server.db, currentUser(request).id);
+}
+
+export async function myCards(request: FastifyRequest) {
+    return cardsOf(request.server.db, currentUser(request).id);
 }
 
 export async function leaveClass(request: FastifyRequest, reply: FastifyReply) {

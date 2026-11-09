@@ -3,11 +3,12 @@ import { Sticker } from '../../components/sticker';
 import type { Subject } from './queries';
 export const subjects: Record<
     Subject,
-    { label: string; tint: string; drawing: ReactNode }
+    { label: string; tint: string; color: string; drawing: ReactNode }
 > = {
     mathematics: {
         label: 'Matematika',
         tint: 'bg-activity-pink/15',
+        color: 'var(--color-activity-pink)',
         drawing: (
             <>
                 <circle cx="24" cy="24" r="16" fill="white" />
@@ -22,6 +23,7 @@ export const subjects: Record<
     natural_and_social_science: {
         label: 'IPAS',
         tint: 'bg-activity-green/15',
+        color: 'var(--color-activity-green)',
         drawing: (
             <>
                 <path d="M24 41V24M16 41h16" />
@@ -39,6 +41,7 @@ export const subjects: Record<
     indonesian_language: {
         label: 'Bahasa Indonesia',
         tint: 'bg-activity-blue/15',
+        color: 'var(--color-activity-blue)',
         drawing: (
             <>
                 <path
@@ -56,6 +59,7 @@ export const subjects: Record<
     pancasila_education: {
         label: 'Pendidikan Pancasila',
         tint: 'bg-activity-orange/15',
+        color: 'var(--color-activity-orange)',
         drawing: (
             <>
                 <path

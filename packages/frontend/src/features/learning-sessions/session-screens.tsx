@@ -4,6 +4,7 @@ import { CheckIcon } from '../../components/icons/check-icon';
 import { LottieMoment } from '../../components/lottie-moment';
 import { requestErrorMessage } from '../../components/request-error';
 import { Button, buttonVariants } from '../../components/ui/button';
+import { textLink } from '../../components/ui/text-link';
 import { useErrorToast } from '../../components/ui/toast';
 import { cn } from '../../lib/cn';
 import { SubjectArt, subjects } from '../assignments/subject-art';
@@ -142,6 +143,13 @@ export function SessionDone({
                             </li>
                         ))}
                     </ul>
+                    <p className="mt-3 leading-relaxed">
+                        Kartu ini tersimpan di{' '}
+                        <Link to="/student/cards" className={textLink}>
+                            Kartu pengetahuanku
+                        </Link>
+                        .
+                    </p>
                 </section>
             )}
             {done.toPractise.length > 0 && (
