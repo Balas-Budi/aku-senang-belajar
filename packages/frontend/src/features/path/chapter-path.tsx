@@ -1,10 +1,11 @@
 import { useQuery } from '@tanstack/react-query';
+import { useEffect, useRef } from 'react';
 import { Link } from 'react-router';
 import { CheckIcon } from '../../components/icons/check-icon';
 import { LockIcon } from '../../components/icons/lock-icon';
 import { JalakBali } from '../../components/jalak-bali';
 import { RequestError } from '../../components/request-error';
-import { Button } from '../../components/ui/button';
+import { Button, buttonVariants } from '../../components/ui/button';
 import { textLink } from '../../components/ui/text-link';
 import { cn } from '../../lib/cn';
 import { SubjectArt, subjects } from '../assignments/subject-art';
@@ -14,7 +15,7 @@ import { findChapter, finished, studentPathQuery, type Stage } from './queries';
 import { StageBar } from './stage-bar';
 
 const lanes = [50, 70, 50, 30];
-const nodeY = 25;
+const nodeY = 50;
 
 function statusOf(stage: Stage) {
     if (stage.progress === 'submitted') return 'Selesai';
@@ -24,6 +25,12 @@ function statusOf(stage: Stage) {
             ? `Lanjut dari ${stepLabels[stage.step]}`
             : 'Lanjutkan';
     return 'Siap dimulai';
+}
+
+function actionOf(stage: Stage) {
+    if (stage.progress === 'submitted') return 'Lihat lagi';
+    if (stage.progress === 'in_progress') return 'Lanjutkan misi';
+    return 'Mulai misi';
 }
 
 function Trail({ stages }: { stages: Stage[] }) {
@@ -60,7 +67,7 @@ function Trail({ stages }: { stages: Stage[] }) {
     );
 }
 
-function Node({
+function Mission({
     stage,
     number,
     lane,
@@ -72,78 +79,116 @@ function Node({
     current: boolean;
 }) {
     const done = stage.progress === 'submitted';
-    const circle = (
-        <span className="relative">
-            <span
-                className={cn(
-                    'font-display flex size-20 items-center justify-center rounded-full text-3xl font-semibold transition-[translate,box-shadow] duration-100',
-                    done &&
-                        'bg-primary text-primary-foreground shadow-[0_5px_0_var(--color-primary-shade)] group-active:translate-y-1 group-active:shadow-none',
-                    !done &&
-                        !stage.locked &&
-                        'border-primary text-primary border-4 bg-white shadow-[0_5px_0_var(--color-primary-shade)] group-active:translate-y-1 group-active:shadow-none',
-                    stage.locked &&
-                        'border-paper-edge bg-secondary text-muted-foreground border-2',
-                )}
-            >
-                {done ? (
-                    <CheckIcon className="size-10" strokeWidth={2.6} />
-                ) : stage.locked ? (
-                    <LockIcon className="size-8" />
-                ) : (
-                    <span aria-hidden="true">{number}</span>
-                )}
-            </span>
-            {current && (
-                <JalakBali
-                    className={cn(
-                        'absolute top-1 w-14',
-                        lane > 50 ? 'right-full mr-2' : 'left-full ml-2',
-                    )}
-                />
-            )}
-        </span>
-    );
-    const label = (
-        <>
-            {circle}
-            <span className="bg-student-surface mt-2 flex flex-col items-center rounded-xl px-2 py-1">
-                <span className="font-display text-primary-deep line-clamp-3 text-lg leading-snug font-semibold break-words">
-                    <span className="sr-only">Misi {number}: </span>
-                    {stage.title}
-                </span>
-                <span
-                    className={cn(
-                        'text-base',
-                        current
-                            ? 'text-primary font-bold'
-                            : 'text-muted-foreground',
-                    )}
-                >
-                    {statusOf(stage)}
-                </span>
-            </span>
-        </>
-    );
-    const place =
-        'absolute top-2 flex w-[56%] -translate-x-1/2 flex-col items-center p-1 text-center';
+    const status = statusOf(stage);
+    const panel = useRef<HTMLDivElement>(null);
     return (
-        <li className="relative h-52">
-            {stage.locked ? (
-                <div className={place} style={{ left: `${lane}%` }}>
-                    {label}
-                </div>
-            ) : (
-                <Link
-                    to={`/student/sessions/${stage.id}`}
+        <li className="relative h-32 sm:h-40">
+            <details
+                name="mission-path"
+                onToggle={(event) => {
+                    const element = panel.current;
+                    if (!event.currentTarget.open || !element) return;
+                    element.style.setProperty('--shift', '0px');
+                    const box = element.getBoundingClientRect();
+                    const edge = 16;
+                    const room = document.documentElement.clientWidth - edge;
+                    element.style.setProperty(
+                        '--shift',
+                        `${Math.max(edge - box.left, 0) - Math.max(box.right - room, 0)}px`,
+                    );
+                    const still = matchMedia(
+                        '(prefers-reduced-motion: reduce)',
+                    ).matches;
+                    element.scrollIntoView({
+                        block: 'nearest',
+                        behavior: still ? 'auto' : 'smooth',
+                    });
+                }}
+            >
+                <summary
+                    aria-label={`Misi ${number}: ${stage.title}, ${status}`}
                     className={cn(
-                        place,
-                        'group focus-visible:outline-ring rounded-2xl focus-visible:outline-3',
+                        'font-display focus-visible:outline-ring absolute top-6 flex size-20 -translate-x-1/2 cursor-pointer list-none items-center justify-center rounded-full text-3xl font-semibold transition-[translate,box-shadow] duration-100 focus-visible:outline-3 focus-visible:outline-offset-4 active:translate-y-1 active:shadow-none sm:size-28 sm:text-4xl [&::-webkit-details-marker]:hidden',
+                        done &&
+                            'bg-primary text-primary-foreground shadow-[0_5px_0_var(--color-primary-shade)]',
+                        !done &&
+                            !stage.locked &&
+                            'border-primary text-primary border-4 bg-white shadow-[0_5px_0_var(--color-primary-shade)]',
+                        stage.locked &&
+                            'border-paper-edge bg-secondary text-muted-foreground border-2 shadow-[0_5px_0_var(--color-paper-edge)]',
                     )}
                     style={{ left: `${lane}%` }}
                 >
-                    {label}
-                </Link>
+                    {done ? (
+                        <CheckIcon
+                            className="size-10 sm:size-14"
+                            strokeWidth={2.6}
+                        />
+                    ) : stage.locked ? (
+                        <LockIcon className="size-8 sm:size-11" />
+                    ) : (
+                        <span aria-hidden="true">{number}</span>
+                    )}
+                </summary>
+                <span
+                    aria-hidden="true"
+                    className="border-paper-edge absolute top-[7.25rem] z-30 size-4 -translate-x-1/2 rotate-45 border-t-2 border-l-2 bg-white sm:top-[9.25rem]"
+                    style={{ left: `${lane}%` }}
+                />
+                <div
+                    ref={panel}
+                    className="border-paper-edge absolute top-[7.75rem] z-20 w-max max-w-[calc(100vw-2rem)] min-w-48 -translate-x-1/2 scroll-mb-4 space-y-2 rounded-2xl border-2 bg-white p-4 text-center shadow-lg sm:top-[9.75rem]"
+                    style={{ left: `calc(${lane}% + var(--shift, 0px))` }}
+                >
+                    <p className="text-muted-foreground text-base">
+                        Misi {number}
+                    </p>
+                    <p className="font-display text-primary-deep text-xl leading-snug font-semibold break-words">
+                        {stage.title}
+                    </p>
+                    <p
+                        className={cn(
+                            'text-base',
+                            current
+                                ? 'text-primary font-bold'
+                                : 'text-muted-foreground',
+                        )}
+                    >
+                        {status}
+                    </p>
+                    {stage.locked ? (
+                        <p className="text-base leading-relaxed">
+                            Selesaikan misi sebelumnya dulu, ya.
+                        </p>
+                    ) : (
+                        <Link
+                            to={`/student/sessions/${stage.id}`}
+                            className={buttonVariants({
+                                feel: 'chunky',
+                                className: 'mt-1 w-full',
+                            })}
+                        >
+                            {actionOf(stage)}
+                        </Link>
+                    )}
+                </div>
+            </details>
+            {current && (
+                <span
+                    className="absolute top-7 sm:top-9"
+                    style={{ left: `${lane}%` }}
+                >
+                    <span
+                        className={cn(
+                            'absolute top-0 w-14 sm:w-20',
+                            lane > 50
+                                ? 'right-12 sm:right-16'
+                                : 'left-12 sm:left-16',
+                        )}
+                    >
+                        <JalakBali className="w-full" />
+                    </span>
+                </span>
             )}
         </li>
     );
@@ -152,6 +197,37 @@ function Node({
 export function ChapterPath({ chapterId }: { chapterId: number }) {
     const query = useQuery(studentPathQuery());
     const classroom = useQuery(studentClassQuery());
+    const list = useRef<HTMLOListElement>(null);
+    useEffect(() => {
+        function openMission() {
+            return (
+                list.current?.querySelector<HTMLDetailsElement>(
+                    'details[open]',
+                ) ?? null
+            );
+        }
+        function closeOutside(event: PointerEvent) {
+            const mission = openMission();
+            if (
+                mission &&
+                event.target instanceof Element &&
+                !mission.contains(event.target)
+            )
+                mission.open = false;
+        }
+        function closeOnEscape(event: KeyboardEvent) {
+            const mission = openMission();
+            if (event.key !== 'Escape' || !mission) return;
+            mission.open = false;
+            mission.querySelector('summary')?.focus();
+        }
+        document.addEventListener('pointerdown', closeOutside);
+        document.addEventListener('keydown', closeOnEscape);
+        return () => {
+            document.removeEventListener('pointerdown', closeOutside);
+            document.removeEventListener('keydown', closeOnEscape);
+        };
+    }, []);
     if (query.isPending)
         return (
             <p role="status" className="text-muted-foreground">
@@ -215,12 +291,13 @@ export function ChapterPath({ chapterId }: { chapterId: number }) {
             ) : (
                 <>
                     <ol
+                        ref={list}
                         aria-label={`Misi di bab ${chapter.title}`}
                         className="relative mx-auto max-w-lg"
                     >
                         <Trail stages={stages} />
                         {stages.map((stage, index) => (
-                            <Node
+                            <Mission
                                 key={stage.id}
                                 stage={stage}
                                 number={index + 1}
