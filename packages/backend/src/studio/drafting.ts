@@ -13,6 +13,7 @@ import {
     sessionBlocks,
     sessionCompetencies,
 } from '../db/schema.ts';
+import { diagramsOf } from '../learning/blocks.ts';
 import { competencyRubric } from '../learning/rubric.ts';
 import { inBackground } from '../lib/background.ts';
 import {
@@ -26,6 +27,7 @@ import {
 } from './session-draft.ts';
 
 const DRAFT_TIMEOUT_MS = 180_000;
+const DRAFT_TURNS = 3;
 const contentOf = z.record(z.string(), z.unknown());
 
 export function sessionCompetencyIds(db: Queryable, sessionId: number) {
@@ -137,6 +139,7 @@ async function draftContext(db: Queryable, sessionId: number) {
                       blocks: blocks
                           .filter(({ kind }) => kind !== 'brain_game')
                           .map((block) => ({
+                              screen: block.position,
                               kind: block.kind,
                               content: block.content,
                               competencies: block.competencies,
@@ -207,7 +210,7 @@ async function draftSession(
             throw new AiError('not_configured', 'AI is not configured');
 
         const context = await draftContext(app.db, sessionId);
-        const { value } = await chatJson(
+        const { value, model, outputTokens } = await chatJson(
             config,
             {
                 system: SESSION_SYSTEM_PROMPT,
@@ -226,6 +229,10 @@ async function draftSession(
                     context.competencies.map(({ code }) => code),
                     context.pages.map(({ number }) => number),
                 ),
+                turns: DRAFT_TURNS,
+                cutOff: context.current
+                    ? 'Your reply was cut off because it was too long. Reply again with the whole JSON object, without indentation: keep every diagram the teacher did not ask to change exactly as it is in the current draft, and make the screen texts shorter instead.'
+                    : 'Your reply was cut off because it was too long. Reply again with the whole JSON object, without indentation, with at most 5 diagrams of at most 12 shapes each.',
             },
             DRAFT_TIMEOUT_MS,
         );
@@ -235,6 +242,25 @@ async function draftSession(
             sessionId,
             value,
             new Map(context.competencies.map(({ code, id }) => [code, id])),
+        );
+
+        const places = storedBlocks(value).flatMap(({ block }) =>
+            diagramsOf(block),
+        );
+
+        app.log.info(
+            {
+                sessionId,
+                prompt: SESSION_PROMPT_VERSION,
+                model,
+                outputTokens,
+                diagrams: places.length,
+                shapes: places.reduce(
+                    (total, { diagram }) => total + diagram.shapes.length,
+                    0,
+                ),
+            },
+            'session drafted',
         );
     } catch (error) {
         const failure = error instanceof AiError ? error.failure : 'internal';

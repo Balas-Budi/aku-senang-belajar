@@ -14,7 +14,10 @@ import { stubProvider } from './ai-stub.ts';
 import {
     asStudent,
     demoClass,
+    demoDiagram,
     demoStudent,
+    drawnDemoModule,
+    drawnLabel,
     refsOf,
     runFor,
     takeDemo,
@@ -30,6 +33,7 @@ const checkContent = z.object({
 async function practisingStudent(
     app: FastifyInstance,
     t: Parameters<typeof stubProvider>[0],
+    drawn = false,
 ) {
     const provider = await stubProvider(t, [
         verdicts((competency) =>
@@ -42,7 +46,11 @@ async function practisingStudent(
                 : {},
         ),
     ]);
-    const demo = await demoClass(app);
+    const demo = await demoClass(
+        app,
+        false,
+        drawn ? drawnDemoModule : undefined,
+    );
     const student = await demoStudent(app, demo.classId);
     const attemptId = await takeDemo(app, student.token, demo.assignmentId);
 
@@ -257,4 +265,34 @@ test('a practice try is judged like a mission try, earns a hint after a wrong tr
         ).statusCode,
         403,
     );
+});
+
+test('an Ulang Yuk question carries its diagram, and a hint diagram comes only with its earned hint', async (t) => {
+    const app = await testApp(t);
+    const { student, blockId, wrong } = await practisingStudent(app, t, true);
+    const review = await asStudent(
+        app,
+        student.token,
+        'GET',
+        '/review?subject=mathematics',
+    );
+    const first = await tryOn(app, student.token, blockId, 1, wrong);
+
+    assert.equal(review.statusCode, 200);
+    assert.deepEqual(
+        review.json().questions[0].content.diagram,
+        demoDiagram(drawnLabel('soal', 4)),
+    );
+
+    for (const secret of ['petunjuk 1', 'petunjuk 2', 'contoh']) {
+        assert.equal(review.body.includes(drawnLabel(secret, 4)), false);
+    }
+
+    assert.equal(first.statusCode, 201);
+    assert.deepEqual(
+        first.json().earned.hints[0].diagram,
+        demoDiagram(drawnLabel('petunjuk 1', 4)),
+    );
+    assert.equal(first.body.includes(drawnLabel('petunjuk 2', 4)), false);
+    assert.equal(first.json().earned.example, null);
 });

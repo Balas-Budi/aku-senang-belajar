@@ -9,6 +9,8 @@ import {
     asStudent,
     demoClass,
     demoStudent,
+    drawnDemoModule,
+    drawnLabel,
     refsOf,
     runFor,
     takeDemo,
@@ -715,4 +717,45 @@ test("another teacher's home shows none of these classes, and a student is refus
     );
 
     assert.equal(asAStudent.statusCode, 403);
+});
+
+test("a student's evidence names the diagram of each question and the diagrams of the help opened", async (t) => {
+    const app = await testApp(t);
+    const demo = await demoClass(app, false, drawnDemoModule);
+    const student = await demoStudent(app, demo.classId, 'Eka Wati');
+
+    await takeDemo(app, student.token, demo.assignmentId);
+
+    const response = await asTeacher(
+        app,
+        demo.teacherToken,
+        'GET',
+        `/classes/${demo.classId}/assignments/${demo.assignmentId}/students/${student.id}`,
+    );
+    const body: {
+        competencies: {
+            code: string;
+            questions: { diagram?: string; help: { diagrams?: string[] } }[];
+        }[];
+    } = response.json();
+
+    assert.equal(response.statusCode, 200);
+    assert.deepEqual(
+        body.competencies.map(({ code, questions }) => [
+            code,
+            questions.map(({ diagram, help }) => [diagram, help.diagrams]),
+        ]),
+        [
+            ['C1', [[drawnLabel('soal', 6), undefined]]],
+            [
+                'C2',
+                [
+                    [drawnLabel('soal', 4), [drawnLabel('petunjuk 1', 4)]],
+                    [drawnLabel('tantangan', 7), undefined],
+                ],
+            ],
+            ['C3', [[drawnLabel('tantangan', 7), undefined]]],
+        ],
+    );
+    assert.equal(response.body.includes('"shapes"'), false);
 });

@@ -7,6 +7,7 @@ import {
     blockCompetencies,
     competencies,
     learningSessions,
+    sessionBlocks,
 } from '../src/db/schema.ts';
 import { completion, stubProvider } from './ai-stub.ts';
 import { demoClass, demoStudent } from './demo-attempts.ts';
@@ -14,16 +15,19 @@ import { createClass, testApp } from './helpers.ts';
 import {
     draft,
     draftedSession,
+    drawnDraft,
     get,
     post,
     put,
+    quarters,
+    settled,
     teacherWithModule,
 } from './studio-fixtures.ts';
 
 const approval = (id: number) => `/api/studio/sessions/${id}/approval`;
 const assigning = (id: number) => `/api/studio/sessions/${id}/assignments`;
 
-async function draftingApp(t: TestContext, replies = [draft]) {
+async function draftingApp(t: TestContext, replies: object[] = [draft]) {
     const provider = await stubProvider(
         t,
         replies.map((reply) => ({ body: completion(JSON.stringify(reply)) })),
@@ -41,6 +45,25 @@ async function titlesFor(app: FastifyInstance, token: string) {
         .flatMap(({ chapters }) => chapters)
         .flatMap(({ stages }) => stages)
         .map(({ title }) => title);
+}
+
+type Picture = { diagram?: object };
+type Block = {
+    id: number;
+    position: number;
+    content: Record<string, unknown>;
+};
+
+function withoutDiagrams(content: Record<string, unknown>) {
+    const copy = structuredClone(content) as Picture & {
+        hints?: Picture[];
+        example?: Picture;
+    };
+    delete copy.diagram;
+    copy.hints?.forEach((hint) => delete hint.diagram);
+    delete copy.example?.diagram;
+
+    return copy;
 }
 
 test('publishing needs every warning acknowledged, then records who approved it and when (FR-011)', async (t) => {
@@ -65,12 +88,14 @@ test('publishing needs every warning acknowledged, then records who approved it 
 
     const partly = await post(app, token, approval(session.id), {
         acknowledged: ['unreadable_pages'],
+        version: session.version,
     });
     assert.equal(partly.statusCode, 409);
     assert.equal(partly.json().name, 'WARNINGS_NOT_ACKNOWLEDGED');
 
     const approved = await post(app, token, approval(session.id), {
         acknowledged: ['no_page_source', 'unreadable_pages'],
+        version: session.version,
     });
     assert.equal(approved.statusCode, 200);
     assert.equal(approved.json().status, 'ready');
@@ -102,9 +127,181 @@ test('publishing needs every warning acknowledged, then records who approved it 
     assert.equal(edit.json().name, 'SESSION_PUBLISHED');
     const again = await post(app, token, approval(session.id), {
         acknowledged: ['no_page_source', 'unreadable_pages'],
+        version: session.version,
     });
     assert.equal(again.statusCode, 409);
     assert.equal(again.json().name, 'SESSION_PUBLISHED');
+});
+
+test('of two approvals sent at once, one publishes and the other answers SESSION_PUBLISHED', async (t) => {
+    const app = await draftingApp(t);
+    const { token, moduleId } = await teacherWithModule(app);
+    const session = await draftedSession(app, token, moduleId);
+    const body = {
+        acknowledged: ['unreadable_pages'],
+        version: session.version,
+    };
+
+    const responses = await Promise.all([
+        post(app, token, approval(session.id), body),
+        post(app, token, approval(session.id), body),
+    ]);
+
+    assert.deepEqual(
+        responses.map(({ statusCode }) => statusCode).sort(),
+        [200, 409],
+    );
+    const refused = responses.find(({ statusCode }) => statusCode === 409);
+    assert.equal(refused?.json().name, 'SESSION_PUBLISHED');
+});
+
+test('an approval names the version it was given for', async (t) => {
+    const app = await draftingApp(t);
+    const { token, moduleId } = await teacherWithModule(app);
+    const session = await draftedSession(app, token, moduleId);
+
+    const response = await post(app, token, approval(session.id), {
+        acknowledged: ['unreadable_pages'],
+    });
+
+    assert.equal(response.statusCode, 400);
+    assert.equal(response.json().name, 'VALIDATION_ERROR');
+    assert.equal(response.json().details[0].field, 'version');
+});
+
+test('AI diagrams are a warning that names their screens until the last one is removed', async (t) => {
+    const app = await draftingApp(t, [drawnDraft]);
+    const { token, moduleId } = await teacherWithModule(app);
+    const session = await draftedSession(app, token, moduleId);
+
+    const review = (
+        await get(app, token, `/api/studio/sessions/${session.id}`)
+    ).json();
+    const drawn = (review.blocks as Block[])
+        .filter(({ content }) => JSON.stringify(content).includes('"diagram"'))
+        .map(({ position }) => position);
+    assert.equal(drawn.length, 4);
+    assert.deepEqual(review.issues, []);
+    assert.deepEqual(review.warnings, [
+        { code: 'unreadable_pages', pages: [2] },
+        { code: 'ai_diagrams', blocks: drawn },
+    ]);
+
+    const unseen = await post(app, token, approval(session.id), {
+        acknowledged: ['unreadable_pages'],
+        version: session.version,
+    });
+    assert.equal(unseen.statusCode, 409);
+    assert.equal(unseen.json().name, 'WARNINGS_NOT_ACKNOWLEDGED');
+
+    const approved = await post(app, token, approval(session.id), {
+        acknowledged: ['unreadable_pages', 'ai_diagrams'],
+        version: session.version,
+    });
+    assert.equal(approved.statusCode, 200);
+    const [row] = await app.db
+        .select({ acknowledged: learningSessions.acknowledgedWarnings })
+        .from(learningSessions)
+        .where(eq(learningSessions.id, session.id));
+    assert.deepEqual(row.acknowledged, review.warnings);
+});
+
+test('removing every diagram clears the AI diagrams warning', async (t) => {
+    const app = await draftingApp(t, [drawnDraft]);
+    const { token, moduleId } = await teacherWithModule(app);
+    const session = await draftedSession(app, token, moduleId);
+
+    for (const block of session.blocks) {
+        if (!JSON.stringify(block.content).includes('"diagram"')) continue;
+
+        const response = await put(
+            app,
+            token,
+            `/api/studio/sessions/${session.id}/blocks/${block.id}`,
+            { content: withoutDiagrams(block.content) },
+        );
+        assert.equal(response.statusCode, 200);
+    }
+
+    const review = (
+        await get(app, token, `/api/studio/sessions/${session.id}`)
+    ).json();
+    assert.deepEqual(review.warnings, [
+        { code: 'unreadable_pages', pages: [2] },
+    ]);
+});
+
+test('an approval given for an older draft answers 409 SESSION_CHANGED and publishes nothing', async (t) => {
+    const app = await draftingApp(t, [draft, draft]);
+    const { token, moduleId } = await teacherWithModule(app);
+    const opened = await draftedSession(app, token, moduleId);
+
+    const revision = await post(
+        app,
+        token,
+        `/api/studio/sessions/${opened.id}/revisions`,
+        {},
+    );
+    assert.equal(revision.statusCode, 202);
+    const revised = await settled(app, token, opened.id);
+    assert.equal(revised.version, opened.version + 1);
+
+    const stale = await post(app, token, approval(opened.id), {
+        acknowledged: ['unreadable_pages'],
+        version: opened.version,
+    });
+    assert.equal(stale.statusCode, 409);
+    assert.equal(stale.json().name, 'SESSION_CHANGED');
+    assert.equal(
+        (await get(app, token, `/api/studio/sessions/${opened.id}`)).json()
+            .status,
+        'draft',
+    );
+
+    const current = await post(app, token, approval(opened.id), {
+        acknowledged: ['unreadable_pages'],
+        version: revised.version,
+    });
+    assert.equal(current.statusCode, 200);
+});
+
+test('a diagram corrupted after drafting is an invalid block that blocks publishing', async (t) => {
+    const app = await draftingApp(t, [drawnDraft]);
+    const { token, moduleId } = await teacherWithModule(app);
+    const session = await draftedSession(app, token, moduleId);
+    const opened = (
+        await get(app, token, `/api/studio/sessions/${session.id}`)
+    ).json();
+    const story = (opened.blocks as Block[])[2];
+    await app.db
+        .update(sessionBlocks)
+        .set({
+            content: {
+                ...story.content,
+                diagram: {
+                    ...quarters,
+                    shapes: [
+                        { ...quarters.shapes[0], x: 150 },
+                        quarters.shapes[1],
+                    ],
+                },
+            },
+        })
+        .where(eq(sessionBlocks.id, story.id));
+
+    const review = (
+        await get(app, token, `/api/studio/sessions/${session.id}`)
+    ).json();
+    assert.deepEqual(review.issues, [
+        { code: 'invalid_block', blocks: [story.position] },
+    ]);
+
+    const response = await post(app, token, approval(session.id), {
+        acknowledged: ['unreadable_pages', 'ai_diagrams'],
+        version: session.version,
+    });
+    assert.equal(response.statusCode, 409);
+    assert.equal(response.json().name, 'PUBLISH_BLOCKED');
 });
 
 test('a hard issue blocks publishing, whatever is acknowledged', async (t) => {
@@ -134,6 +331,7 @@ test('a hard issue blocks publishing, whatever is acknowledged', async (t) => {
 
     const response = await post(app, token, approval(session.id), {
         acknowledged: ['unreadable_pages'],
+        version: session.version,
     });
     assert.equal(response.statusCode, 409);
     assert.equal(response.json().name, 'PUBLISH_BLOCKED');
@@ -157,6 +355,7 @@ test('a session without a draft cannot be published', async (t) => {
     assert.deepEqual(review.issues, [{ code: 'no_draft' }]);
     const response = await post(app, token, approval(session.id), {
         acknowledged: ['unreadable_pages'],
+        version: session.version,
     });
     assert.equal(response.statusCode, 409);
     assert.equal(response.json().name, 'PUBLISH_BLOCKED');
@@ -180,6 +379,7 @@ test("a ready session goes to the teacher's own classes at once, and a draft nev
 
     await post(app, token, approval(session.id), {
         acknowledged: ['unreadable_pages'],
+        version: session.version,
     });
     const assigned = await post(app, token, assigning(session.id), {
         classIds: [first.id],
@@ -245,12 +445,14 @@ test("the prepared session can be assigned too, and another teacher's class or s
         (
             await post(app, other, approval(session.id), {
                 acknowledged: ['unreadable_pages'],
+                version: session.version,
             })
         ).statusCode,
         404,
     );
     await post(app, token, approval(session.id), {
         acknowledged: ['unreadable_pages'],
+        version: session.version,
     });
     assert.equal(
         (

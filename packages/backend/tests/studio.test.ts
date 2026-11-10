@@ -2,17 +2,40 @@ import assert from 'node:assert/strict';
 import { test } from 'node:test';
 import { eq } from 'drizzle-orm';
 import { learningSessions } from '../src/db/schema.ts';
+import { diagramsOf, sessionBlock } from '../src/learning/blocks.ts';
 import { completion, stubProvider } from './ai-stub.ts';
 import { createUser, loginAs, testApp } from './helpers.ts';
 import {
+    allShapes,
+    brokenDraft,
     c1,
     draft,
+    drawnDraft,
     get,
     post,
     put,
+    quarters,
     settled,
     teacherWithModule,
+    type Session,
 } from './studio-fixtures.ts';
+
+const drawnDiagrams = [
+    allShapes,
+    quarters,
+    allShapes,
+    quarters,
+    allShapes,
+    quarters,
+];
+
+function storedDiagrams(session: Session) {
+    return session.blocks.flatMap(({ kind, content }) =>
+        diagramsOf(sessionBlock.parse({ kind, content })).map(
+            ({ diagram }) => diagram,
+        ),
+    );
+}
 
 type Chapter = {
     id: number;
@@ -61,7 +84,7 @@ test('a teacher drafts a session from a module; it is stored with the brain game
     assert.match(user, /<material>\n\[Page 1\]\nPecahan adalah bagian/);
 });
 
-test('a draft that breaks the rules twice is not stored, and the session says it failed (AT-12)', async (t) => {
+test('a draft that breaks the rules three times is not stored, and the session says it failed (AT-12)', async (t) => {
     const uncovered = {
         ...draft,
         blocks: draft.blocks.filter(
@@ -70,6 +93,7 @@ test('a draft that breaks the rules twice is not stored, and the session says it
         ),
     };
     const provider = await stubProvider(t, [
+        { body: completion(JSON.stringify(uncovered)) },
         { body: completion(JSON.stringify(uncovered)) },
         { body: completion(JSON.stringify(uncovered)) },
     ]);
@@ -88,6 +112,121 @@ test('a draft that breaks the rules twice is not stored, and the session says it
         provider.requests[1].body.messages.at(-1)?.content ?? '',
         /C1/,
     );
+});
+
+test('a drawn draft is stored with every diagram as the model drew it, under the diagram rules', async (t) => {
+    const provider = await stubProvider(t, [
+        { body: completion(JSON.stringify(drawnDraft)) },
+    ]);
+    const app = await testApp(t, provider.config);
+    const { token, moduleId } = await teacherWithModule(app);
+    const { id } = (
+        await post(app, token, `/api/modules/${moduleId}/sessions`, {})
+    ).json();
+    const session = await settled(app, token, id);
+
+    assert.equal(session.drafting, null);
+    assert.deepEqual(storedDiagrams(session), drawnDiagrams);
+
+    const system = provider.requests[0].body.messages[0].content;
+    assert.match(system, /160 wide and 120 high/);
+    assert.match(system, /"parts"/);
+    assert.doesNotMatch(system, /There are no pictures/);
+});
+
+test('a draft with broken diagrams is repaired once with every problem named', async (t) => {
+    const provider = await stubProvider(t, [
+        { body: completion(JSON.stringify(brokenDraft)) },
+        { body: completion(JSON.stringify(drawnDraft)) },
+    ]);
+    const app = await testApp(t, provider.config);
+    const { token, moduleId } = await teacherWithModule(app);
+    const { id } = (
+        await post(app, token, `/api/modules/${moduleId}/sessions`, {})
+    ).json();
+    const session = await settled(app, token, id);
+
+    assert.equal(session.drafting, null);
+    assert.deepEqual(storedDiagrams(session), drawnDiagrams);
+
+    const repair = provider.requests[1].body.messages.at(-1)?.content ?? '';
+    assert.match(repair, /Block 2 \(story\): diagram\.shapes\.0\.width/);
+    assert.match(repair, /hints\.1\.diagram\.label/);
+});
+
+test('a draft with broken diagrams three times is not stored, after two repairs', async (t) => {
+    const provider = await stubProvider(t, [
+        { body: completion(JSON.stringify(brokenDraft)) },
+        { body: completion(JSON.stringify(brokenDraft)) },
+        { body: completion(JSON.stringify(brokenDraft)) },
+    ]);
+    const app = await testApp(t, provider.config);
+    const { token, moduleId } = await teacherWithModule(app);
+    const { id } = (
+        await post(app, token, `/api/modules/${moduleId}/sessions`, {})
+    ).json();
+    const session = await settled(app, token, id);
+
+    assert.equal(session.drafting, 'failed');
+    assert.equal(session.draftError, 'invalid_output');
+    assert.deepEqual(session.blocks, []);
+    assert.equal(provider.requests.length, 3);
+});
+
+test('a revision sends the stored diagrams with screen numbers and asks to keep them', async (t) => {
+    const provider = await stubProvider(t, [
+        { body: completion(JSON.stringify(drawnDraft)) },
+        { body: completion(JSON.stringify(drawnDraft)) },
+    ]);
+    const app = await testApp(t, provider.config);
+    const { token, moduleId } = await teacherWithModule(app);
+    const { id } = (
+        await post(app, token, `/api/modules/${moduleId}/sessions`, {})
+    ).json();
+    await settled(app, token, id);
+
+    const response = await post(
+        app,
+        token,
+        `/api/studio/sessions/${id}/revisions`,
+        { note: 'Tambahkan gambar pada petunjuk 2 di layar 4.' },
+    );
+
+    assert.equal(response.statusCode, 202);
+    await settled(app, token, id);
+
+    const [system, user] = provider.requests[1].body.messages.map(
+        ({ content }) => content,
+    );
+    assert.ok(user.includes(quarters.label));
+    assert.ok(user.includes('"screen":3'));
+    assert.ok(system.includes('copy each of its diagrams unchanged'));
+});
+
+test('a cut-off first draft is asked for fewer diagrams, a cut-off revision to keep them', async (t) => {
+    const cut = completion(JSON.stringify(drawnDraft).slice(0, 200), 'length');
+    const provider = await stubProvider(t, [
+        { body: cut },
+        { body: completion(JSON.stringify(drawnDraft)) },
+        { body: cut },
+        { body: completion(JSON.stringify(drawnDraft)) },
+    ]);
+    const app = await testApp(t, provider.config);
+    const { token, moduleId } = await teacherWithModule(app);
+    const { id } = (
+        await post(app, token, `/api/modules/${moduleId}/sessions`, {})
+    ).json();
+    await settled(app, token, id);
+    await post(app, token, `/api/studio/sessions/${id}/revisions`, {});
+    const revised = await settled(app, token, id);
+
+    assert.equal(revised.drafting, null);
+    const [drafted, revisedRepair] = [1, 3].map(
+        (index) => provider.requests[index].body.messages.at(-1)?.content ?? '',
+    );
+    assert.match(drafted, /at most 5 diagrams/);
+    assert.match(revisedRepair, /keep every diagram/);
+    assert.doesNotMatch(revisedRepair, /at most 5 diagrams/);
 });
 
 test('without AI the request answers 503 and stores no session', async (t) => {
@@ -190,6 +329,115 @@ test("the teacher edits a screen's text, checked by the block rules", async (t) 
     });
     assert.equal(reshaped.statusCode, 400);
     assert.equal(reshaped.json().details[0].field, 'content/options');
+});
+
+type Picture = { text: string; diagram?: object };
+type CheckContent = {
+    prompt: string;
+    diagram?: object;
+    hints: Picture[];
+    example: Picture;
+};
+
+test('a text edit keeps every diagram, and a diagram can only be kept or removed', async (t) => {
+    const provider = await stubProvider(t, [
+        { body: completion(JSON.stringify(drawnDraft)) },
+    ]);
+    const app = await testApp(t, provider.config);
+    const { token, moduleId } = await teacherWithModule(app);
+    const { id } = (
+        await post(app, token, `/api/modules/${moduleId}/sessions`, {})
+    ).json();
+    const session = await settled(app, token, id);
+    const [, , story, check, plain] = session.blocks;
+    const url = (blockId: number) =>
+        `/api/studio/sessions/${id}/blocks/${blockId}`;
+    const content = check.content as CheckContent;
+    const storedCheck = async () =>
+        (await settled(app, token, id)).blocks.find(
+            ({ id: blockId }) => blockId === check.id,
+        )?.content as CheckContent;
+    const refused = (
+        response: Awaited<ReturnType<typeof put>>,
+        field: string,
+    ) => {
+        assert.equal(response.statusCode, 400);
+        assert.equal(response.json().name, 'VALIDATION_ERROR');
+        assert.deepEqual(response.json().details, [
+            { field, message: 'A picture can only be kept or removed' },
+        ]);
+    };
+
+    const retexted = await put(app, token, url(check.id), {
+        content: { ...content, prompt: 'Roti mana yang dibagi empat?' },
+    });
+    assert.equal(retexted.statusCode, 200);
+    const kept = await storedCheck();
+    assert.equal(kept.prompt, 'Roti mana yang dibagi empat?');
+    assert.deepEqual(kept.hints[1].diagram, quarters);
+    assert.deepEqual(kept.example.diagram, allShapes);
+
+    const removed = await put(app, token, url(check.id), {
+        content: { ...kept, example: { text: kept.example.text } },
+    });
+    assert.equal(removed.statusCode, 200);
+    const without = await storedCheck();
+    assert.equal(without.example.diagram, undefined);
+    assert.deepEqual(without.hints[1].diagram, quarters);
+
+    refused(
+        await put(app, token, url(check.id), {
+            content: {
+                ...without,
+                hints: without.hints.map((hint, index) =>
+                    index === 1
+                        ? {
+                              ...hint,
+                              diagram: {
+                                  ...quarters,
+                                  label: `${quarters.label} Bagian lain putih.`,
+                              },
+                          }
+                        : hint,
+                ),
+            },
+        }),
+        'content/hints/1/diagram',
+    );
+    refused(
+        await put(app, token, url(plain.id), {
+            content: { ...plain.content, diagram: quarters },
+        }),
+        'content/diagram',
+    );
+    refused(
+        await put(app, token, url(check.id), {
+            content: {
+                ...without,
+                example: { ...without.example, diagram: allShapes },
+            },
+        }),
+        'content/example/diagram',
+    );
+
+    const malformed = await put(app, token, url(story.id), {
+        content: {
+            ...story.content,
+            diagram: {
+                ...quarters,
+                shapes: [{ ...quarters.shapes[0], x: 150 }, quarters.shapes[1]],
+            },
+        },
+    });
+    assert.equal(malformed.statusCode, 400);
+    assert.ok(
+        malformed
+            .json()
+            .details.every(({ field }: { field: string }) =>
+                field.startsWith('content/diagram/'),
+            ),
+    );
+    assert.deepEqual(await storedCheck(), without);
 });
 
 test("another teacher's session answers 404, and a session being drafted cannot be revised", async (t) => {

@@ -1,10 +1,13 @@
 import {
+    diagramFields,
     fieldName,
+    samePath,
     textAt,
     textFields,
     withTexts,
     type EditableBlock,
 } from './block-fields';
+import { DiagramFigure } from './diagram-figure';
 import { useEditBlock } from './queries';
 import { StudioError } from './studio-error';
 import {
@@ -27,6 +30,7 @@ export function BlockEditor({
 }) {
     const edit = useEditBlock(sessionId);
     const fields = textFields(block);
+    const diagrams = diagramFields(block);
     const idOf = (name: string) => `block-${block.id}-${name}`;
     const answer = 'answer' in block.content ? block.content.answer : null;
     const options = 'options' in block.content ? block.content.options : [];
@@ -58,10 +62,24 @@ export function BlockEditor({
                     required: true,
                     error: edit.error,
                 };
-                return field.long ? (
-                    <TextAreaField key={name} {...props} />
-                ) : (
-                    <FormField key={name} {...props} />
+                return (
+                    <div key={name}>
+                        {field.long ? (
+                            <TextAreaField {...props} />
+                        ) : (
+                            <FormField {...props} />
+                        )}
+                        {diagrams
+                            .filter((d) => samePath(d.under, field.path))
+                            .map((d) => (
+                                <DiagramFigure
+                                    key={d.path.join('/')}
+                                    name={d.name}
+                                    screen={block.position}
+                                    diagram={d.diagram}
+                                />
+                            ))}
+                    </div>
                 );
             })}
             {answer !== null && (

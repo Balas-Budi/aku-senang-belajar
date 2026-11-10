@@ -5,6 +5,7 @@ import {
 } from '@tanstack/react-query';
 import { api, ApiError } from '../../lib/api';
 import type { Subject } from '../assignments/queries';
+import type { Diagram } from './diagram';
 import type { IllustrationName } from './illustration';
 
 export type Step = 'opening' | 'story' | 'challenge' | 'reflection';
@@ -13,7 +14,11 @@ export type Option = {
     label: string;
     illustration?: IllustrationName;
 };
-export type Picture = { text: string; illustration?: IllustrationName };
+export type Picture = {
+    text: string;
+    illustration?: IllustrationName;
+    diagram?: Diagram;
+};
 export type Earned = {
     hints: Picture[];
     example: Picture | null;
@@ -33,6 +38,7 @@ export type Block = { id: number; position: number; step: Step } & (
           content: {
               prompt: string;
               illustration?: IllustrationName;
+              diagram?: Diagram;
               options: Option[];
           };
       }
@@ -41,6 +47,7 @@ export type Block = { id: number; position: number; step: Step } & (
           content: {
               text: string;
               illustration?: IllustrationName;
+              diagram?: Diagram;
               fraction?: Fraction;
           };
       }
@@ -49,6 +56,7 @@ export type Block = { id: number; position: number; step: Step } & (
           content: {
               prompt: string;
               illustration?: IllustrationName;
+              diagram?: Diagram;
               options: Option[];
               reason?: { prompt: string; starters: string[] };
           };
@@ -60,6 +68,7 @@ export type Block = { id: number; position: number; step: Step } & (
               prompt: string;
               question: string;
               illustration?: IllustrationName;
+              diagram?: Diagram;
               options: Option[];
               reasonStarter: string;
           };

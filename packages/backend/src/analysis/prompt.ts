@@ -1,7 +1,7 @@
 import { z } from 'zod';
 import type { CompetencyEvidence } from './evidence.ts';
 
-export const PROMPT_VERSION = 'understanding-2026-11-05b';
+export const PROMPT_VERSION = 'understanding-2026-11-10';
 
 export const SYSTEM_PROMPT = [
     "You estimate an Indonesian primary school student's understanding for their teacher. You receive, as JSON, the competencies of one lesson; for each competency its description, its rubric, the student's answers to the questions that test it, and the student's own reflection.",

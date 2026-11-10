@@ -2,6 +2,7 @@ import { useQuery } from '@tanstack/react-query';
 import { useEffect, useRef, useState } from 'react';
 import { Link } from 'react-router';
 import { BlockEditor } from './block-editor';
+import type { DiagramField } from './block-fields';
 import { BlockView } from './block-view';
 import {
     studioSessionQuery,
@@ -13,6 +14,7 @@ import {
     type StudioSession,
     type Warning,
 } from './queries';
+import { RemoveDiagramDialog } from './remove-diagram-dialog';
 import { StudioError } from './studio-error';
 import { TextAreaField, fieldErrorText } from '../../components/form-field';
 import { RequestError } from '../../components/request-error';
@@ -83,9 +85,16 @@ function issueText({ code, competencies = [], blocks = [] }: Issue) {
 }
 
 function warningText({ code, blocks = [], pages = [] }: Warning) {
-    if (code === 'no_page_source')
-        return `Layar ${joined(blocks)} tidak punya halaman sumber, jadi isinya belum tentu berasal dari materi Anda.`;
-    return `Halaman ${joined(pages)} tidak terbaca, jadi isinya tidak dipakai dalam sesi ini.`;
+    switch (code) {
+        case 'no_page_source':
+            return `Layar ${joined(blocks)} tidak punya halaman sumber, jadi isinya belum tentu berasal dari materi Anda.`;
+        case 'unreadable_pages':
+            return `Halaman ${joined(pages)} tidak terbaca, jadi isinya tidak dipakai dalam sesi ini.`;
+        case 'ai_diagrams':
+            return `Layar ${joined(blocks)} punya gambar buatan AI. Saya sudah memeriksa setiap gambar: jumlah, ukuran, dan warnanya sesuai dengan teks, misalnya bagian pecahan sama besar.`;
+        default:
+            return code satisfies never;
+    }
 }
 
 function metaOf(block: StudioBlock) {
@@ -160,7 +169,14 @@ function ScreenItem({
     editable: boolean;
 }) {
     const [editing, setEditing] = useState(false);
+    const [removing, setRemoving] = useState<DiagramField | null>(null);
+    const [confirming, setConfirming] = useState(false);
+    const [notice, setNotice] = useState<{ text: string } | null>(null);
     const toggle = useRef<HTMLButtonElement>(null);
+    const heading = useRef<HTMLHeadingElement>(null);
+    useEffect(() => {
+        if (notice) heading.current?.focus();
+    }, [notice]);
     const close = () => {
         setEditing(false);
         toggle.current?.focus();
@@ -169,19 +185,44 @@ function ScreenItem({
         <li className="space-y-3 py-4">
             <div className="flex flex-wrap items-start justify-between gap-x-4 gap-y-2">
                 <div>
-                    <h3 className="font-semibold">
+                    <h3
+                        ref={heading}
+                        tabIndex={-1}
+                        className="focus-visible:outline-ring rounded font-semibold focus-visible:outline-3 focus-visible:outline-offset-4"
+                    >
                         Layar {block.position} · {kindLabels[block.kind]}
                     </h3>
                     <p className="text-muted-foreground text-sm tabular-nums">
                         {metaOf(block)}
                     </p>
+                    <p role="status" className="mt-1 text-sm empty:mt-0">
+                        {notice?.text}
+                    </p>
+                    {removing && block.kind !== 'brain_game' && (
+                        <RemoveDiagramDialog
+                            sessionId={sessionId}
+                            block={block}
+                            field={removing}
+                            open={confirming}
+                            onClose={() => setConfirming(false)}
+                            onDone={() => {
+                                setConfirming(false);
+                                setNotice({
+                                    text: `${removing.name} dihapus. Minta revisi bila Anda perlu gambar lain.`,
+                                });
+                            }}
+                        />
+                    )}
                 </div>
                 {editable && block.kind !== 'brain_game' && (
                     <Button
                         ref={toggle}
                         variant="outline"
                         aria-expanded={editing}
-                        onClick={() => setEditing(!editing)}
+                        onClick={() => {
+                            setNotice(null);
+                            setEditing(!editing);
+                        }}
                     >
                         Ubah teks
                     </Button>
@@ -194,7 +235,17 @@ function ScreenItem({
                     onClose={close}
                 />
             ) : (
-                <BlockView block={block} />
+                <BlockView
+                    block={block}
+                    onRemove={
+                        editable && !editing
+                            ? (field) => {
+                                  setRemoving(field);
+                                  setConfirming(true);
+                              }
+                            : undefined
+                    }
+                />
             )}
         </li>
     );
@@ -211,9 +262,11 @@ function RevisionForm({ session }: { session: StudioSession }) {
                         Minta revisi
                     </h2>
                     <p className="text-muted-foreground mt-1">
-                        AI menulis ulang seluruh sesi dari draf ini. Teks yang
-                        sudah Anda ubah ikut dikirim, tetapi AI bisa ikut
-                        mengubahnya.
+                        AI menulis ulang seluruh sesi dari draf ini. Teks dan
+                        gambar yang ada ikut dikirim; AI mempertahankan gambar
+                        yang tidak Anda sebut, tetapi bisa ikut mengubahnya.
+                        Gambar yang Anda hapus tidak digambar lagi kecuali Anda
+                        memintanya.
                     </p>
                 </div>
                 <form
@@ -229,7 +282,7 @@ function RevisionForm({ session }: { session: StudioSession }) {
                     <TextAreaField
                         name="note"
                         label="Yang perlu diubah"
-                        hint="Contoh: pakai contoh kue, bukan roti. Kosongkan bila AI perlu menyusun ulang dari awal."
+                        hint="Contoh: pakai contoh kue, bukan roti, atau tambahkan gambar pada petunjuk 2 di layar 5. Kosongkan bila AI perlu menyusun ulang dari awal."
                         rows={3}
                         maxLength={500}
                         disabled={generating}
@@ -285,15 +338,17 @@ function PublishCard({
                     </Alert>
                 )}
                 <form
+                    key={session.version}
                     className="space-y-4"
                     onSubmit={(event) => {
                         event.preventDefault();
                         const acknowledged = new FormData(event.currentTarget)
                             .getAll('acknowledged')
                             .map(String);
-                        approve.mutate(acknowledged, {
-                            onSuccess: onPublished,
-                        });
+                        approve.mutate(
+                            { acknowledged, version: session.version },
+                            { onSuccess: onPublished },
+                        );
                     }}
                 >
                     {session.warnings.length > 0 && (

@@ -25,6 +25,8 @@ import {
     asStudent,
     demoClass,
     demoStudent,
+    drawnDemoModule,
+    drawnLabel,
     runFor,
     takeDemo,
     verdicts,
@@ -46,6 +48,20 @@ const sentSummary = z.object({
                         z.object({ helpBefore: z.array(z.string()) }),
                     ),
                     helpAfter: z.array(z.string()),
+                }),
+            ),
+        }),
+    ),
+});
+
+const sentDiagrams = z.object({
+    competencies: z.array(
+        z.object({
+            code: z.string(),
+            questions: z.array(
+                z.object({
+                    diagram: z.string().optional(),
+                    helpDiagrams: z.array(z.string()).optional(),
                 }),
             ),
         }),
@@ -368,4 +384,57 @@ test('summarise-attempts queues a summary for a mission analysed before learner 
     assert.equal(await queueMissingSummaries(app.db, { attemptId }), 1);
     assert.equal(await queueMissingSummaries(app.db, { attemptId }), 0);
     assert.equal((await summaryOf(app, attemptId)).length, 1);
+});
+
+test('the summary request names the diagram of each question and the diagrams of the help opened', async (t) => {
+    const app = await testApp(t);
+    const { classId, assignmentId } = await demoClass(
+        app,
+        false,
+        drawnDemoModule,
+    );
+    const attemptId = await takeDemo(
+        app,
+        (await demoStudent(app, classId)).token,
+        assignmentId,
+    );
+    const provider = await stubProvider(t, [verdicts(), summaryReply]);
+
+    await runFor(app, attemptId, provider.config);
+
+    const claimed = await claimSummary(app.db, { embedding: false, attemptId });
+
+    assert.ok(claimed);
+    await processSummary(app, claimed, provider.config, null);
+
+    const request = provider.requests[1];
+
+    assert.ok(request);
+
+    const sent = sentDiagrams.parse(
+        JSON.parse(request.body.messages[1]?.content ?? ''),
+    );
+
+    assert.deepEqual(
+        sent.competencies.map(({ code, questions }) => [
+            code,
+            questions.map(({ diagram, helpDiagrams }) => [
+                diagram,
+                helpDiagrams,
+            ]),
+        ]),
+        [
+            ['C1', [[drawnLabel('soal', 6), undefined]]],
+            [
+                'C2',
+                [
+                    [drawnLabel('soal', 4), [drawnLabel('petunjuk 1', 4)]],
+                    [drawnLabel('tantangan', 7), undefined],
+                ],
+            ],
+            ['C3', [[drawnLabel('tantangan', 7), undefined]]],
+        ],
+    );
+    assert.match(SUMMARY_PROMPT, /"helpDiagrams" the labels of the pictures/);
+    assert.equal(SUMMARY_PROMPT_VERSION, 'summary-2026-11-10');
 });

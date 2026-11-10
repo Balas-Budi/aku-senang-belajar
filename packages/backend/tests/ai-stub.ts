@@ -21,10 +21,20 @@ type Answer = { status?: number; body?: unknown; delay?: number };
 
 export type Reply = Answer | ((request: ProviderRequest) => Answer);
 
-export function completion(content: string) {
+export function completion(content: string, finishReason = 'stop') {
     return {
         model: 'provider-model-name',
-        choices: [{ message: { role: 'assistant', content } }],
+        choices: [
+            {
+                message: { role: 'assistant', content },
+                finish_reason: finishReason,
+            },
+        ],
+        usage: {
+            prompt_tokens: 100,
+            completion_tokens: 42,
+            total_tokens: 142,
+        },
     };
 }
 

@@ -32,6 +32,7 @@ test('a valid JSON reply comes back parsed, with the model the provider named', 
     assert.deepEqual(result, {
         value: { status: 'visible' },
         model: 'provider-model-name',
+        outputTokens: 42,
     });
     assert.equal(provider.requests.length, 1);
     assert.equal(provider.requests[0].path, '/v1/chat/completions');
@@ -95,6 +96,22 @@ test('a reply that fails twice ends as invalid output after two requests', async
     assert.match(provider.requests[1].body.messages[3].content, /schema/);
 });
 
+test('a request may allow more turns, and the last one can still succeed', async (t) => {
+    const provider = await stubProvider(t, [
+        { body: completion('not json') },
+        { body: completion('{"state":"visible"}') },
+        { body: completion('{"status":"visible"}') },
+    ]);
+    const result = await chatJson(provider.config, {
+        ...ask,
+        schema: verdict,
+        turns: 3,
+    });
+
+    assert.deepEqual(result.value, { status: 'visible' });
+    assert.equal(provider.requests.length, 3);
+});
+
 test('a check that refuses the value counts as a problem to correct', async (t) => {
     const provider = await stubProvider(t, [
         { body: completion('{"status":"visible"}') },
@@ -115,6 +132,56 @@ test('a check that refuses the value counts as a problem to correct', async (t) 
         provider.requests[1].body.messages[3].content,
         /needs a cited answer/,
     );
+});
+
+test('a reply cut off at the length limit is retried with the cut-off named', async (t) => {
+    const provider = await stubProvider(t, [
+        { body: completion('{"status":"vis', 'length') },
+        { body: completion('{"status":"visible"}') },
+    ]);
+
+    const result = await chatJson(provider.config, {
+        ...ask,
+        schema: verdict,
+    });
+
+    assert.deepEqual(result.value, { status: 'visible' });
+    assert.equal(provider.requests.length, 2);
+    assert.match(
+        provider.requests[1].body.messages.at(-1)?.content ?? '',
+        /cut off/,
+    );
+});
+
+test('a request with its own cut-off text sends that text', async (t) => {
+    const provider = await stubProvider(t, [
+        { body: completion('{"status":"visible"}', 'length') },
+        { body: completion('{"status":"visible"}') },
+    ]);
+
+    await chatJson(provider.config, {
+        ...ask,
+        schema: verdict,
+        cutOff: 'Too long: answer with fewer words.',
+    });
+
+    assert.match(
+        provider.requests[1].body.messages.at(-1)?.content ?? '',
+        /^Too long: answer with fewer words\. Reply again/,
+    );
+});
+
+test('the accepted reply carries the output tokens the provider counted', async (t) => {
+    const provider = await stubProvider(t, [
+        { body: completion('{"status":"visible"}') },
+    ]);
+
+    const result = await chatJson(provider.config, {
+        ...ask,
+        schema: verdict,
+    });
+
+    assert.equal(result.outputTokens, 42);
 });
 
 test('a provider slower than the timeout ends as a timeout', async (t) => {

@@ -11,6 +11,7 @@ import { useErrorToast } from '../../components/ui/toast';
 import type { Subject } from '../assignments/queries';
 import { subjects } from '../assignments/subject-art';
 import { Feedback, HelpCard } from '../learning-sessions/check-block';
+import { DiagramPicture } from '../learning-sessions/diagram';
 import { Illustration } from '../learning-sessions/illustration';
 import {
     NarrationControls,
@@ -102,6 +103,12 @@ function Question({
             {content.illustration && (
                 <Illustration
                     name={content.illustration}
+                    className="mx-auto max-w-sm"
+                />
+            )}
+            {content.diagram && (
+                <DiagramPicture
+                    diagram={content.diagram}
                     className="mx-auto max-w-sm"
                 />
             )}

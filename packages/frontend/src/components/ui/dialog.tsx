@@ -8,7 +8,7 @@ export function Dialog({
     ...props
 }: Omit<ComponentProps<'dialog'>, 'open' | 'onClose'> & {
     open: boolean;
-    onClose: () => void;
+    onClose: (dialog: HTMLDialogElement) => void;
 }) {
     const ref = useRef<HTMLDialogElement>(null);
     useEffect(() => {
@@ -20,9 +20,10 @@ export function Dialog({
     return (
         <dialog
             ref={ref}
-            onClose={onClose}
+            onClose={(event) => onClose(event.currentTarget)}
             onClick={(event) => {
-                if (event.target === event.currentTarget) onClose();
+                if (event.target === event.currentTarget)
+                    onClose(event.currentTarget);
             }}
             className={cn(
                 'bg-background text-foreground backdrop:bg-primary-deep/50 m-auto w-[calc(100%-2rem)] max-w-md rounded-2xl p-6 shadow-xl',

@@ -1,3 +1,4 @@
+import type { Diagram } from '../learning-sessions/diagram';
 import type { StudioBlock } from './queries';
 
 export type EditableBlock = Exclude<StudioBlock, { kind: 'brain_game' }>;
@@ -91,17 +92,75 @@ export function textAt(content: Node, { path }: TextField) {
     return typeof value === 'string' ? value : '';
 }
 
+const parentOf = (content: Node, path: Path) =>
+    path.slice(0, -1).reduce<Node>((node, key) => node[key] as Node, content);
+
 export function withTexts(
     content: Node,
     fields: TextField[],
     read: (field: TextField) => string,
 ) {
     const copy = structuredClone(content);
-    for (const field of fields) {
-        const parent = field.path
-            .slice(0, -1)
-            .reduce<Node>((node, key) => node[key] as Node, copy);
-        parent[field.path[field.path.length - 1]] = read(field);
+    for (const field of fields)
+        parentOf(copy, field.path)[field.path[field.path.length - 1]] =
+            read(field);
+    return copy;
+}
+
+export type DiagramField = {
+    path: Path;
+    under: Path;
+    name: string;
+    diagram: Diagram;
+};
+
+const drawn = (
+    name: string,
+    diagram: Diagram | undefined,
+    ...under: Path
+): DiagramField[] =>
+    diagram
+        ? [{ path: [...under.slice(0, -1), 'diagram'], under, name, diagram }]
+        : [];
+
+export function diagramFields(block: EditableBlock): DiagramField[] {
+    switch (block.kind) {
+        case 'hook':
+            return drawn('Gambar pertanyaan', block.content.diagram, 'prompt');
+        case 'story':
+            return drawn('Gambar cerita', block.content.diagram, 'text');
+        case 'check': {
+            const { diagram, hints, example } = block.content;
+            return [
+                ...drawn('Gambar pertanyaan', diagram, 'prompt'),
+                ...hints.flatMap((hint, index) =>
+                    drawn(
+                        `Gambar petunjuk ${index + 1}`,
+                        hint.diagram,
+                        'hints',
+                        index,
+                        'text',
+                    ),
+                ),
+                ...drawn(
+                    'Gambar contoh lain',
+                    example.diagram,
+                    'example',
+                    'text',
+                ),
+            ];
+        }
+        case 'challenge':
+            return drawn('Gambar situasi', block.content.diagram, 'prompt');
+        case 'reflection':
+            return [];
     }
+}
+
+export const samePath = (a: Path, b: Path) => a.join('/') === b.join('/');
+
+export function withoutDiagram(content: Node, path: Path) {
+    const copy = structuredClone(content);
+    delete parentOf(copy, path)[path[path.length - 1]];
     return copy;
 }

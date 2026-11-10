@@ -94,6 +94,12 @@ function QuestionEvidence({
             {question.picture && (
                 <Illustration name={question.picture} className="max-w-48" />
             )}
+            {question.diagram && (
+                <p className="text-sm">
+                    <span className="font-semibold">Gambar buatan AI:</span>{' '}
+                    {question.diagram}
+                </p>
+            )}
             {question.options.some((option) => option.picture) && (
                 <ul className="flex flex-wrap gap-3">
                     {question.options.map((option) => (
@@ -137,7 +143,11 @@ function QuestionEvidence({
                     </li>
                 ))}
             </ol>
-            <p className="text-sm">Bantuan: {helpUsed(question.help)}</p>
+            <p className="text-sm">
+                Bantuan: {helpUsed(question.help)}
+                {question.help.diagrams &&
+                    ` · Gambar di bantuan: ${question.help.diagrams.map((label) => `“${label}”`).join(', ')}`}
+            </p>
         </article>
     );
 }

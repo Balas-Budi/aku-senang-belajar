@@ -48,6 +48,7 @@ export type BlockBody = z.infer<typeof blockBody>;
 
 export const approvalBody = z.object({
     acknowledged: z.array(z.enum(warningCodes)).max(warningCodes.length),
+    version: z.int().nonnegative(),
 });
 
 export type ApprovalBody = z.infer<typeof approvalBody>;

@@ -15,6 +15,13 @@ import {
     seedModule,
 } from '../src/learning/seed-module.ts';
 import {
+    demoClass,
+    demoDiagram,
+    demoStudent,
+    drawnDemoModule,
+    drawnLabel,
+} from './demo-attempts.ts';
+import {
     createClass,
     createStudent,
     createUser,
@@ -675,4 +682,92 @@ test('the learning path shows each session progress and step (FR-016)', async (t
     assert.deepEqual(started, [['in_progress', 'opening']]);
     assert.deepEqual(later, [['in_progress', 'challenge']]);
     assert.deepEqual(finished, [['submitted', null]]);
+});
+
+test('a student sees the diagrams of the hook, the stories, the check questions, and the challenge, and a hint or example diagram only once earned', async (t) => {
+    const app = await testApp(t);
+    const demo = await demoClass(app, false, drawnDemoModule);
+    const student = await demoStudent(app, demo.classId);
+    const read = await call(
+        app,
+        student.token,
+        'GET',
+        `/assignments/${demo.assignmentId}`,
+    );
+    const detail: {
+        blocks: {
+            id: number;
+            kind: string;
+            content: { diagram?: { label: string } };
+        }[];
+    } = read.json();
+    const firstCheck = detail.blocks[4];
+    const attempt: { id: number } = (
+        await call(
+            app,
+            student.token,
+            'POST',
+            `/assignments/${demo.assignmentId}/attempt`,
+        )
+    ).json();
+    const wrong = await call(
+        app,
+        student.token,
+        'POST',
+        `/attempts/${attempt.id}/responses`,
+        {
+            blockId: firstCheck.id,
+            tryNumber: 1,
+            answer: { kind: 'check', choice: 'a', reason: 'Karena ada 4' },
+        },
+    );
+    const example = await call(
+        app,
+        student.token,
+        'POST',
+        `/attempts/${attempt.id}/help`,
+        { blockId: firstCheck.id, kind: 'example' },
+    );
+
+    assert.equal(read.statusCode, 200);
+    assert.deepEqual(
+        detail.blocks.map(({ content }) => content.diagram?.label ?? null),
+        [
+            null,
+            drawnLabel('pembuka', 1),
+            drawnLabel('cerita', 2),
+            drawnLabel('cerita', 3),
+            drawnLabel('soal', 4),
+            drawnLabel('cerita', 5),
+            drawnLabel('soal', 6),
+            drawnLabel('tantangan', 7),
+            null,
+        ],
+    );
+    assert.deepEqual(
+        firstCheck.content.diagram,
+        demoDiagram(drawnLabel('soal', 4)),
+    );
+
+    for (const secret of [4, 6].flatMap((index) => [
+        drawnLabel('petunjuk 1', index),
+        drawnLabel('petunjuk 2', index),
+        drawnLabel('petunjuk 3', index),
+        drawnLabel('contoh', index),
+    ])) {
+        assert.equal(read.body.includes(secret), false, secret);
+    }
+
+    assert.equal(wrong.statusCode, 201);
+    assert.deepEqual(
+        wrong.json().earned.hints[0].diagram,
+        demoDiagram(drawnLabel('petunjuk 1', 4)),
+    );
+    assert.equal(wrong.json().earned.example, null);
+    assert.equal(wrong.body.includes(drawnLabel('petunjuk 2', 4)), false);
+    assert.equal(example.statusCode, 201);
+    assert.deepEqual(
+        example.json().earned.example.diagram,
+        demoDiagram(drawnLabel('contoh', 4)),
+    );
 });

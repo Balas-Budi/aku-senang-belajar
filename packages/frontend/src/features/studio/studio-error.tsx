@@ -10,6 +10,8 @@ const conflicts: Record<string, string> = {
         'Sesi ini belum bisa diterbitkan. Periksa daftar di atas tombol.',
     WARNINGS_NOT_ACKNOWLEDGED:
         'Peringatan sesi ini berubah. Centang lagi setiap peringatan, lalu terbitkan.',
+    SESSION_CHANGED:
+        'Draf sudah berubah sejak halaman ini dibuka. Periksa lagi setiap layar dan gambarnya, lalu centang dan terbitkan.',
 };
 
 export function StudioError({

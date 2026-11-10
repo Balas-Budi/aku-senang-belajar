@@ -9,6 +9,7 @@ import {
     Spoken,
     useNarration,
 } from '../narration/narration';
+import { DiagramPicture } from './diagram';
 import { Illustration } from './illustration';
 import { answersFor, useHelp, type Earned, type Picture } from './queries';
 import {
@@ -40,6 +41,12 @@ export function HelpCard({
                 <Illustration
                     name={picture.illustration}
                     className="w-full max-w-40 shrink-0"
+                />
+            )}
+            {picture.diagram && (
+                <DiagramPicture
+                    diagram={picture.diagram}
+                    className="w-full max-w-48 shrink-0"
                 />
             )}
             <div className="space-y-2">
@@ -196,6 +203,12 @@ export function CheckBlock({
             {content.illustration && (
                 <Illustration
                     name={content.illustration}
+                    className="mx-auto max-w-sm"
+                />
+            )}
+            {content.diagram && (
+                <DiagramPicture
+                    diagram={content.diagram}
                     className="mx-auto max-w-sm"
                 />
             )}

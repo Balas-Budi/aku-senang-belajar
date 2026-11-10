@@ -40,6 +40,8 @@ export function fieldMessage(message: string) {
         return 'Pilih jawaban benar dari pilihan yang ada.';
     if (/Keep the same options/u.test(message))
         return 'Pilihan jawaban tidak bisa ditambah atau dihapus.';
+    if (/A picture can only be kept or removed/u.test(message))
+        return 'Gambar hanya bisa dibiarkan atau dihapus. Muat ulang halaman untuk melihat versi terbaru.';
     if (/at least one class/u.test(message))
         return 'Pilih setidaknya satu kelas.';
     if (/at least one competency/u.test(message))

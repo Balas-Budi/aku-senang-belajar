@@ -17,6 +17,8 @@ import {
     asStudent,
     demoClass,
     demoStudent,
+    drawnDemoModule,
+    drawnLabel,
     refsOf,
     runFor,
     sentEvidence,
@@ -26,6 +28,23 @@ import {
 import { testApp, testEnv } from './helpers.ts';
 
 const refList = z.array(z.int());
+
+const sentQuestions = z.object({
+    competencies: z.array(
+        z.object({
+            code: z.string(),
+            evidence: z.array(
+                z.object({
+                    kind: z.string(),
+                    diagram: z.string().optional(),
+                    help: z.object({
+                        diagrams: z.array(z.string()).optional(),
+                    }),
+                }),
+            ),
+        }),
+    ),
+});
 
 async function submittedDemo(app: FastifyInstance, extraCompetency = false) {
     const { teacher, classId, assignmentId } = await demoClass(
@@ -391,4 +410,66 @@ test('the runner started with the server analyses a submitted attempt, and closi
     assert.equal(run?.status, 'succeeded');
     assert.equal(provider.requests.length, 1);
     assert.equal((await assessmentsOf(viewer, attemptId)).length, 3);
+});
+
+test('the evidence names the diagram a question showed and the diagrams of the help opened, never their shapes, and a mission without diagrams sends none', async (t) => {
+    const app = await testApp(t);
+    const drawn = await demoClass(app, false, drawnDemoModule);
+    const drawnAttempt = await takeDemo(
+        app,
+        (await demoStudent(app, drawn.classId)).token,
+        drawn.assignmentId,
+    );
+    const { attemptId: plainAttempt } = await submittedDemo(app);
+    const provider = await stubProvider(t, [verdicts(), verdicts()]);
+
+    await runFor(app, drawnAttempt, provider.config);
+    await runFor(app, plainAttempt, provider.config);
+
+    const [drawnRequest, plainRequest] = provider.requests;
+
+    assert.ok(drawnRequest && plainRequest);
+
+    const sent = sentQuestions.parse(
+        JSON.parse(drawnRequest.body.messages[1]?.content ?? ''),
+    );
+
+    assert.deepEqual(
+        sent.competencies.map(({ code, evidence }) => [
+            code,
+            evidence.map(({ kind, diagram, help }) => [
+                kind,
+                diagram,
+                help.diagrams,
+            ]),
+        ]),
+        [
+            ['C1', [['check', drawnLabel('soal', 6), undefined]]],
+            [
+                'C2',
+                [
+                    [
+                        'check',
+                        drawnLabel('soal', 4),
+                        [drawnLabel('petunjuk 1', 4)],
+                    ],
+                    ['challenge', drawnLabel('tantangan', 7), undefined],
+                ],
+            ],
+            ['C3', [['challenge', drawnLabel('tantangan', 7), undefined]]],
+        ],
+    );
+
+    const evidence = drawnRequest.body.messages[1]?.content ?? '';
+
+    assert.ok(evidence.includes(drawnLabel('soal', 6)));
+    for (const drawing of ['"shapes"', 'polygon', '"d":', '"parts"']) {
+        assert.equal(evidence.includes(drawing), false, drawing);
+    }
+
+    assert.equal(
+        plainRequest.body.messages[1]?.content.includes('"diagram'),
+        false,
+    );
+    assert.equal(PROMPT_VERSION, 'understanding-2026-11-10');
 });

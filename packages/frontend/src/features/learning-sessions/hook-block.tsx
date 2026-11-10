@@ -6,6 +6,7 @@ import {
     Spoken,
     useNarration,
 } from '../narration/narration';
+import { DiagramPicture } from './diagram';
 import { Illustration } from './illustration';
 import { answersFor } from './queries';
 import {
@@ -61,6 +62,12 @@ export function HookBlock({
             {content.illustration && (
                 <Illustration
                     name={content.illustration}
+                    className="mx-auto max-w-64"
+                />
+            )}
+            {content.diagram && (
+                <DiagramPicture
+                    diagram={content.diagram}
                     className="mx-auto max-w-64"
                 />
             )}

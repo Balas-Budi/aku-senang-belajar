@@ -1,11 +1,15 @@
 import { and, asc, eq, gte, inArray, isNull, lte } from 'drizzle-orm';
 import type { Queryable } from '../db/index.ts';
 import { competencies, materialPages, modules } from '../db/schema.ts';
-import { sessionBlock } from '../learning/blocks.ts';
+import { diagramsOf, sessionBlock } from '../learning/blocks.ts';
 import { competencyRubric } from '../learning/rubric.ts';
 import { blocksWithCodes, sessionCompetencyIds } from './drafting.ts';
 
-export const warningCodes = ['no_page_source', 'unreadable_pages'] as const;
+export const warningCodes = [
+    'no_page_source',
+    'unreadable_pages',
+    'ai_diagrams',
+] as const;
 
 export type Issue =
     | { code: 'no_draft' }
@@ -17,7 +21,8 @@ export type Issue =
 
 export type Warning =
     | { code: 'no_page_source'; blocks: number[] }
-    | { code: 'unreadable_pages'; pages: number[] };
+    | { code: 'unreadable_pages'; pages: number[] }
+    | { code: 'ai_diagrams'; blocks: number[] };
 
 const sourcedKinds = new Set(['story', 'check', 'challenge']);
 const testingKinds = new Set(['check', 'challenge']);
@@ -91,6 +96,12 @@ export async function reviewSession(
                 sourcedKinds.has(kind) && sourcePages.length === 0,
         )
         .map(({ position }) => position);
+    const drawn = blocks
+        .filter(({ kind, content }) => {
+            const parsed = sessionBlock.safeParse({ kind, content });
+            return parsed.success && diagramsOf(parsed.data).length > 0;
+        })
+        .map(({ position }) => position);
     const unreadable = await unreadablePages(db, moduleId);
 
     const issues: Issue[] = [
@@ -110,6 +121,9 @@ export async function reviewSession(
             : []),
         ...(unreadable.length > 0
             ? [{ code: 'unreadable_pages' as const, pages: unreadable }]
+            : []),
+        ...(drawn.length > 0
+            ? [{ code: 'ai_diagrams' as const, blocks: drawn }]
             : []),
     ];
 

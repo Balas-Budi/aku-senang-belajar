@@ -181,6 +181,102 @@ export const draft = {
     ],
 };
 
+const quarterLoaf = {
+    type: 'rect',
+    x: 20,
+    y: 20,
+    width: 120,
+    height: 60,
+    fill: 'yellow',
+    parts: 4,
+    shaded: 1,
+};
+
+export const quarters = {
+    label: 'Roti dibagi menjadi 4 bagian sama besar, 1 bagian diwarnai: 1/4.',
+    shapes: [quarterLoaf, { type: 'text', x: 35, y: 100, text: '1/4' }],
+};
+
+export const allShapes = {
+    label: 'Persegi, lingkaran, elips, garis putus-putus, garis tanda, segitiga, dan seperempat lingkaran bertuliskan Ani.',
+    shapes: [
+        { type: 'rect', x: 8, y: 8, width: 40, height: 30, fill: 'paper' },
+        { type: 'circle', cx: 75, cy: 28, r: 20, fill: 'soft' },
+        { type: 'ellipse', cx: 125, cy: 25, rx: 25, ry: 15, fill: 'blue' },
+        { type: 'line', x1: 8, y1: 55, x2: 150, y2: 55, dashed: true },
+        {
+            type: 'polyline',
+            points: [
+                [8, 70],
+                [40, 90],
+                [70, 70],
+            ],
+            stroke: 'mark',
+        },
+        {
+            type: 'polygon',
+            points: [
+                [85, 70],
+                [115, 100],
+                [85, 100],
+            ],
+            fill: 'green',
+        },
+        {
+            type: 'path',
+            d: 'M125 110 L125 80 A30 30 0 0 1 155 110 Z',
+            fill: 'mark',
+        },
+        { type: 'text', x: 8, y: 105, text: 'Ani', anchor: 'start' },
+    ],
+};
+
+function withDiagram<T extends { content: object }>(block: T, diagram: object) {
+    return { ...block, content: { ...block.content, diagram } };
+}
+
+function drawn(story: object, hint: object) {
+    const [hook, c1Story, , c2Story, c2Check, challenge, reflection] =
+        draft.blocks;
+    const check = checkFor('C1', 1);
+    const [first, , third] = check.content.hints;
+
+    return {
+        ...draft,
+        blocks: [
+            withDiagram(hook, allShapes),
+            withDiagram(c1Story, story),
+            {
+                ...check,
+                content: {
+                    ...check.content,
+                    diagram: allShapes,
+                    hints: [
+                        first,
+                        { ...check.content.hints[1], diagram: hint },
+                        third,
+                    ],
+                    example: { ...check.content.example, diagram: allShapes },
+                },
+            },
+            c2Story,
+            c2Check,
+            withDiagram(challenge, quarters),
+            reflection,
+        ],
+    };
+}
+
+export const drawnDraft = drawn(quarters, quarters);
+
+export const brokenDraft = drawn(
+    {
+        ...quarters,
+        shapes: [{ ...quarterLoaf, x: 150, width: 30 }, quarters.shapes[1]],
+    },
+    { ...quarters, label: 'Ini roti. Ada 4 bagian. Satu diwarnai. Itu 1/4.' },
+);
+
 export type Session = {
     id: number;
     title: string;

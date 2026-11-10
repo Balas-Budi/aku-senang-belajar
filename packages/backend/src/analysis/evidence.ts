@@ -13,7 +13,7 @@ import {
     sessionBlocks,
     sessionCompetencies,
 } from '../db/schema.ts';
-import { sessionBlock } from '../learning/blocks.ts';
+import { diagramName, sessionBlock } from '../learning/blocks.ts';
 import { competencyRubric, type CompetencyRubric } from '../learning/rubric.ts';
 import { answer as storedAnswer } from '../routes/student/schema.ts';
 
@@ -32,6 +32,7 @@ export const evidenceQuestion = z.object({
     kind: z.enum(['check', 'challenge']),
     question: z.string(),
     picture: z.string().optional(),
+    diagram: z.string().optional(),
     options: z.array(
         z.object({
             id: z.string(),
@@ -46,6 +47,7 @@ export const evidenceQuestion = z.object({
         otherExample: z.boolean(),
         answerShown: z.boolean(),
         askedTeacher: z.boolean(),
+        diagrams: z.array(z.string()).optional(),
     }),
 });
 
@@ -234,6 +236,27 @@ export async function evidenceOf(
             .filter(({ blockId }) => blockId === row.id)
             .map(({ kind }) => kind);
         const { content } = block;
+        const shown =
+            block.kind === 'check'
+                ? [
+                      ...block.content.hints
+                          .slice(
+                              0,
+                              Math.min(
+                                  3,
+                                  kinds.filter((kind) => kind === 'hint')
+                                      .length,
+                              ),
+                          )
+                          .flatMap(({ diagram }) =>
+                              diagram ? [diagramName(diagram)] : [],
+                          ),
+                      ...(kinds.includes('example') &&
+                      block.content.example.diagram
+                          ? [diagramName(block.content.example.diagram)]
+                          : []),
+                  ]
+                : [];
 
         questions.set(row.id, {
             block: row.position,
@@ -243,6 +266,9 @@ export async function evidenceOf(
                     ? `${block.content.prompt} ${block.content.question}`
                     : content.prompt,
             ...(content.illustration ? { picture: content.illustration } : {}),
+            ...(content.diagram
+                ? { diagram: diagramName(content.diagram) }
+                : {}),
             options: content.options.map(({ id, label, illustration }) =>
                 illustration
                     ? { id, label, picture: illustration }
@@ -255,6 +281,7 @@ export async function evidenceOf(
                 otherExample: kinds.includes('example'),
                 answerShown: kinds.includes('reveal'),
                 askedTeacher: kinds.includes('ask_teacher'),
+                ...(shown.length > 0 ? { diagrams: shown } : {}),
             },
         });
     }

@@ -1,7 +1,20 @@
-import { textAt, textFields } from './block-fields';
+import {
+    diagramFields,
+    samePath,
+    textAt,
+    textFields,
+    type DiagramField,
+} from './block-fields';
+import { DiagramFigure } from './diagram-figure';
 import type { StudioBlock } from './queries';
 
-export function BlockView({ block }: { block: StudioBlock }) {
+export function BlockView({
+    block,
+    onRemove,
+}: {
+    block: StudioBlock;
+    onRemove?: (field: DiagramField) => void;
+}) {
     if (block.kind === 'brain_game')
         return (
             <p className="text-muted-foreground">
@@ -9,6 +22,7 @@ export function BlockView({ block }: { block: StudioBlock }) {
                 dan hasilnya tidak dihitung sebagai bukti.
             </p>
         );
+    const diagrams = diagramFields(block);
     return (
         <dl className="space-y-3">
             {textFields(block).map((field) => (
@@ -29,6 +43,19 @@ export function BlockView({ block }: { block: StudioBlock }) {
                                 </span>
                             </>
                         )}
+                        {diagrams
+                            .filter((d) => samePath(d.under, field.path))
+                            .map((d) => (
+                                <DiagramFigure
+                                    key={d.path.join('/')}
+                                    name={d.name}
+                                    screen={block.position}
+                                    diagram={d.diagram}
+                                    onRemove={
+                                        onRemove ? () => onRemove(d) : undefined
+                                    }
+                                />
+                            ))}
                     </dd>
                 </div>
             ))}

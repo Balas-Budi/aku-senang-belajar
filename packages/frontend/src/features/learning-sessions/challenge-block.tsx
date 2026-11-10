@@ -7,6 +7,7 @@ import {
     useNarration,
 } from '../narration/narration';
 import { readStored, store } from './device-storage';
+import { DiagramPicture } from './diagram';
 import { Illustration } from './illustration';
 import { answersFor, useHelp } from './queries';
 import {
@@ -98,6 +99,12 @@ export function ChallengeBlock({
             {content.illustration && (
                 <Illustration
                     name={content.illustration}
+                    className="mx-auto max-w-sm"
+                />
+            )}
+            {content.diagram && (
+                <DiagramPicture
+                    diagram={content.diagram}
                     className="mx-auto max-w-sm"
                 />
             )}

@@ -6,8 +6,12 @@ import { z } from 'zod';
 import type { AiConfig } from '../src/ai/chat.ts';
 import { claimRun, processRun } from '../src/analysis/runner.ts';
 import { assignments, classMembers } from '../src/db/schema.ts';
+import type { Diagram } from '../src/learning/blocks.ts';
 import { demoModule } from '../src/learning/demo-module.ts';
-import { seedModule } from '../src/learning/seed-module.ts';
+import {
+    type PreparedModule,
+    seedModule,
+} from '../src/learning/seed-module.ts';
 import { completion, type ProviderRequest } from './ai-stub.ts';
 import {
     createClass,
@@ -96,19 +100,113 @@ export function asStudent(
     });
 }
 
-export async function demoClass(app: FastifyInstance, extraCompetency = false) {
+export function drawnLabel(place: string, index: number) {
+    return `Gambar ${place} layar ${index}: roti dalam 4 bagian sama besar.`;
+}
+
+export function demoDiagram(label: string): Diagram {
+    return {
+        label,
+        shapes: [
+            {
+                type: 'rect',
+                x: 20,
+                y: 20,
+                width: 120,
+                height: 60,
+                fill: 'yellow',
+                parts: 4,
+                shaded: 1,
+            },
+            {
+                type: 'polygon',
+                points: [
+                    [20, 90],
+                    [40, 110],
+                    [20, 110],
+                ],
+                fill: 'none',
+            },
+            { type: 'path', d: 'M60 110 L60 90 L80 110 Z', fill: 'none' },
+        ],
+    };
+}
+
+function drawnBlock(
+    block: PreparedModule['blocks'][number],
+    index: number,
+): PreparedModule['blocks'][number] {
+    const at = (place: string) => demoDiagram(drawnLabel(place, index));
+
+    switch (block.kind) {
+        case 'hook':
+            return {
+                ...block,
+                content: { ...block.content, diagram: at('pembuka') },
+            };
+        case 'story':
+            return {
+                ...block,
+                content: { ...block.content, diagram: at('cerita') },
+            };
+        case 'challenge':
+            return {
+                ...block,
+                content: { ...block.content, diagram: at('tantangan') },
+            };
+        case 'check':
+            return {
+                ...block,
+                content: {
+                    ...block.content,
+                    diagram: at('soal'),
+                    hints: [
+                        {
+                            ...block.content.hints[0],
+                            diagram: at('petunjuk 1'),
+                        },
+                        {
+                            ...block.content.hints[1],
+                            diagram: at('petunjuk 2'),
+                        },
+                        {
+                            ...block.content.hints[2],
+                            diagram: at('petunjuk 3'),
+                        },
+                    ],
+                    example: {
+                        ...block.content.example,
+                        diagram: at('contoh'),
+                    },
+                },
+            };
+        default:
+            return block;
+    }
+}
+
+export const drawnDemoModule: PreparedModule = {
+    ...demoModule,
+    blocks: demoModule.blocks.map(drawnBlock),
+};
+
+export async function demoClass(
+    app: FastifyInstance,
+    extraCompetency = false,
+    prepared = demoModule,
+) {
     const teacher = await createUser(app);
     const teacherToken = await loginAs(app, teacher.username);
     const classroom = await createClass(app, teacherToken);
     const { sessionId } = await seedModule(app.db, classroom.id, {
-        ...demoModule,
+        ...prepared,
         material: `Demo module ${randomUUID()}`,
         competencies: extraCompetency
             ? [
-                  ...demoModule.competencies,
+                  ...prepared.competencies,
                   { code: 'C4', description: 'Membandingkan 1/3 dan 1/4.' },
               ]
-            : demoModule.competencies,
+            : prepared.competencies,
     });
     const [assignment] = await app.db
         .select({ id: assignments.id })

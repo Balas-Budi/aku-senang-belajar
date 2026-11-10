@@ -4,9 +4,20 @@ import {
     useQueryClient,
 } from '@tanstack/react-query';
 import { api, ApiError } from '../../lib/api';
+import type { Diagram } from '../learning-sessions/diagram';
 
 export type Option = { id: string; label: string; illustration?: string };
-export type Picture = { text: string; illustration?: string };
+export type Picture = {
+    text: string;
+    illustration?: string;
+    diagram?: Diagram;
+};
+type Fraction = {
+    numerator: number;
+    denominator: number;
+    numeratorNote: string;
+    denominatorNote: string;
+};
 
 export type StudioBlock = {
     id: number;
@@ -17,14 +28,28 @@ export type StudioBlock = {
     | { kind: 'brain_game'; content: { game: 'memory_pairs' } }
     | {
           kind: 'hook';
-          content: { prompt: string; illustration?: string; options: Option[] };
+          content: {
+              prompt: string;
+              illustration?: string;
+              diagram?: Diagram;
+              options: Option[];
+          };
       }
-    | { kind: 'story'; content: { text: string; illustration?: string } }
+    | {
+          kind: 'story';
+          content: {
+              text: string;
+              illustration?: string;
+              diagram?: Diagram;
+              fraction?: Fraction;
+          };
+      }
     | {
           kind: 'check';
           content: {
               prompt: string;
               illustration?: string;
+              diagram?: Diagram;
               options: Option[];
               answer: string;
               reason?: { prompt: string; starters: string[] };
@@ -40,6 +65,7 @@ export type StudioBlock = {
               prompt: string;
               question: string;
               illustration?: string;
+              diagram?: Diagram;
               options: Option[];
               answer: string;
               reasonStarter: string;
@@ -58,7 +84,7 @@ export type Issue = {
     blocks?: number[];
 };
 export type Warning = {
-    code: 'no_page_source' | 'unreadable_pages';
+    code: 'no_page_source' | 'unreadable_pages' | 'ai_diagrams';
     blocks?: number[];
     pages?: number[];
 };
@@ -142,10 +168,10 @@ export function useApproveSession(id: number) {
     const client = useQueryClient();
     const sync = useStudioSync(id);
     return useMutation({
-        mutationFn: (acknowledged: string[]) =>
+        mutationFn: (body: { acknowledged: string[]; version: number }) =>
             api<StudioSession>(`/api/studio/sessions/${id}/approval`, {
                 method: 'POST',
-                body: JSON.stringify({ acknowledged }),
+                body: JSON.stringify(body),
             }),
         onSuccess: (session) => {
             client.setQueryData(studioSessionQuery(id).queryKey, session);

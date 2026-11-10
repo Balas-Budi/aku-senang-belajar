@@ -4,6 +4,7 @@ import {
     Spoken,
     useNarration,
 } from '../narration/narration';
+import { DiagramPicture } from './diagram';
 import { Illustration } from './illustration';
 import type { BlockOf } from './queries';
 import { ScreenCard, ScreenHeading } from './session-ui';
@@ -67,6 +68,12 @@ export function StoryBlock({
             {content.illustration && (
                 <Illustration
                     name={content.illustration}
+                    className="mx-auto max-w-sm"
+                />
+            )}
+            {content.diagram && (
+                <DiagramPicture
+                    diagram={content.diagram}
                     className="mx-auto max-w-sm"
                 />
             )}

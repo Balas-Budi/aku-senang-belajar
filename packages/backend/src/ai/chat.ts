@@ -31,6 +31,8 @@ export type ChatJsonRequest<T> = {
     user: string;
     schema: ZodType<T>;
     check?: (value: T) => string | null;
+    cutOff?: string;
+    turns?: number;
 };
 
 const defaultTimeout = 60_000;
@@ -137,19 +139,30 @@ export async function chatJson<T>(
         timeout: timeoutMs,
         maxRetries: 0,
     });
-    let accepted: { value: T; model: string } | undefined;
+    let accepted:
+        { value: T; model: string; outputTokens: number | null } | undefined;
     const graph = new StateGraph(Turn)
         .addNode('ask', async (state) => {
             const reply = await model.invoke(state.messages, {
                 response_format: { type: 'json_object' },
             });
             const name = reply.response_metadata.model_name;
-            const result = readReply(reply.text, request);
+            const finish = reply.response_metadata.finish_reason;
+            const tokens = reply.usage_metadata?.output_tokens;
+            const result =
+                finish === 'length'
+                    ? {
+                          problem:
+                              request.cutOff ??
+                              'Your reply was cut off at the length limit, so it is not complete JSON. Reply again with a shorter JSON object.',
+                      }
+                    : readReply(reply.text, request);
 
             if ('value' in result) {
                 accepted = {
                     value: result.value,
                     model: typeof name === 'string' ? name : config.model,
+                    outputTokens: typeof tokens === 'number' ? tokens : null,
                 };
             }
 
@@ -169,7 +182,9 @@ export async function chatJson<T>(
         }))
         .addEdge(START, 'ask')
         .addConditionalEdges('ask', (state) =>
-            state.problem && state.turns < maxTurns ? 'repair' : END,
+            state.problem && state.turns < (request.turns ?? maxTurns)
+                ? 'repair'
+                : END,
         )
         .addEdge('repair', 'ask')
         .compile();

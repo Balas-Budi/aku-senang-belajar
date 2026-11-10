@@ -50,6 +50,7 @@ export type EvidenceQuestion = {
     kind: 'check' | 'challenge';
     question: string;
     picture?: IllustrationName;
+    diagram?: string;
     options: { id: string; label: string; picture?: IllustrationName }[];
     rightOption: string;
     tries: {
@@ -64,6 +65,7 @@ export type EvidenceQuestion = {
         otherExample: boolean;
         answerShown: boolean;
         askedTeacher: boolean;
+        diagrams?: string[];
     };
 };
 

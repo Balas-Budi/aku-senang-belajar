@@ -1,3 +1,4 @@
+import { isDeepStrictEqual } from 'node:util';
 import { and, asc, eq, inArray, isNull, or } from 'drizzle-orm';
 import type { FastifyReply, FastifyRequest } from 'fastify';
 import { aiConfig } from '../../ai/chat.ts';
@@ -13,7 +14,11 @@ import {
     sessionBlocks,
     sessionCompetencies,
 } from '../../db/schema.ts';
-import { sessionBlock, type SessionBlock } from '../../learning/blocks.ts';
+import {
+    diagramsOf,
+    sessionBlock,
+    type SessionBlock,
+} from '../../learning/blocks.ts';
 import { AppError, notFound } from '../../lib/errors.ts';
 import { fieldError, validationError } from '../../lib/field-error.ts';
 import {
@@ -51,6 +56,12 @@ const alreadyPublished = () =>
         code: 'SESSION_PUBLISHED',
     });
 
+const sessionChanged = () =>
+    new AppError(409, {
+        message: 'The draft changed after you opened it',
+        code: 'SESSION_CHANGED',
+    });
+
 const optionIds = ({ content }: SessionBlock) =>
     'options' in content ? content.options.map(({ id }) => id).join(',') : '';
 
@@ -67,6 +78,7 @@ async function ownSession(db: Queryable, sessionId: number, userId: number) {
             moduleId: learningSessions.moduleId,
             status: learningSessions.status,
             drafting: learningSessions.drafting,
+            version: learningSessions.version,
         })
         .from(learningSessions)
         .where(
@@ -268,6 +280,22 @@ export async function editBlock(
         throw fieldError('content/options', 'Keep the same options');
     }
 
+    const before = new Map(
+        diagramsOf(stored).map(({ path, diagram }) => [
+            path.join('/'),
+            diagram,
+        ]),
+    );
+
+    for (const { path, diagram } of diagramsOf(edited.data)) {
+        if (!isDeepStrictEqual(before.get(path.join('/')), diagram)) {
+            throw fieldError(
+                `content/${path.join('/')}`,
+                'A picture can only be kept or removed',
+            );
+        }
+    }
+
     await db
         .update(sessionBlocks)
         .set({ content: edited.data.content })
@@ -321,6 +349,7 @@ export async function approveSession(
 
     if (session.drafting === 'generating') throw stillDrafting();
     if (session.status === 'ready') throw alreadyPublished();
+    if (session.version !== request.body.version) throw sessionChanged();
 
     const { issues, warnings } = await reviewSession(
         db,
@@ -358,6 +387,7 @@ export async function approveSession(
             and(
                 eq(learningSessions.id, session.id),
                 eq(learningSessions.status, 'draft'),
+                eq(learningSessions.version, request.body.version),
                 or(
                     isNull(learningSessions.drafting),
                     eq(learningSessions.drafting, 'failed'),
@@ -366,7 +396,15 @@ export async function approveSession(
         )
         .returning({ id: learningSessions.id });
 
-    if (!approved) throw stillDrafting();
+    if (!approved) {
+        const now = await ownSession(db, session.id, user.id);
+
+        if (now.drafting === 'generating') throw stillDrafting();
+        if (now.status === 'ready') throw alreadyPublished();
+        if (now.version !== request.body.version) throw sessionChanged();
+
+        throw stillDrafting();
+    }
 
     return studioSession(db, session.id, user.id);
 }
