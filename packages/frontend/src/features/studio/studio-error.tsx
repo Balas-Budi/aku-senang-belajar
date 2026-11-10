@@ -12,6 +12,9 @@ const conflicts: Record<string, string> = {
         'Peringatan sesi ini berubah. Centang lagi setiap peringatan, lalu terbitkan.',
     SESSION_CHANGED:
         'Draf sudah berubah sejak halaman ini dibuka. Periksa lagi setiap layar dan gambarnya, lalu centang dan terbitkan.',
+    THEME_DRAFTING: 'AI sedang menulis tema ini. Tunggu sampai selesai.',
+    THEME_NOT_READY: 'Tema ini belum lengkap. Tulis ulang temanya dulu.',
+    SESSION_NOT_DRAFTED: 'Susun misi dasarnya dulu sebelum memilih tema.',
 };
 
 export function StudioError({
@@ -27,6 +30,12 @@ export function StudioError({
         return (
             <Alert tone="attention" role="alert">
                 AI belum bisa menyusun sesi sekarang. Coba lagi sebentar lagi.
+            </Alert>
+        );
+    if (error.status === 404 && error.body.message === 'Theme not found')
+        return (
+            <Alert tone="attention" role="alert">
+                Tema ini sudah dihapus. Halaman dimuat ulang.
             </Alert>
         );
     if (error.status === 409)

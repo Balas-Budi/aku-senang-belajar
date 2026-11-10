@@ -1,7 +1,8 @@
 import { and, eq, inArray } from 'drizzle-orm';
 import type { Queryable } from '../../db/index.ts';
-import { assignments, sessionBlocks } from '../../db/schema.ts';
+import { assignments, attempts, sessionBlocks } from '../../db/schema.ts';
 import { sessionBlock } from '../../learning/blocks.ts';
+import { themedOr, themesFor } from '../../learning/themed-blocks.ts';
 import { pathOf } from './path.ts';
 
 export async function cardsOf(db: Queryable, studentId: number) {
@@ -19,7 +20,9 @@ export async function cardsOf(db: Queryable, studentId: number) {
             : await db
                   .select({
                       assignmentId: assignments.id,
+                      id: sessionBlocks.id,
                       content: sessionBlocks.content,
+                      theme: attempts.theme,
                   })
                   .from(assignments)
                   .innerJoin(
@@ -32,30 +35,46 @@ export async function cardsOf(db: Queryable, studentId: number) {
                           eq(sessionBlocks.kind, 'reflection'),
                       ),
                   )
+                  .innerJoin(
+                      attempts,
+                      and(
+                          eq(attempts.assignmentId, assignments.id),
+                          eq(attempts.studentId, studentId),
+                      ),
+                  )
                   .where(
                       inArray(
                           assignments.id,
                           done.map(({ stage }) => stage.id),
                       ),
                   );
+    const themes = await themesFor(
+        db,
+        reflections.map(({ id, theme }) => ({ blockId: id, theme })),
+    );
 
     return {
         cards: done.flatMap(({ subject, chapter, stage }) => {
-            const block = sessionBlock.safeParse({
+            const row = reflections.find(
+                ({ assignmentId }) => assignmentId === stage.id,
+            );
+            const base = sessionBlock.safeParse({
                 kind: 'reflection',
-                content: reflections.find(
-                    ({ assignmentId }) => assignmentId === stage.id,
-                )?.content,
+                content: row?.content,
             });
+            const block =
+                row && base.success
+                    ? themedOr(base.data, themes.get(row.id))
+                    : null;
 
-            return block.success && block.data.kind === 'reflection'
+            return block?.kind === 'reflection'
                 ? [
                       {
                           id: stage.id,
                           title: stage.title,
                           chapter: chapter.title,
                           subject,
-                          takeaways: block.data.content.takeaways,
+                          takeaways: block.content.takeaways,
                       },
                   ]
                 : [];

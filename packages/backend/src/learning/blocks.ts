@@ -610,6 +610,178 @@ export function diagramsOf(block: SessionBlock): DiagramPlace[] {
     }
 }
 
+export const optionIds = ({ content }: SessionBlock) =>
+    'options' in content ? content.options.map(({ id }) => id).join(',') : '';
+
+const isRecord = (value: unknown): value is Record<string, unknown> =>
+    typeof value === 'object' && value !== null && !Array.isArray(value);
+
+export function withoutDiagrams<T>(content: T): T {
+    const copy = structuredClone(content);
+    if (!isRecord(copy)) return copy;
+
+    const parents = [
+        copy,
+        ...(Array.isArray(copy.hints) ? copy.hints : []),
+        copy.example,
+    ];
+    for (const parent of parents) if (isRecord(parent)) delete parent.diagram;
+
+    return copy;
+}
+
+export function mergeDiagrams(base: SessionBlock, themed: unknown): unknown {
+    const copy = structuredClone(themed);
+
+    for (const { path, diagram } of diagramsOf(base)) {
+        let parent: unknown = copy;
+        for (const key of path.slice(0, -1))
+            parent =
+                typeof parent === 'object' && parent !== null
+                    ? (parent as Record<string | number, unknown>)[key]
+                    : undefined;
+        if (isRecord(parent))
+            parent[path[path.length - 1]] = structuredClone(diagram);
+    }
+
+    return copy;
+}
+
+export const withTheme = (base: SessionBlock, themed: unknown) =>
+    sessionBlock.parse({
+        kind: base.kind,
+        content: mergeDiagrams(base, themed),
+    });
+
+const units = [
+    'satu',
+    'dua',
+    'tiga',
+    'empat',
+    'lima',
+    'enam',
+    'tujuh',
+    'delapan',
+    'sembilan',
+];
+const numberWords = [
+    'nol',
+    ...units,
+    'setengah',
+    'separuh',
+    '(?:se)?(?:belas|puluh|ratus|ribu)(?:an)?',
+    `(?:se)?per(?:${units.slice(1).join('|')}|sepuluh)`,
+];
+const numberPattern = new RegExp(
+    `\\d+(?:[.,]\\d+)?(?:\\/\\d+)?|(?<!\\p{L})(?:${numberWords.join('|')})(?!\\p{L})`,
+    'giu',
+);
+const numberIdioms =
+    /(?<!\p{L})(?:salah\s+satu|satu-satunya|satu\s+per\s+satu|dua-duanya)(?!\p{L})/giu;
+
+function textsOf(value: unknown, key?: string): string[] {
+    if (key === 'id' || key === 'answer' || key === 'diagram') return [];
+    if (typeof value === 'string') return [value];
+    if (Array.isArray(value)) return value.flatMap((item) => textsOf(item));
+    if (isRecord(value))
+        return Object.entries(value).flatMap(([k, v]) => textsOf(v, k));
+    return [];
+}
+
+export const numbersOf = ({ content }: SessionBlock) =>
+    textsOf(content)
+        .flatMap(
+            (text) =>
+                text.replace(numberIdioms, ' ').match(numberPattern) ?? [],
+        )
+        .map((number) => number.toLowerCase())
+        .sort();
+
+function tally(list: string[]) {
+    const counts = new Map<string, number>();
+    for (const item of list) counts.set(item, (counts.get(item) ?? 0) + 1);
+    return counts;
+}
+
+const answerOf = ({ content }: SessionBlock) =>
+    'answer' in content ? content.answer : undefined;
+
+const fractionOf = ({ content }: SessionBlock) =>
+    'fraction' in content && content.fraction
+        ? `${content.fraction.numerator}/${content.fraction.denominator}`
+        : undefined;
+
+const hasReason = (block: SessionBlock) =>
+    block.kind === 'check' && block.content.reason !== undefined;
+
+const listOf = (block: SessionBlock, key: 'topics' | 'takeaways') =>
+    block.kind === 'reflection' ? block.content[key].length : 0;
+
+const counted = (count: number, word: string) =>
+    `${count} ${count === 1 ? word : `${word}s`}`;
+
+export function themeProblems(
+    base: SessionBlock,
+    themed: SessionBlock,
+): string[] {
+    const problems: string[] = [];
+    const ids = optionIds(base);
+    if (ids !== optionIds(themed))
+        problems.push(
+            `Keep the option ids ${ids.split(',').join(', ')} in this order`,
+        );
+    const answer = answerOf(base);
+    if (answer !== answerOf(themed)) problems.push(`Keep the answer ${answer}`);
+    const fraction = fractionOf(base);
+    if (fraction !== fractionOf(themed))
+        problems.push(
+            fraction
+                ? `Keep the fraction ${fraction}`
+                : 'Remove the fraction; the base screen does not have one',
+        );
+    if (hasReason(base) !== hasReason(themed))
+        problems.push(
+            hasReason(base)
+                ? 'Keep the reason question'
+                : 'Remove the reason question; the base screen does not have one',
+        );
+    for (const [key, word] of [
+        ['topics', 'topic'],
+        ['takeaways', 'takeaway'],
+    ] as const)
+        if (listOf(base, key) !== listOf(themed, key))
+            problems.push(`Keep ${counted(listOf(base, key), word)}`);
+    const baseNumbers = tally(numbersOf(base));
+    const themedNumbers = tally(numbersOf(themed));
+    const missing = [...baseNumbers.keys()].filter(
+        (number) => !themedNumbers.has(number),
+    );
+    const extra = [...themedNumbers.keys()].filter(
+        (number) => !baseNumbers.has(number),
+    );
+    if (missing.length > 0)
+        problems.push(
+            missing.length === 1
+                ? `Keep the number ${missing[0]} exactly as the base writes it`
+                : `Keep the numbers ${missing.join(', ')} exactly as the base writes them`,
+        );
+    if (extra.length > 0)
+        problems.push(
+            extra.length === 1
+                ? `Remove the number ${extra[0]}; the base screen does not have it`
+                : `Remove the numbers ${extra.join(', ')}; the base screen does not have them`,
+        );
+    for (const [number, count] of baseNumbers) {
+        const used = themedNumbers.get(number);
+        if (used !== undefined && used !== count)
+            problems.push(
+                `Write the number ${number} exactly ${counted(count, 'time')} on this screen, as the base does (you wrote it ${counted(used, 'time')})`,
+            );
+    }
+
+    return problems.map((problem) => `Theme rule: ${problem}`);
+}
+
 export const steps = ['opening', 'story', 'challenge', 'reflection'] as const;
 
 export const stepOfKind = {

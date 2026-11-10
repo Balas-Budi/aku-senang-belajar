@@ -1,5 +1,6 @@
 import { z } from 'zod';
 import {
+    INTERESTS,
     blockKind,
     learningSessionStatus,
     sessionDrafting,
@@ -45,6 +46,42 @@ const content = z.record(z.string(), z.unknown());
 export const blockBody = z.object({ content });
 
 export type BlockBody = z.infer<typeof blockBody>;
+
+export const themeParams = sessionParams.extend({
+    theme: z.enum(INTERESTS),
+});
+
+export type ThemeParams = z.infer<typeof themeParams>;
+
+export const themesBody = z.object({
+    themes: z
+        .array(z.enum(INTERESTS))
+        .min(1)
+        .max(3)
+        .refine(
+            (themes) => new Set(themes).size === themes.length,
+            'Choose each theme once',
+        ),
+});
+
+export type ThemesBody = z.infer<typeof themesBody>;
+
+export const themeBody = z.union([
+    z.object({ blockId: z.int().positive(), content }),
+    z.object({ read: z.literal(true), version: z.int().nonnegative() }),
+]);
+
+export type ThemeBody = z.infer<typeof themeBody>;
+
+export const chosenThemes = z.object({ themes: z.array(z.string()) });
+
+export const themeChange = z.object({
+    theme: z.string(),
+    blockId: z.number().optional(),
+    read: z.boolean(),
+});
+
+export const themeAccepted = z.object({ theme: z.string() });
 
 export const approvalBody = z.object({
     acknowledged: z.array(z.enum(warningCodes)).max(warningCodes.length),
@@ -104,6 +141,7 @@ export const studioSession = z.object({
             code: z.string(),
             competencies: z.array(z.string()).optional(),
             blocks: z.array(z.number()).optional(),
+            themes: z.array(z.string()).optional(),
         }),
     ),
     warnings: z.array(
@@ -114,4 +152,19 @@ export const studioSession = z.object({
         }),
     ),
     assignedClasses: classList,
+    themes: z.array(
+        z.object({
+            theme: z.string(),
+            drafting: z.enum(sessionDrafting.enumValues).nullable(),
+            draftError: z.string().nullable(),
+            read: z.boolean(),
+            readAt: z.date().nullable(),
+            mismatch: z.boolean(),
+            complete: z.boolean(),
+            blocks: z.array(z.object({ id: z.number(), content })),
+        }),
+    ),
+    interests: z.array(
+        z.object({ key: z.enum(INTERESTS), students: z.number() }),
+    ),
 });

@@ -11,7 +11,8 @@ import {
     responses,
     sessionBlocks,
 } from '../../db/schema.ts';
-import { sessionBlock, type SessionBlock } from '../../learning/blocks.ts';
+import { type SessionBlock } from '../../learning/blocks.ts';
+import { themedBlock, themesFor } from '../../learning/themed-blocks.ts';
 import { AppError, notFound } from '../../lib/errors.ts';
 import { fieldError } from '../../lib/field-error.ts';
 import { answer, type Answer, TRY_LIMIT } from './schema.ts';
@@ -85,6 +86,7 @@ export async function lockedAttempt(
         .select({
             id: attempts.id,
             status: attempts.status,
+            theme: attempts.theme,
             sessionId: assignments.learningSessionId,
         })
         .from(attempts)
@@ -140,33 +142,47 @@ const blockColumns = {
     content: sessionBlocks.content,
 };
 
-function parsed(row: {
-    id: number;
-    position: number;
-    kind: Block['kind'];
-    content: unknown;
-}): Block {
-    return {
+async function themed(
+    db: Queryable,
+    theme: string | null,
+    rows: {
+        id: number;
+        position: number;
+        kind: Block['kind'];
+        content: unknown;
+    }[],
+): Promise<Block[]> {
+    const themes = await themesFor(
+        db,
+        rows.map(({ id }) => ({ blockId: id, theme })),
+    );
+
+    return rows.map((row) => ({
         id: row.id,
         position: row.position,
-        ...sessionBlock.parse({ kind: row.kind, content: row.content }),
-    };
+        ...themedBlock(row, themes),
+    }));
 }
 
-export async function blocksOf(db: Queryable, sessionId: number) {
+export async function blocksOf(
+    db: Queryable,
+    sessionId: number,
+    theme: string | null,
+) {
     const rows = await db
         .select(blockColumns)
         .from(sessionBlocks)
         .where(eq(sessionBlocks.learningSessionId, sessionId))
         .orderBy(asc(sessionBlocks.position));
 
-    return rows.map(parsed);
+    return themed(db, theme, rows);
 }
 
 export async function blockOf(
     db: Queryable,
     sessionId: number,
     blockId: number,
+    theme: string | null,
 ) {
     const [row] = await db
         .select(blockColumns)
@@ -182,7 +198,9 @@ export async function blockOf(
         throw fieldError('blockId', 'The block is not part of this session');
     }
 
-    return parsed(row);
+    const [block] = await themed(db, theme, [row]);
+
+    return block;
 }
 
 export async function historyOf(

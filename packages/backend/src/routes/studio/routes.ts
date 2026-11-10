@@ -4,10 +4,14 @@ import { trackBackground } from '../../lib/background.ts';
 import {
     approveSession,
     assignSession,
+    chooseThemes,
     createSession,
     editBlock,
     getSession,
+    redraftTheme,
+    removeTheme,
     reviseSession,
+    updateTheme,
 } from './handlers.ts';
 import {
     accepted,
@@ -15,6 +19,7 @@ import {
     assignmentBody,
     blockBody,
     blockParams,
+    chosenThemes,
     classList,
     editedBlock,
     moduleParams,
@@ -22,6 +27,11 @@ import {
     sessionBody,
     sessionParams,
     studioSession,
+    themeAccepted,
+    themeBody,
+    themeChange,
+    themeParams,
+    themesBody,
 } from './schema.ts';
 
 export const studioRoutes: FastifyPluginAsyncZod = async (fastify) => {
@@ -87,5 +97,43 @@ export const studioRoutes: FastifyPluginAsyncZod = async (fastify) => {
             },
         },
         assignSession,
+    );
+    fastify.post(
+        '/studio/sessions/:sessionId/themes',
+        {
+            schema: {
+                params: sessionParams,
+                body: themesBody,
+                response: { 202: chosenThemes },
+            },
+        },
+        chooseThemes,
+    );
+    fastify.put(
+        '/studio/sessions/:sessionId/themes/:theme',
+        {
+            schema: {
+                params: themeParams,
+                body: themeBody,
+                response: { 200: themeChange },
+            },
+        },
+        updateTheme,
+    );
+    fastify.post(
+        '/studio/sessions/:sessionId/themes/:theme/draft',
+        {
+            schema: {
+                params: themeParams,
+                body: revisionBody,
+                response: { 202: themeAccepted },
+            },
+        },
+        redraftTheme,
+    );
+    fastify.delete(
+        '/studio/sessions/:sessionId/themes/:theme',
+        { schema: { params: themeParams } },
+        removeTheme,
     );
 };

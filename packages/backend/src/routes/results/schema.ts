@@ -125,6 +125,7 @@ export const evidenceResponse = z.object({
     assignment,
     progress,
     attemptId: z.number().nullable(),
+    theme: z.string().nullable(),
     analysis,
     summary: z
         .object({ id: z.number(), text: z.string(), excluded: z.boolean() })

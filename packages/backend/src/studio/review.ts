@@ -4,6 +4,7 @@ import { competencies, materialPages, modules } from '../db/schema.ts';
 import { diagramsOf, sessionBlock } from '../learning/blocks.ts';
 import { competencyRubric } from '../learning/rubric.ts';
 import { blocksWithCodes, sessionCompetencyIds } from './drafting.ts';
+import { themeStates } from './theming.ts';
 
 export const warningCodes = [
     'no_page_source',
@@ -17,7 +18,38 @@ export type Issue =
           code: 'missing_rubric' | 'untested_competency';
           competencies: string[];
       }
-    | { code: 'invalid_block'; blocks: number[] };
+    | { code: 'invalid_block'; blocks: number[] }
+    | {
+          code:
+              | 'theme_drafting'
+              | 'theme_failed'
+              | 'theme_mismatch'
+              | 'theme_unread';
+          themes: string[];
+      };
+
+type ThemeState = Awaited<ReturnType<typeof themeStates>>[number];
+
+function themeIssues(states: ThemeState[]): Issue[] {
+    const rules = [
+        ['theme_drafting', ({ drafting }) => drafting === 'generating'],
+        ['theme_failed', ({ drafting }) => drafting === 'failed'],
+        ['theme_mismatch', ({ mismatch }) => mismatch],
+        [
+            'theme_unread',
+            ({ drafting, mismatch, read }) =>
+                drafting === null && !mismatch && !read,
+        ],
+    ] as const satisfies readonly (readonly [
+        Issue['code'],
+        (state: ThemeState) => boolean,
+    ])[];
+
+    return rules.flatMap(([code, matches]) => {
+        const themes = states.filter(matches).map(({ theme }) => theme);
+        return themes.length > 0 ? [{ code, themes }] : [];
+    });
+}
 
 export type Warning =
     | { code: 'no_page_source'; blocks: number[] }
@@ -114,6 +146,7 @@ export async function reviewSession(
         ...(invalid.length > 0
             ? [{ code: 'invalid_block' as const, blocks: invalid }]
             : []),
+        ...themeIssues(await themeStates(db, sessionId)),
     ];
     const warnings: Warning[] = [
         ...(unsourced.length > 0

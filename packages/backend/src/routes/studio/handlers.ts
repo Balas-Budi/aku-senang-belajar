@@ -1,5 +1,15 @@
 import { isDeepStrictEqual } from 'node:util';
-import { and, asc, eq, inArray, isNull, or } from 'drizzle-orm';
+import {
+    and,
+    asc,
+    eq,
+    inArray,
+    isNull,
+    ne,
+    notExists,
+    or,
+    sql,
+} from 'drizzle-orm';
 import type { FastifyReply, FastifyRequest } from 'fastify';
 import { aiConfig } from '../../ai/chat.ts';
 import { currentUser } from '../../auth/guards.ts';
@@ -7,17 +17,25 @@ import type { Queryable } from '../../db/index.ts';
 import {
     assignments,
     classes,
+    classMembers,
     competencies,
+    INTERESTS,
     learningSessions,
     materials,
     modules,
     sessionBlocks,
+    sessionBlockThemes,
     sessionCompetencies,
+    sessionThemes,
+    studentProfiles,
+    users,
 } from '../../db/schema.ts';
 import {
     diagramsOf,
+    optionIds,
     sessionBlock,
-    type SessionBlock,
+    themeProblems,
+    withoutDiagrams,
 } from '../../learning/blocks.ts';
 import { AppError, notFound } from '../../lib/errors.ts';
 import { fieldError, validationError } from '../../lib/field-error.ts';
@@ -27,6 +45,8 @@ import {
     startDraft,
 } from '../../studio/drafting.ts';
 import { reviewSession } from '../../studio/review.ts';
+import { pictureKeys, themedContent } from '../../studio/theme-draft.ts';
+import { startThemeDraft, themeStates } from '../../studio/theming.ts';
 import type {
     ApprovalBody,
     AssignmentBody,
@@ -36,6 +56,9 @@ import type {
     RevisionBody,
     SessionBody,
     SessionParams,
+    ThemeBody,
+    ThemeParams,
+    ThemesBody,
 } from './schema.ts';
 
 const aiNotConfigured = () =>
@@ -62,8 +85,78 @@ const sessionChanged = () =>
         code: 'SESSION_CHANGED',
     });
 
-const optionIds = ({ content }: SessionBlock) =>
-    'options' in content ? content.options.map(({ id }) => id).join(',') : '';
+const themeDrafting = () =>
+    new AppError(409, {
+        message: 'The theme is being drafted',
+        code: 'THEME_DRAFTING',
+    });
+
+const themeNotReady = () =>
+    new AppError(409, {
+        message: 'The theme is not complete',
+        code: 'THEME_NOT_READY',
+    });
+
+const themeNotFound = () => notFound('Theme not found');
+
+const generatingTheme = (sessionId: number) =>
+    and(
+        eq(sessionThemes.learningSessionId, sessionId),
+        eq(sessionThemes.drafting, 'generating'),
+    );
+
+const idleDraft = (sessionId: number) =>
+    and(
+        eq(learningSessions.id, sessionId),
+        eq(learningSessions.status, 'draft'),
+        or(
+            isNull(learningSessions.drafting),
+            eq(learningSessions.drafting, 'failed'),
+        ),
+    );
+
+async function claimSession(tx: Queryable, sessionId: number) {
+    const [claimed] = await tx
+        .update(learningSessions)
+        .set({ version: sql`${learningSessions.version} + 1` })
+        .where(idleDraft(sessionId))
+        .returning({ id: learningSessions.id });
+
+    if (claimed) return;
+
+    const [now] = await tx
+        .select({ status: learningSessions.status })
+        .from(learningSessions)
+        .where(eq(learningSessions.id, sessionId));
+
+    if (now?.status === 'ready') throw alreadyPublished();
+
+    throw stillDrafting();
+}
+
+async function themeRow(db: Queryable, sessionId: number, theme: string) {
+    const [row] = await db
+        .select({ id: sessionThemes.id, drafting: sessionThemes.drafting })
+        .from(sessionThemes)
+        .where(
+            and(
+                eq(sessionThemes.learningSessionId, sessionId),
+                eq(sessionThemes.theme, theme),
+            ),
+        );
+
+    return row;
+}
+
+async function hasGeneratingTheme(db: Queryable, sessionId: number) {
+    const [row] = await db
+        .select({ id: sessionThemes.id })
+        .from(sessionThemes)
+        .where(generatingTheme(sessionId))
+        .limit(1);
+
+    return row !== undefined;
+}
 
 export const visibleTo = (userId: number) =>
     or(
@@ -89,6 +182,19 @@ async function ownSession(db: Queryable, sessionId: number, userId: number) {
         );
 
     if (!session) throw notFound('Session not found');
+
+    return session;
+}
+
+async function editableSession(
+    db: Queryable,
+    sessionId: number,
+    userId: number,
+) {
+    const session = await ownSession(db, sessionId, userId);
+
+    if (session.status === 'ready') throw alreadyPublished();
+    if (session.drafting === 'generating') throw stillDrafting();
 
     return session;
 }
@@ -222,7 +328,31 @@ async function studioSession(db: Queryable, sessionId: number, userId: number) {
         blocks: await blocksWithCodes(db, session.id),
         ...review,
         assignedClasses: await assignedClasses(db, session.id, userId),
+        themes: await themeStates(db, session.id),
+        interests: await interestCounts(db, userId),
     };
+}
+
+async function interestCounts(db: Queryable, teacherId: number) {
+    const profiles = await db
+        .selectDistinct({
+            studentId: classMembers.studentId,
+            interests: studentProfiles.interests,
+        })
+        .from(classMembers)
+        .innerJoin(classes, eq(classes.id, classMembers.classId))
+        .innerJoin(users, eq(users.id, classMembers.studentId))
+        .innerJoin(
+            studentProfiles,
+            eq(studentProfiles.studentId, classMembers.studentId),
+        )
+        .where(and(eq(classes.teacherId, teacherId), isNull(users.deletedAt)));
+
+    return INTERESTS.map((key) => ({
+        key,
+        students: profiles.filter(({ interests }) => interests.includes(key))
+            .length,
+    }));
 }
 
 export async function getSession(
@@ -296,10 +426,33 @@ export async function editBlock(
         }
     }
 
-    await db
-        .update(sessionBlocks)
-        .set({ content: edited.data.content })
-        .where(eq(sessionBlocks.id, request.params.blockId));
+    await db.transaction(async (tx) => {
+        await claimSession(tx, session.id);
+        await tx
+            .update(sessionBlocks)
+            .set({ content: edited.data.content })
+            .where(eq(sessionBlocks.id, request.params.blockId));
+        await tx
+            .update(sessionThemes)
+            .set({ readBy: null, readAt: null })
+            .where(
+                and(
+                    eq(sessionThemes.learningSessionId, session.id),
+                    inArray(
+                        sessionThemes.theme,
+                        tx
+                            .select({ theme: sessionBlockThemes.theme })
+                            .from(sessionBlockThemes)
+                            .where(
+                                eq(
+                                    sessionBlockThemes.blockId,
+                                    request.params.blockId,
+                                ),
+                            ),
+                    ),
+                ),
+            );
+    });
 
     return { id: request.params.blockId, content: edited.data.content };
 }
@@ -318,22 +471,36 @@ export async function reviseSession(
     if (session.status === 'ready') throw alreadyPublished();
     if (!aiConfig(env)) throw aiNotConfigured();
 
-    const [claimed] = await db
-        .update(learningSessions)
-        .set({ drafting: 'generating', draftError: null })
-        .where(
-            and(
-                eq(learningSessions.id, session.id),
-                eq(learningSessions.status, 'draft'),
-                or(
-                    isNull(learningSessions.drafting),
-                    eq(learningSessions.drafting, 'failed'),
-                ),
-            ),
-        )
-        .returning({ id: learningSessions.id });
+    const claimed = await db.transaction(async (tx) => {
+        await tx
+            .select({ id: learningSessions.id })
+            .from(learningSessions)
+            .where(eq(learningSessions.id, session.id))
+            .for('update');
 
-    if (!claimed) throw stillDrafting();
+        const [row] = await tx
+            .update(learningSessions)
+            .set({ drafting: 'generating', draftError: null })
+            .where(
+                and(
+                    idleDraft(session.id),
+                    notExists(
+                        tx
+                            .select({ id: sessionThemes.id })
+                            .from(sessionThemes)
+                            .where(generatingTheme(session.id)),
+                    ),
+                ),
+            )
+            .returning({ id: learningSessions.id });
+
+        return row;
+    });
+
+    if (!claimed) {
+        if (await hasGeneratingTheme(db, session.id)) throw themeDrafting();
+        throw stillDrafting();
+    }
 
     startDraft(request.server, session.id, request.body.note || null);
 
@@ -392,6 +559,12 @@ export async function approveSession(
                     isNull(learningSessions.drafting),
                     eq(learningSessions.drafting, 'failed'),
                 ),
+                notExists(
+                    db
+                        .select({ id: sessionThemes.id })
+                        .from(sessionThemes)
+                        .where(generatingTheme(session.id)),
+                ),
             ),
         )
         .returning({ id: learningSessions.id });
@@ -402,6 +575,7 @@ export async function approveSession(
         if (now.drafting === 'generating') throw stillDrafting();
         if (now.status === 'ready') throw alreadyPublished();
         if (now.version !== request.body.version) throw sessionChanged();
+        if (await hasGeneratingTheme(db, session.id)) throw themeDrafting();
 
         throw stillDrafting();
     }
@@ -454,4 +628,377 @@ export async function assignSession(
         .onConflictDoNothing();
 
     return assignedClasses(db, session.id, user.id);
+}
+
+export async function chooseThemes(
+    request: FastifyRequest<{ Params: SessionParams; Body: ThemesBody }>,
+    reply: FastifyReply,
+) {
+    const { db, env } = request.server;
+    const session = await editableSession(
+        db,
+        request.params.sessionId,
+        currentUser(request).id,
+    );
+    const [block] = await db
+        .select({ id: sessionBlocks.id })
+        .from(sessionBlocks)
+        .where(eq(sessionBlocks.learningSessionId, session.id))
+        .limit(1);
+
+    if (!block) {
+        throw new AppError(409, {
+            message: 'Draft the session before choosing themes',
+            code: 'SESSION_NOT_DRAFTED',
+        });
+    }
+
+    if (!aiConfig(env)) throw aiNotConfigured();
+
+    const { themes } = request.body;
+    const rows = await db.transaction(async (tx) => {
+        await claimSession(tx, session.id);
+
+        const existing = (
+            await tx
+                .select({ theme: sessionThemes.theme })
+                .from(sessionThemes)
+                .where(eq(sessionThemes.learningSessionId, session.id))
+        ).map(({ theme }) => theme);
+
+        if (themes.some((theme) => existing.includes(theme))) {
+            throw fieldError('themes', 'Already chosen');
+        }
+
+        if (existing.length + themes.length > 3) {
+            throw fieldError('themes', 'At most three themes');
+        }
+
+        return tx
+            .insert(sessionThemes)
+            .values(
+                themes.map((theme) => ({
+                    learningSessionId: session.id,
+                    theme,
+                    drafting: 'generating' as const,
+                })),
+            )
+            .returning({ id: sessionThemes.id });
+    });
+
+    for (const { id } of rows) {
+        startThemeDraft(request.server, session.id, id, null);
+    }
+
+    return reply.code(202).send({ themes });
+}
+
+async function editTheme(
+    db: Queryable,
+    sessionId: number,
+    theme: string,
+    blockId: number,
+    content: Record<string, unknown>,
+) {
+    const row = await themeRow(db, sessionId, theme);
+
+    if (!row) throw themeNotFound();
+    if (row.drafting === 'generating') throw themeDrafting();
+
+    const [block] = await db
+        .select({ kind: sessionBlocks.kind, content: sessionBlocks.content })
+        .from(sessionBlocks)
+        .where(
+            and(
+                eq(sessionBlocks.id, blockId),
+                eq(sessionBlocks.learningSessionId, sessionId),
+            ),
+        );
+
+    if (!block || block.kind === 'brain_game') {
+        throw notFound('Block not found');
+    }
+
+    const pictures = pictureKeys(content);
+
+    if (pictures.length > 0) {
+        throw validationError(
+            pictures.map((path) => ({
+                field: `content/${path.join('/')}`,
+                message: 'Pictures come from the base mission',
+            })),
+        );
+    }
+
+    const base = sessionBlock.safeParse(block);
+
+    if (!base.success) {
+        throw fieldError('content', 'Fix the base screen first');
+    }
+
+    const edited = themedContent(base.data, content);
+
+    if (!edited.success) {
+        throw validationError(
+            edited.error.issues.map((issue) => ({
+                field: issue.path.join('/'),
+                message: issue.message,
+            })),
+        );
+    }
+
+    const problems = themeProblems(base.data, edited.data);
+
+    if (problems.length > 0) {
+        throw fieldError('content', problems.join('. '));
+    }
+
+    await db.transaction(async (tx) => {
+        await claimSession(tx, sessionId);
+
+        const [kept] = await tx
+            .update(sessionThemes)
+            .set({ readBy: null, readAt: null })
+            .where(
+                and(
+                    eq(sessionThemes.id, row.id),
+                    or(
+                        isNull(sessionThemes.drafting),
+                        eq(sessionThemes.drafting, 'failed'),
+                    ),
+                ),
+            )
+            .returning({ id: sessionThemes.id });
+
+        if (!kept) {
+            throw (await themeRow(tx, sessionId, theme))
+                ? themeDrafting()
+                : themeNotFound();
+        }
+
+        const stored = withoutDiagrams(edited.data.content);
+
+        await tx
+            .insert(sessionBlockThemes)
+            .values({ blockId, theme, content: stored })
+            .onConflictDoUpdate({
+                target: [sessionBlockThemes.blockId, sessionBlockThemes.theme],
+                set: { content: stored },
+            });
+    });
+
+    return { theme, blockId, read: false };
+}
+
+async function markThemeRead(
+    db: Queryable,
+    sessionId: number,
+    theme: string,
+    userId: number,
+    version: number,
+) {
+    const [marked] = await db
+        .update(sessionThemes)
+        .set({ readBy: userId, readAt: new Date() })
+        .where(
+            and(
+                eq(sessionThemes.learningSessionId, sessionId),
+                eq(sessionThemes.theme, theme),
+                isNull(sessionThemes.drafting),
+                inArray(
+                    sessionThemes.learningSessionId,
+                    db
+                        .select({ id: learningSessions.id })
+                        .from(learningSessions)
+                        .where(
+                            and(
+                                eq(learningSessions.id, sessionId),
+                                eq(learningSessions.status, 'draft'),
+                                eq(learningSessions.version, version),
+                            ),
+                        ),
+                ),
+                notExists(
+                    db
+                        .select({ id: sessionBlocks.id })
+                        .from(sessionBlocks)
+                        .where(
+                            and(
+                                eq(sessionBlocks.learningSessionId, sessionId),
+                                ne(sessionBlocks.kind, 'brain_game'),
+                                notExists(
+                                    db
+                                        .select({ id: sessionBlockThemes.id })
+                                        .from(sessionBlockThemes)
+                                        .where(
+                                            and(
+                                                eq(
+                                                    sessionBlockThemes.blockId,
+                                                    sessionBlocks.id,
+                                                ),
+                                                eq(
+                                                    sessionBlockThemes.theme,
+                                                    theme,
+                                                ),
+                                            ),
+                                        ),
+                                ),
+                            ),
+                        ),
+                ),
+            ),
+        )
+        .returning({ id: sessionThemes.id });
+
+    if (marked) return { theme, read: true };
+
+    const row = await themeRow(db, sessionId, theme);
+
+    if (!row) throw themeNotFound();
+
+    const [session] = await db
+        .select({
+            status: learningSessions.status,
+            version: learningSessions.version,
+        })
+        .from(learningSessions)
+        .where(eq(learningSessions.id, sessionId));
+
+    if (session?.status === 'ready') throw alreadyPublished();
+    if (row.drafting === 'generating') throw themeDrafting();
+    if (session?.version !== version) throw sessionChanged();
+
+    throw themeNotReady();
+}
+
+export async function updateTheme(
+    request: FastifyRequest<{ Params: ThemeParams; Body: ThemeBody }>,
+) {
+    const { db } = request.server;
+    const user = currentUser(request);
+    const session = await editableSession(
+        db,
+        request.params.sessionId,
+        user.id,
+    );
+    const { body } = request;
+
+    return 'read' in body
+        ? markThemeRead(
+              db,
+              session.id,
+              request.params.theme,
+              user.id,
+              body.version,
+          )
+        : editTheme(
+              db,
+              session.id,
+              request.params.theme,
+              body.blockId,
+              body.content,
+          );
+}
+
+export async function redraftTheme(
+    request: FastifyRequest<{ Params: ThemeParams; Body: RevisionBody }>,
+    reply: FastifyReply,
+) {
+    const { db, env } = request.server;
+    const session = await editableSession(
+        db,
+        request.params.sessionId,
+        currentUser(request).id,
+    );
+    const { theme } = request.params;
+    const row = await themeRow(db, session.id, theme);
+
+    if (!row) throw themeNotFound();
+    if (!aiConfig(env)) throw aiNotConfigured();
+
+    await db.transaction(async (tx) => {
+        await claimSession(tx, session.id);
+
+        const [claimed] = await tx
+            .update(sessionThemes)
+            .set({
+                drafting: 'generating',
+                draftError: null,
+                readBy: null,
+                readAt: null,
+            })
+            .where(
+                and(
+                    eq(sessionThemes.id, row.id),
+                    or(
+                        isNull(sessionThemes.drafting),
+                        eq(sessionThemes.drafting, 'failed'),
+                    ),
+                ),
+            )
+            .returning({ id: sessionThemes.id });
+
+        if (!claimed) {
+            throw (await themeRow(tx, session.id, theme))
+                ? themeDrafting()
+                : themeNotFound();
+        }
+    });
+
+    startThemeDraft(
+        request.server,
+        session.id,
+        row.id,
+        request.body.note || null,
+    );
+
+    return reply.code(202).send({ theme });
+}
+
+export async function removeTheme(
+    request: FastifyRequest<{ Params: ThemeParams }>,
+    reply: FastifyReply,
+) {
+    const { db } = request.server;
+    const session = await editableSession(
+        db,
+        request.params.sessionId,
+        currentUser(request).id,
+    );
+    const { theme } = request.params;
+
+    await db.transaction(async (tx) => {
+        await claimSession(tx, session.id);
+
+        const [removed] = await tx
+            .delete(sessionThemes)
+            .where(
+                and(
+                    eq(sessionThemes.learningSessionId, session.id),
+                    eq(sessionThemes.theme, theme),
+                ),
+            )
+            .returning({ id: sessionThemes.id });
+
+        if (!removed) throw themeNotFound();
+
+        await tx
+            .delete(sessionBlockThemes)
+            .where(
+                and(
+                    eq(sessionBlockThemes.theme, theme),
+                    inArray(
+                        sessionBlockThemes.blockId,
+                        tx
+                            .select({ id: sessionBlocks.id })
+                            .from(sessionBlocks)
+                            .where(
+                                eq(sessionBlocks.learningSessionId, session.id),
+                            ),
+                    ),
+                ),
+            );
+    });
+
+    return reply.code(204).send();
 }

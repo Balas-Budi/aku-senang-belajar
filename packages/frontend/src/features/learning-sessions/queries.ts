@@ -144,6 +144,8 @@ function useSession(assignmentId: number) {
     return {
         update: (change: (session: LearningSession) => LearningSession) =>
             client.setQueryData(key, (session) => session && change(session)),
+        refetch: () =>
+            client.refetchQueries({ queryKey: key }, { throwOnError: true }),
         resync: (error: Error) => {
             if (error instanceof ApiError && error.status === 409)
                 void client.invalidateQueries({ queryKey: key });
@@ -179,9 +181,9 @@ export function useStartAttempt(assignmentId: number) {
             api<Attempt>(`/api/student/assignments/${assignmentId}/attempt`, {
                 method: 'POST',
             }),
-        onSuccess: (attempt) => {
-            session.update((current) => ({ ...current, attempt }));
+        onSuccess: async () => {
             void session.refreshList();
+            await session.refetch();
         },
     });
 }

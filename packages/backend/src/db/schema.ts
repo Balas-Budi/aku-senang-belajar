@@ -116,6 +116,19 @@ export const classMembers = pgTable(
     (table) => [index('class_members_class_id_idx').on(table.classId)],
 );
 
+export const INTERESTS = [
+    'animals',
+    'football',
+    'superheroes',
+    'space',
+    'music',
+    'drawing',
+    'cooking',
+    'nature',
+] as const;
+
+export type Interest = (typeof INTERESTS)[number];
+
 export const studentProfiles = pgTable('student_profiles', {
     studentId: integer()
         .primaryKey()
@@ -303,6 +316,50 @@ export const blockCompetencies = pgTable(
     ],
 );
 
+export const sessionThemes = pgTable(
+    'session_themes',
+    {
+        id: integer().primaryKey().generatedAlwaysAsIdentity(),
+        learningSessionId: integer()
+            .notNull()
+            .references(() => learningSessions.id, { onDelete: 'cascade' }),
+        theme: text().notNull(),
+        drafting: sessionDrafting(),
+        draftError: text(),
+        model: text(),
+        promptVersion: text(),
+        readBy: integer().references(() => users.id, {
+            onDelete: 'set null',
+        }),
+        readAt: timestamp({ withTimezone: true }),
+        createdAt: timestamp({ withTimezone: true }).notNull().defaultNow(),
+    },
+    (table) => [
+        unique('session_themes_learning_session_id_theme_unique').on(
+            table.learningSessionId,
+            table.theme,
+        ),
+    ],
+);
+
+export const sessionBlockThemes = pgTable(
+    'session_block_themes',
+    {
+        id: integer().primaryKey().generatedAlwaysAsIdentity(),
+        blockId: integer()
+            .notNull()
+            .references(() => sessionBlocks.id, { onDelete: 'cascade' }),
+        theme: text().notNull(),
+        content: jsonb().notNull(),
+    },
+    (table) => [
+        unique('session_block_themes_block_id_theme_unique').on(
+            table.blockId,
+            table.theme,
+        ),
+    ],
+);
+
 export const sessionCompetencies = pgTable(
     'session_competencies',
     {
@@ -361,6 +418,7 @@ export const attempts = pgTable(
         submittedAt: timestamp({ withTimezone: true }),
         memoryDeletedAt: timestamp({ withTimezone: true }),
         readAloud: boolean().notNull().default(false),
+        theme: text(),
     },
     (table) => [
         unique('attempts_assignment_id_student_id_unique').on(

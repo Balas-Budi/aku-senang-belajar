@@ -5,6 +5,7 @@ import {
     analysisRuns,
     assignments,
     assessments,
+    attempts,
     classes,
     competencies,
     learnerSummaries,
@@ -14,6 +15,7 @@ import {
     sessionBlocks,
 } from '../../db/schema.ts';
 import { sessionBlock } from '../../learning/blocks.ts';
+import { themedOr, themesFor } from '../../learning/themed-blocks.ts';
 import { notFound } from '../../lib/errors.ts';
 import { membersOf } from '../classes/queries.ts';
 import {
@@ -449,6 +451,7 @@ export async function practiceOf(
             kind: sessionBlocks.kind,
             content: sessionBlocks.content,
             mission: learningSessions.title,
+            theme: attempts.theme,
         })
         .from(reviewTries)
         .innerJoin(sessionBlocks, eq(sessionBlocks.id, reviewTries.blockId))
@@ -463,8 +466,19 @@ export async function practiceOf(
                 eq(assignments.classId, classId),
             ),
         )
+        .leftJoin(
+            attempts,
+            and(
+                eq(attempts.assignmentId, assignments.id),
+                eq(attempts.studentId, reviewTries.studentId),
+            ),
+        )
         .where(eq(reviewTries.studentId, studentId))
         .orderBy(asc(reviewTries.id));
+    const themes = await themesFor(
+        db,
+        tries.map(({ blockId, theme }) => ({ blockId, theme })),
+    );
     const questions = new Map<
         number,
         {
@@ -481,12 +495,15 @@ export async function practiceOf(
             content: item.content,
         });
 
-        if (!block.success || block.data.kind !== 'check') continue;
+        const shown =
+            block.success && themedOr(block.data, themes.get(item.blockId));
+
+        if (!shown || shown.kind !== 'check') continue;
 
         const question = questions.get(item.blockId) ?? {
             blockId: item.blockId,
             mission: item.mission,
-            prompt: block.data.content.prompt,
+            prompt: shown.content.prompt,
             rounds: [],
         };
         const open = question.rounds.at(-1);

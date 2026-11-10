@@ -5,7 +5,15 @@ import type { FastifyInstance } from 'fastify';
 import { z } from 'zod';
 import type { AiConfig } from '../src/ai/chat.ts';
 import { claimRun, processRun } from '../src/analysis/runner.ts';
-import { assignments, classMembers } from '../src/db/schema.ts';
+import {
+    assignments,
+    classMembers,
+    sessionBlocks,
+    sessionBlockThemes,
+    sessionThemes,
+    studentProfiles,
+    type Interest,
+} from '../src/db/schema.ts';
 import type { Diagram } from '../src/learning/blocks.ts';
 import { demoModule } from '../src/learning/demo-module.ts';
 import {
@@ -225,7 +233,68 @@ export async function demoClass(
         teacherToken,
         classId: classroom.id,
         assignmentId: assignment.id,
+        sessionId,
     };
+}
+
+const kept = new Set(['id', 'answer']);
+const pictures = new Set(['diagram', 'illustration']);
+
+function rewritten(
+    value: unknown,
+    rewrite: (text: string) => string,
+    key = '',
+): unknown {
+    if (typeof value === 'string') {
+        return kept.has(key) ? value : rewrite(value);
+    }
+
+    if (Array.isArray(value)) {
+        return value.map((item) => rewritten(item, rewrite, key));
+    }
+
+    if (typeof value === 'object' && value !== null) {
+        return Object.fromEntries(
+            Object.entries(value)
+                .filter(([name]) => !pictures.has(name))
+                .map(([name, item]) => [name, rewritten(item, rewrite, name)]),
+        );
+    }
+
+    return value;
+}
+
+export async function seedTheme(
+    app: FastifyInstance,
+    sessionId: number,
+    theme: Interest,
+    rewrite: (text: string) => string,
+) {
+    const blocks = await app.db
+        .select({
+            id: sessionBlocks.id,
+            kind: sessionBlocks.kind,
+            content: sessionBlocks.content,
+        })
+        .from(sessionBlocks)
+        .where(eq(sessionBlocks.learningSessionId, sessionId));
+
+    await app.db.transaction(async (tx) => {
+        await tx.insert(sessionThemes).values({
+            learningSessionId: sessionId,
+            theme,
+            readAt: new Date(),
+        });
+        await tx.insert(sessionBlockThemes).values(
+            blocks
+                .filter(({ kind }) => kind !== 'brain_game')
+                .map(({ id, content }) => ({
+                    blockId: id,
+                    theme,
+                    content: rewritten(content, rewrite),
+                })),
+        );
+    });
 }
 
 export async function demoStudent(
@@ -245,14 +314,25 @@ export async function demoStudent(
     };
 }
 
+export async function withInterests(
+    app: FastifyInstance,
+    studentId: number,
+    interests: Interest[],
+) {
+    await app.db
+        .insert(studentProfiles)
+        .values({ studentId, interests })
+        .onConflictDoUpdate({
+            target: studentProfiles.studentId,
+            set: { interests, updatedAt: new Date() },
+        });
+}
+
 export async function takeDemo(
     app: FastifyInstance,
     token: string,
     assignmentId: number,
 ) {
-    const detail: { blocks: { id: number; kind: string }[] } = (
-        await asStudent(app, token, 'GET', `/assignments/${assignmentId}`)
-    ).json();
     const attempt: { id: number } = (
         await asStudent(
             app,
@@ -261,6 +341,14 @@ export async function takeDemo(
             `/assignments/${assignmentId}/attempt`,
         )
     ).json();
+    const detail: {
+        blocks: { id: number; kind: string; content: { topics?: string[] } }[];
+    } = (
+        await asStudent(app, token, 'GET', `/assignments/${assignmentId}`)
+    ).json();
+    const topics =
+        detail.blocks.find(({ kind }) => kind === 'reflection')?.content
+            .topics ?? [];
     const blockId = (kind: string, index = 0) => {
         const block = detail.blocks.filter((entry) => entry.kind === kind)[
             index
@@ -303,7 +391,7 @@ export async function takeDemo(
     });
     await answer(blockId('reflection'), 1, {
         kind: 'reflection',
-        understood: ['Arti 1/4'],
+        understood: topics.slice(0, 1),
         confusing: [],
     });
 

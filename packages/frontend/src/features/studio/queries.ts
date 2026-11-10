@@ -5,6 +5,7 @@ import {
 } from '@tanstack/react-query';
 import { api, ApiError } from '../../lib/api';
 import type { Diagram } from '../learning-sessions/diagram';
+import type { Interest } from '../profile/interests';
 
 export type Option = { id: string; label: string; illustration?: string };
 export type Picture = {
@@ -79,9 +80,27 @@ export type StudioBlock = {
 
 export type Issue = {
     code:
-        'no_draft' | 'missing_rubric' | 'untested_competency' | 'invalid_block';
+        | 'no_draft'
+        | 'missing_rubric'
+        | 'untested_competency'
+        | 'invalid_block'
+        | 'theme_drafting'
+        | 'theme_failed'
+        | 'theme_mismatch'
+        | 'theme_unread';
     competencies?: string[];
     blocks?: number[];
+    themes?: Interest[];
+};
+export type StudioTheme = {
+    theme: Interest;
+    drafting: 'generating' | 'failed' | null;
+    draftError: string | null;
+    read: boolean;
+    readAt: string | null;
+    mismatch: boolean;
+    complete: boolean;
+    blocks: { id: number; content: Record<string, unknown> }[];
 };
 export type Warning = {
     code: 'no_page_source' | 'unreadable_pages' | 'ai_diagrams';
@@ -111,10 +130,16 @@ export type StudioSession = {
     issues: Issue[];
     warnings: Warning[];
     assignedClasses: ClassRef[];
+    themes: StudioTheme[];
+    interests: { key: Interest; students: number }[];
 };
 
 const headersOf = (cookie?: string | null) => (cookie ? { cookie } : undefined);
 const studioKey = (id: number) => ['studio', id];
+
+const working = (session: StudioSession | undefined) =>
+    session?.drafting === 'generating' ||
+    (session?.themes ?? []).some(({ drafting }) => drafting === 'generating');
 
 export const studioSessionQuery = (id: number, cookie?: string | null) =>
     queryOptions({
@@ -123,20 +148,86 @@ export const studioSessionQuery = (id: number, cookie?: string | null) =>
             api<StudioSession>(`/api/studio/sessions/${id}`, {
                 headers: headersOf(cookie),
             }),
-        refetchInterval: (query) =>
-            query.state.data?.drafting === 'generating' ? 5000 : false,
+        refetchInterval: (query) => (working(query.state.data) ? 5000 : false),
     });
 
-function useStudioSync(id: number) {
+function useStudioSync(id: number, stale = [409]) {
     const client = useQueryClient();
     const refresh = () => client.invalidateQueries({ queryKey: studioKey(id) });
     return {
         refresh,
         refreshIfStale: (error: Error) => {
-            if (error instanceof ApiError && error.status === 409)
+            if (error instanceof ApiError && stale.includes(error.status))
                 void refresh();
         },
     };
+}
+
+const useThemeSync = (id: number) => useStudioSync(id, [404, 409]);
+const themePath = (id: number, theme: Interest) =>
+    `/api/studio/sessions/${id}/themes/${theme}`;
+export type ThemeScreen = { blockId: number; content: Record<string, unknown> };
+
+export function useChooseThemes(id: number) {
+    const sync = useThemeSync(id);
+    return useMutation({
+        mutationFn: (themes: Interest[]) =>
+            api<{ themes: Interest[] }>(`/api/studio/sessions/${id}/themes`, {
+                method: 'POST',
+                body: JSON.stringify({ themes }),
+            }),
+        onSuccess: sync.refresh,
+        onError: sync.refreshIfStale,
+    });
+}
+
+export function useEditThemeBlock(id: number, theme: Interest) {
+    const sync = useThemeSync(id);
+    return useMutation({
+        mutationFn: (screen: ThemeScreen) =>
+            api<{ theme: Interest }>(themePath(id, theme), {
+                method: 'PUT',
+                body: JSON.stringify(screen),
+            }),
+        onSuccess: sync.refresh,
+        onError: sync.refreshIfStale,
+    });
+}
+
+export function useMarkThemeRead(id: number, theme: Interest) {
+    const sync = useThemeSync(id);
+    return useMutation({
+        mutationFn: (version: number) =>
+            api<{ theme: Interest }>(themePath(id, theme), {
+                method: 'PUT',
+                body: JSON.stringify({ read: true, version }),
+            }),
+        onSuccess: sync.refresh,
+        onError: sync.refreshIfStale,
+    });
+}
+
+export function useRedraftTheme(id: number, theme: Interest) {
+    const sync = useThemeSync(id);
+    return useMutation({
+        mutationFn: (note: string) =>
+            api<{ theme: Interest }>(`${themePath(id, theme)}/draft`, {
+                method: 'POST',
+                body: JSON.stringify(note ? { note } : {}),
+            }),
+        onSuccess: sync.refresh,
+        onError: sync.refreshIfStale,
+    });
+}
+
+export function useRemoveTheme(id: number) {
+    const sync = useThemeSync(id);
+    return useMutation({
+        mutationFn: (theme: Interest) =>
+            api<undefined>(themePath(id, theme), { method: 'DELETE' }),
+        onSuccess: sync.refresh,
+        onError: sync.refreshIfStale,
+    });
 }
 
 export function useCreateSession(moduleId: number) {

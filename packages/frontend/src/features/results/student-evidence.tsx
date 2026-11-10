@@ -9,6 +9,7 @@ import { textLink } from '../../components/ui/text-link';
 import { cn } from '../../lib/cn';
 import { subjects } from '../assignments/subject-art';
 import { Illustration } from '../learning-sessions/illustration';
+import { interests } from '../profile/interests';
 import { AnalyseAgain, waitsForTeacher } from './analysis-state';
 import {
     analysing,
@@ -443,7 +444,7 @@ export function StudentEvidence({
         );
     }
 
-    const { student, assignment, competencies, summary } = evidence.data;
+    const { student, assignment, competencies, summary, theme } = evidence.data;
 
     return (
         <div className="space-y-6">
@@ -454,6 +455,13 @@ export function StudentEvidence({
                     {assignment.title} · {subjects[assignment.subject].label} ·{' '}
                     {assignment.moduleTitle}
                 </p>
+                {theme && (
+                    <p>
+                        Tema cerita:{' '}
+                        {interests.find((interest) => interest.key === theme)
+                            ?.label ?? theme}
+                    </p>
+                )}
                 <AnalysisSummary classId={classId} evidence={evidence.data} />
                 {summary && (
                     <p

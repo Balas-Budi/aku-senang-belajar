@@ -149,6 +149,30 @@ const MAX_DRAFT_SHAPES = 150;
 const SHOWN = 8;
 const PER_BLOCK = 4;
 
+export function blockProblems(at: string, problems: string[]) {
+    return [
+        ...problems.slice(0, PER_BLOCK).map((problem) => `${at}: ${problem}`),
+        ...(problems.length > PER_BLOCK
+            ? [
+                  `${at}: and ${problems.length - PER_BLOCK} more problems in this block; check all of it against the rules`,
+              ]
+            : []),
+    ];
+}
+
+export function problemList(problems: string[]) {
+    if (problems.length === 0) return null;
+    if (problems.length === 1) return problems[0];
+
+    return [
+        'Fix every problem below:',
+        ...problems.slice(0, SHOWN).map((problem) => `- ${problem}`),
+        ...(problems.length > SHOWN
+            ? [`- and ${problems.length - SHOWN} more of the same kinds`]
+            : []),
+    ].join('\n');
+}
+
 export function checkDraft(codes: string[], pages: number[]) {
     return (draft: SessionDraft) => {
         const structure = structureProblem(
@@ -174,20 +198,14 @@ export function checkDraft(codes: string[], pages: number[]) {
                     shapes += place.diagram.shapes.length;
                 }
             } else {
-                const { issues } = parsed.error;
-
                 problems.push(
-                    ...issues
-                        .slice(0, PER_BLOCK)
-                        .map(
+                    ...blockProblems(
+                        at,
+                        parsed.error.issues.map(
                             (issue) =>
-                                `${at}: ${issue.path.slice(1).join('.')} ${issue.message}`,
+                                `${issue.path.slice(1).join('.')} ${issue.message}`,
                         ),
-                    ...(issues.length > PER_BLOCK
-                        ? [
-                              `${at}: and ${issues.length - PER_BLOCK} more problems in this block; check all of it against the rules`,
-                          ]
-                        : []),
+                    ),
                 );
             }
 
@@ -242,16 +260,7 @@ export function checkDraft(codes: string[], pages: number[]) {
             );
         }
 
-        if (problems.length === 0) return null;
-        if (problems.length === 1) return problems[0];
-
-        return [
-            'Fix every problem below:',
-            ...problems.slice(0, SHOWN).map((problem) => `- ${problem}`),
-            ...(problems.length > SHOWN
-                ? [`- and ${problems.length - SHOWN} more of the same kinds`]
-                : []),
-        ].join('\n');
+        return problemList(problems);
     };
 }
 

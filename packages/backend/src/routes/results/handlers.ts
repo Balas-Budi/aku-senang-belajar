@@ -203,6 +203,7 @@ export async function studentEvidence(
             ...header,
             progress: 'not_started' as const,
             attemptId: null,
+            theme: null,
             analysis: null,
             summary: null,
             competencies: [],
@@ -243,6 +244,7 @@ export async function studentEvidence(
         ...header,
         progress: attempt.status,
         attemptId: attempt.id,
+        theme: attempt.theme,
         analysis: run?.status ?? null,
         summary: summary
             ? {

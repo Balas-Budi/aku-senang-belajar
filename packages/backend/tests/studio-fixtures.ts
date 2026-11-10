@@ -1,4 +1,7 @@
 import type { FastifyInstance } from 'fastify';
+import type { Interest } from '../src/db/schema.ts';
+import { interestNames } from '../src/studio/theme-draft.ts';
+import { completion, type Reply } from './ai-stub.ts';
 import { createUser, loginAs, TEST_ORIGIN } from './helpers.ts';
 import { pdfOf } from './pdf.ts';
 
@@ -277,6 +280,90 @@ export const brokenDraft = drawn(
     { ...quarters, label: 'Ini roti. Ada 4 bagian. Satu diwarnai. Itu 1/4.' },
 );
 
+export const fractionDraft = {
+    ...draft,
+    blocks: draft.blocks.map((block, index) => {
+        if (index === 1) {
+            return {
+                ...block,
+                content: {
+                    ...block.content,
+                    fraction: {
+                        numerator: 1,
+                        denominator: 4,
+                        numeratorNote: 'Bagian yang dimakan Kancil.',
+                        denominatorNote: 'Semua bagian roti sama besar.',
+                    },
+                },
+            };
+        }
+
+        if (index === 2) {
+            return {
+                ...block,
+                content: {
+                    ...block.content,
+                    reason: {
+                        prompt: 'Mengapa kamu memilih roti itu?',
+                        starters: ['Aku memilih roti itu karena'],
+                    },
+                },
+            };
+        }
+
+        return block;
+    }),
+};
+
+function rewritten(value: unknown, theme: string, key?: string): unknown {
+    if (key === 'id' || key === 'answer') return value;
+    if (typeof value === 'string') return `Tema ${theme}: ${value}`;
+    if (Array.isArray(value))
+        return value.map((item) => rewritten(item, theme));
+    if (value && typeof value === 'object') {
+        return Object.fromEntries(
+            Object.entries(value)
+                .filter(([name]) => name !== 'diagram')
+                .map(([name, item]) => [name, rewritten(item, theme, name)]),
+        );
+    }
+    return value;
+}
+
+export function themedDraft(
+    theme: string,
+    from: { blocks: { content: object }[] } = draft,
+) {
+    return {
+        blocks: from.blocks.map((block, index) => ({
+            screen: index + 2,
+            content: rewritten(block.content, theme),
+        })),
+    };
+}
+
+export function themeReply(
+    byTheme: Partial<Record<Interest, object | object[]>>,
+): Reply {
+    return (request) => {
+        const [first, ...repairs] = request.body.messages.filter(
+            ({ role }) => role === 'user',
+        );
+        const theme = (Object.keys(byTheme) as Interest[]).find((key) =>
+            first?.content.includes(`Theme: ${interestNames[key]}\n`),
+        );
+        const chosen = theme && byTheme[theme];
+
+        if (!chosen) return { status: 500 };
+
+        const reply = Array.isArray(chosen)
+            ? chosen[Math.min(repairs.length, chosen.length - 1)]
+            : chosen;
+
+        return { body: completion(JSON.stringify(reply)) };
+    };
+}
+
 export type Session = {
     id: number;
     title: string;
@@ -291,7 +378,33 @@ export type Session = {
         competencies: string[];
         sourcePages: number[];
     }[];
+    themes: {
+        theme: string;
+        drafting: string | null;
+        draftError: string | null;
+        read: boolean;
+        blocks: { id: number; content: Record<string, unknown> }[];
+    }[];
 };
+
+export async function themesSettled(
+    app: FastifyInstance,
+    token: string,
+    id: number,
+): Promise<Session> {
+    for (let tries = 0; tries < 200; tries++) {
+        const session: Session = (
+            await get(app, token, `/api/studio/sessions/${id}`)
+        ).json();
+
+        if (session.themes.every(({ drafting }) => drafting !== 'generating'))
+            return session;
+
+        await new Promise((done) => setTimeout(done, 25));
+    }
+
+    throw new Error(`Session ${id} still drafts a theme`);
+}
 
 export async function settled(
     app: FastifyInstance,

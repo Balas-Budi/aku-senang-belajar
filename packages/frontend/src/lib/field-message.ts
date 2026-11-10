@@ -24,6 +24,7 @@ export function fieldLabel(field: string) {
         notEnough: 'Belum cukup bukti',
         note: 'Yang perlu diubah',
         classIds: 'Kelas',
+        themes: 'Tema cerita',
     };
     const parts = field.split('/');
     const label = labels[parts.at(-1) ?? ''] ?? 'Isian';
@@ -33,7 +34,18 @@ export function fieldLabel(field: string) {
         return `C${Number(parts[1]) + 1}, ${label.toLowerCase()}`;
     return label;
 }
-export function fieldMessage(message: string) {
+export function fieldMessage(message: string, field = '') {
+    if (/^Theme rule:/u.test(message))
+        return 'Teks ini mengubah jawaban, angka, atau isi misi dasar.';
+    if (/^Already chosen$/u.test(message)) return 'Tema ini sudah dipilih.';
+    if (/^At most three themes$/u.test(message))
+        return 'Paling banyak tiga tema per misi.';
+    if (/^Pictures come from the base mission$/u.test(message))
+        return 'Gambar mengikuti misi dasar.';
+    if (field === 'themes' && /expected array to have >=1/u.test(message))
+        return 'Pilih setidaknya satu minat.';
+    if (field === 'themes' && /expected array to have <=3/u.test(message))
+        return 'Paling banyak tiga tema per misi.';
     if (/at most two sentences/u.test(message))
         return 'Satu layar siswa paling banyak dua kalimat. Pendekkan teksnya.';
     if (/answer must be one of the options/u.test(message))

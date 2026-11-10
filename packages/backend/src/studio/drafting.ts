@@ -12,6 +12,7 @@ import {
     modules,
     sessionBlocks,
     sessionCompetencies,
+    sessionThemes,
 } from '../db/schema.ts';
 import { diagramsOf } from '../learning/blocks.ts';
 import { competencyRubric } from '../learning/rubric.ts';
@@ -26,8 +27,8 @@ import {
     type SessionDraft,
 } from './session-draft.ts';
 
-const DRAFT_TIMEOUT_MS = 180_000;
-const DRAFT_TURNS = 3;
+export const DRAFT_TIMEOUT_MS = 180_000;
+export const DRAFT_TURNS = 3;
 const contentOf = z.record(z.string(), z.unknown());
 
 export function sessionCompetencyIds(db: Queryable, sessionId: number) {
@@ -156,6 +157,9 @@ async function storeDraft(
     competencyIds: Map<string, number>,
 ) {
     await db.transaction(async (tx) => {
+        await tx
+            .delete(sessionThemes)
+            .where(eq(sessionThemes.learningSessionId, sessionId));
         await tx
             .delete(sessionBlocks)
             .where(eq(sessionBlocks.learningSessionId, sessionId));
@@ -295,4 +299,8 @@ export async function failInterruptedDrafts(db: Queryable) {
         .update(learningSessions)
         .set({ drafting: 'failed', draftError: 'interrupted' })
         .where(eq(learningSessions.drafting, 'generating'));
+    await db
+        .update(sessionThemes)
+        .set({ drafting: 'failed', draftError: 'interrupted' })
+        .where(eq(sessionThemes.drafting, 'generating'));
 }

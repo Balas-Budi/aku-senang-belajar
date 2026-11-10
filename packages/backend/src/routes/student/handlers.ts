@@ -1,4 +1,4 @@
-import { and, eq } from 'drizzle-orm';
+import { and, eq, isNotNull, isNull } from 'drizzle-orm';
 import type { FastifyReply, FastifyRequest } from 'fastify';
 import { queueAnalysis } from '../../analysis/runner.ts';
 import { currentUser } from '../../auth/guards.ts';
@@ -9,6 +9,7 @@ import {
     classMembers,
     helpEvents,
     responses,
+    sessionThemes,
     studentProfiles,
     studentSettings,
 } from '../../db/schema.ts';
@@ -121,6 +122,7 @@ async function attemptOf(request: FastifyRequest, assignmentId: number) {
             id: attempts.id,
             status: attempts.status,
             currentBlockId: attempts.currentBlockId,
+            theme: attempts.theme,
         })
         .from(attempts)
         .where(
@@ -146,8 +148,8 @@ export async function assignmentDetail(
         throw stageLocked();
     }
 
-    const blocks = await blocksOf(db, sessionId);
     const attempt = await attemptOf(request, assignment.id);
+    const blocks = await blocksOf(db, sessionId, attempt?.theme ?? null);
     const history = attempt
         ? await historyOf(db, attempt.id)
         : { answers: [], help: [] };
@@ -183,9 +185,9 @@ export async function startAttempt(
         throw stageLocked();
     }
 
-    const blocks = await blocksOf(db, assignment.sessionId);
+    const base = await blocksOf(db, assignment.sessionId, null);
 
-    if (blocks.length === 0) {
+    if (base.length === 0) {
         throw notFound('This session has no content yet');
     }
 
@@ -195,16 +197,47 @@ export async function startAttempt(
         .values({
             assignmentId: assignment.id,
             studentId,
-            currentBlockId: blocks[0].id,
+            currentBlockId: base[0].id,
             readAloud,
+            theme: await themeFor(db, studentId, assignment.sessionId),
         })
         .onConflictDoNothing()
         .returning({ id: attempts.id });
     const attempt = await attemptOf(request, assignment.id);
+    const blocks = attempt.theme
+        ? await blocksOf(db, assignment.sessionId, attempt.theme)
+        : base;
 
     return reply
         .code(created ? 201 : 200)
         .send(stateOf(attempt, blocks, await historyOf(db, attempt.id)));
+}
+
+async function themeFor(db: Queryable, studentId: number, sessionId: number) {
+    const [profile] = await db
+        .select({ interests: studentProfiles.interests })
+        .from(studentProfiles)
+        .where(eq(studentProfiles.studentId, studentId));
+
+    if (!profile || profile.interests.length === 0) return null;
+
+    const ready = await db
+        .select({ theme: sessionThemes.theme })
+        .from(sessionThemes)
+        .where(
+            and(
+                eq(sessionThemes.learningSessionId, sessionId),
+                isNull(sessionThemes.drafting),
+                isNotNull(sessionThemes.readAt),
+            ),
+        );
+    const themed = new Set(ready.map(({ theme }) => theme));
+
+    return (
+        INTERESTS.find(
+            (key) => profile.interests.includes(key) && themed.has(key),
+        ) ?? null
+    );
 }
 
 export async function moveCheckpoint(
@@ -223,6 +256,7 @@ export async function moveCheckpoint(
             tx,
             attempt.sessionId,
             request.body.blockId,
+            attempt.theme,
         );
 
         await tx
@@ -246,7 +280,12 @@ export async function answerBlock(
             studentId,
             request.params.attemptId,
         );
-        const block = await blockOf(tx, attempt.sessionId, blockId);
+        const block = await blockOf(
+            tx,
+            attempt.sessionId,
+            blockId,
+            attempt.theme,
+        );
         const before = forBlock(await historyOf(tx, attempt.id), block.id);
         const sent = before.answers.find(
             (saved) => saved.tryNumber === tryNumber,
@@ -320,7 +359,12 @@ export async function askForHelp(
             studentId,
             request.params.attemptId,
         );
-        const block = await blockOf(tx, attempt.sessionId, blockId);
+        const block = await blockOf(
+            tx,
+            attempt.sessionId,
+            blockId,
+            attempt.theme,
+        );
         const before = forBlock(await historyOf(tx, attempt.id), block.id);
 
         if (kind === 'listen') {
@@ -370,7 +414,7 @@ export async function submitAttempt(
         }
 
         return doneOf(
-            await blocksOf(tx, attempt.sessionId),
+            await blocksOf(tx, attempt.sessionId, attempt.theme),
             await historyOf(tx, attempt.id),
         );
     });

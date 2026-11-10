@@ -2,6 +2,7 @@ import { z } from 'zod';
 import { INVITE_CODE_LENGTH, normalizeCode } from '../../auth/codes.ts';
 import {
     attemptStatus,
+    INTERESTS,
     responseOutcome,
     subject,
     textSize,
@@ -246,16 +247,7 @@ export const reviewTryBody = z.object({
 export type ReviewQuery = z.infer<typeof reviewQuery>;
 export type ReviewTryBody = z.infer<typeof reviewTryBody>;
 
-export const INTERESTS = [
-    'animals',
-    'football',
-    'superheroes',
-    'space',
-    'music',
-    'drawing',
-    'cooking',
-    'nature',
-] as const;
+export { INTERESTS, type Interest } from '../../db/schema.ts';
 
 export const profileBody = z.object({
     interests: z

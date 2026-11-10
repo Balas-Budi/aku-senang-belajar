@@ -23,7 +23,8 @@ export function RequestError({ error }: { error: unknown }) {
                         key={`${item.field}-${item.message}`}
                         className="mt-2 text-sm"
                     >
-                        {fieldLabel(item.field)}: {fieldMessage(item.message)}
+                        {fieldLabel(item.field)}:{' '}
+                        {fieldMessage(item.message, item.field)}
                     </p>
                 ))}
         </div>

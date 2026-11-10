@@ -8,7 +8,7 @@ export function fieldErrorText(error: unknown, name: string) {
         error instanceof ApiError
             ? (error.body.details ?? [])
                   .filter((item) => item.field === name)
-                  .map((item) => fieldMessage(item.message))
+                  .map((item) => fieldMessage(item.message, item.field))
             : [];
     return messages.length > 0 ? messages.join(' ') : null;
 }

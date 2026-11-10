@@ -6,9 +6,16 @@ import {
     diagram,
     diagramName,
     diagramsOf,
+    mergeDiagrams,
+    numbersOf,
+    optionIds,
     pathProblem,
     sessionBlock,
+    type SessionBlock,
     textWidth,
+    themeProblems,
+    withoutDiagrams,
+    withTheme,
 } from '../src/learning/blocks.ts';
 import {
     checkDraft,
@@ -603,5 +610,218 @@ test('a screen of more than two sentences is refused', () => {
             },
         }),
         ['content.prompt'],
+    );
+});
+
+const parsed = (block: unknown) => sessionBlock.parse(block);
+const drawnCheck = parsed(drawnDraft.blocks[2]);
+const kancil = parsed(draft.blocks[1]);
+const rewritten = (block: SessionBlock, content: object) =>
+    parsed({ kind: block.kind, content: { ...block.content, ...content } });
+
+test('optionIds lists the option ids in order, empty without options', () => {
+    assert.equal(optionIds(parsed(check)), 'a,b');
+    assert.equal(optionIds(kancil), '');
+});
+
+test('withoutDiagrams removes every diagram and leaves the original whole', () => {
+    const content = withoutDiagrams(drawnCheck.content) as Record<
+        string,
+        unknown
+    >;
+
+    assert.deepEqual(
+        diagramsOf(parsed({ kind: 'check', content })).map(({ path }) =>
+            path.join('.'),
+        ),
+        [],
+    );
+    assert.equal(content.prompt, 'Roti mana yang dibagi empat sama besar?');
+    assert.equal(diagramsOf(drawnCheck).length, 3);
+});
+
+test('withTheme merges the base diagrams back, a hint diagram included', () => {
+    const themed = {
+        ...withoutDiagrams(drawnCheck.content),
+        prompt: 'Bola mana yang dibagi empat sama besar?',
+    };
+    const block = withTheme(drawnCheck, themed);
+
+    assert.equal(block.kind, 'check');
+    assert.equal(
+        block.kind === 'check' && block.content.prompt,
+        'Bola mana yang dibagi empat sama besar?',
+    );
+    assert.deepEqual(diagramsOf(block), diagramsOf(drawnCheck));
+    assert.equal(
+        block.kind === 'check' && block.content.hints[1].diagram?.label,
+        quarters.label,
+    );
+});
+
+test('mergeDiagrams never throws on malformed content', () => {
+    for (const content of [
+        null,
+        'text',
+        7,
+        [],
+        { hints: 'none' },
+        { hints: [null, 5, 'x'] },
+        { example: 3 },
+    ])
+        assert.doesNotThrow(() => mergeDiagrams(drawnCheck, content));
+
+    assert.equal(mergeDiagrams(drawnCheck, null), null);
+    assert.deepEqual(mergeDiagrams(drawnCheck, { hints: [null, 5] }), {
+        hints: [null, 5],
+        diagram: allShapes,
+    });
+});
+
+test('numbersOf takes digits and number words, never ids or the answer', () => {
+    assert.deepEqual(numbersOf(kancil), ['satu', 'tiga']);
+    assert.deepEqual(
+        numbersOf(
+            rewritten(kancil, {
+                text: 'Dua Belas anak makan sepertiga kue. Lalu 2,5 dan 3/4 sisanya.',
+            }),
+        ),
+        ['2,5', '3/4', 'belas', 'dua', 'sepertiga'],
+    );
+    assert.deepEqual(numbersOf(parsed(draft.blocks[5])), [
+        '1/2',
+        '1/4',
+        'empat',
+    ]);
+});
+
+test('numbersOf skips phrases that only look like numbers and takes prefixed number words', () => {
+    assert.deepEqual(
+        numbersOf(
+            rewritten(kancil, {
+                text: 'Salah satu pemain, satu-satunya kiper, dan dua-duanya maju satu per satu.',
+            }),
+        ),
+        [],
+    );
+    assert.deepEqual(
+        numbersOf(
+            rewritten(kancil, {
+                text: 'Seratus penonton dan ribuan suporter makan seperlima atau seperdelapan kue, dua pertiga sisanya, puluhan bola.',
+            }),
+        ),
+        [
+            'dua',
+            'pertiga',
+            'puluhan',
+            'ribuan',
+            'seperdelapan',
+            'seperlima',
+            'seratus',
+        ],
+    );
+});
+
+test('themeProblems says how often to write a number the base already has', () => {
+    assert.deepEqual(
+        themeProblems(
+            kancil,
+            rewritten(kancil, {
+                text: 'Kancil punya satu roti. Satu temannya datang, lalu tiga temannya.',
+            }),
+        ),
+        [
+            'Theme rule: Write the number satu exactly 1 time on this screen, as the base does (you wrote it 2 times)',
+        ],
+    );
+});
+
+test('themeProblems accepts a theme that keeps every number and answer', () => {
+    assert.deepEqual(
+        themeProblems(
+            kancil,
+            rewritten(kancil, {
+                text: 'Kucing punya satu bola. Ia ingin bermain dengan tiga temannya.',
+            }),
+        ),
+        [],
+    );
+});
+
+test('themeProblems refuses "tiga temannya" rewritten as "dua temannya"', () => {
+    assert.deepEqual(
+        themeProblems(
+            kancil,
+            rewritten(kancil, {
+                text: 'Kancil punya satu roti. Ia ingin berbagi dengan dua temannya.',
+            }),
+        ),
+        [
+            'Theme rule: Keep the number tiga exactly as the base writes it',
+            'Theme rule: Remove the number dua; the base screen does not have it',
+        ],
+    );
+});
+
+test('themeProblems names an extra digit', () => {
+    assert.deepEqual(
+        themeProblems(
+            kancil,
+            rewritten(kancil, {
+                text: 'Kancil punya satu roti. Pemain nomor 11 berbagi dengan tiga temannya.',
+            }),
+        ),
+        ['Theme rule: Remove the number 11; the base screen does not have it'],
+    );
+});
+
+test('themeProblems refuses changed ids, answer, fraction, reason, and lists', () => {
+    const base = parsed(check);
+    const fraction = {
+        numerator: 1,
+        denominator: 4,
+        numeratorNote: 'bagian yang diambil',
+        denominatorNote: 'semua bagian',
+    };
+    const story = rewritten(kancil, { fraction });
+    const reflection = parsed(draft.blocks[6]);
+
+    assert.deepEqual(
+        themeProblems(
+            base,
+            rewritten(base, {
+                options: [
+                    { id: 'b', label: 'No' },
+                    { id: 'a', label: 'Yes' },
+                ],
+                answer: 'a',
+                reason: { prompt: 'Why?', starters: ['Because'] },
+            }),
+        ),
+        [
+            'Theme rule: Keep the option ids a, b in this order',
+            'Theme rule: Keep the answer b',
+            'Theme rule: Remove the reason question; the base screen does not have one',
+        ],
+    );
+    assert.deepEqual(
+        themeProblems(
+            story,
+            rewritten(story, { fraction: { ...fraction, denominator: 2 } }),
+        ),
+        ['Theme rule: Keep the fraction 1/4'],
+    );
+    assert.deepEqual(
+        themeProblems(
+            reflection,
+            rewritten(reflection, {
+                topics: ['Pecahan', 'Perempat', 'Bola'],
+                takeaways: [
+                    'Perempat berarti satu dari empat bagian sama besar.',
+                    'Bola itu bulat.',
+                ],
+            }),
+        ),
+        ['Theme rule: Keep 2 topics', 'Theme rule: Keep 1 takeaway'],
     );
 });

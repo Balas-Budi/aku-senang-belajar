@@ -11,9 +11,11 @@ import type { StudioBlock } from './queries';
 export function BlockView({
     block,
     onRemove,
+    layout = 'columns',
 }: {
     block: StudioBlock;
     onRemove?: (field: DiagramField) => void;
+    layout?: 'columns' | 'stacked';
 }) {
     if (block.kind === 'brain_game')
         return (
@@ -28,9 +30,19 @@ export function BlockView({
             {textFields(block).map((field) => (
                 <div
                     key={field.path.join('/')}
-                    className="grid gap-1 sm:grid-cols-[10rem_1fr] sm:gap-4"
+                    className={
+                        layout === 'columns'
+                            ? 'grid gap-1 sm:grid-cols-[10rem_1fr] sm:gap-4'
+                            : 'grid gap-1'
+                    }
                 >
-                    <dt className="text-muted-foreground text-sm font-medium sm:pt-0.5">
+                    <dt
+                        className={
+                            layout === 'columns'
+                                ? 'text-muted-foreground text-sm font-medium sm:pt-0.5'
+                                : 'text-muted-foreground text-sm font-medium'
+                        }
+                    >
                         {field.label}
                     </dt>
                     <dd className="text-pretty">

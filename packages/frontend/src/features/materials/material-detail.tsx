@@ -11,7 +11,7 @@ import { Button, buttonVariants } from '../../components/ui/button';
 import { Card } from '../../components/ui/card';
 import { textLink } from '../../components/ui/text-link';
 import { useCreateSession } from '../studio/queries';
-import { choiceBox, choiceCard } from '../studio/studio';
+import { choiceBox, choiceCard } from '../studio/studio-labels';
 import { StudioError } from '../studio/studio-error';
 
 type Module = MaterialDetail['modules'][number];

@@ -13,7 +13,8 @@ import {
     sessionBlocks,
     sessionCompetencies,
 } from '../db/schema.ts';
-import { diagramName, sessionBlock } from '../learning/blocks.ts';
+import { diagramName } from '../learning/blocks.ts';
+import { themedBlock, themesFor } from '../learning/themed-blocks.ts';
 import { competencyRubric, type CompetencyRubric } from '../learning/rubric.ts';
 import { answer as storedAnswer } from '../routes/student/schema.ts';
 
@@ -140,6 +141,7 @@ export async function evidenceOf(
         .select({
             assignmentId: assignments.id,
             sessionId: learningSessions.id,
+            theme: attempts.theme,
         })
         .from(attempts)
         .innerJoin(assignments, eq(assignments.id, attempts.assignmentId))
@@ -208,15 +210,16 @@ export async function evidenceOf(
         .select({ blockId: helpEvents.blockId, kind: helpEvents.kind })
         .from(helpEvents)
         .where(eq(helpEvents.attemptId, attemptId));
+    const themes = await themesFor(
+        db,
+        blocks.map(({ id }) => ({ blockId: id, theme: attempt.theme })),
+    );
 
     const questions = new Map<number, EvidenceQuestion>();
     const reflections = new Map<number, SelfReport>();
 
     for (const row of blocks) {
-        const block = sessionBlock.parse({
-            kind: row.kind,
-            content: row.content,
-        });
+        const block = themedBlock(row, themes);
         const saved = answers.filter(({ blockId }) => blockId === row.id);
 
         if (block.kind === 'reflection') {

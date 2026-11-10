@@ -8,7 +8,7 @@ import {
     type EditableBlock,
 } from './block-fields';
 import { DiagramFigure } from './diagram-figure';
-import { useEditBlock } from './queries';
+import type { ThemeScreen } from './queries';
 import { StudioError } from './studio-error';
 import {
     FormField,
@@ -19,22 +19,33 @@ import { Button } from '../../components/ui/button';
 
 const answerName = 'content/answer';
 
+export type BlockSave = {
+    mutate(input: ThemeScreen, options: { onSuccess: () => void }): void;
+    isPending: boolean;
+    error: Error | null;
+};
+
 export function BlockEditor({
-    sessionId,
     block,
+    save,
+    idPrefix,
+    answerFixed = false,
     onClose,
 }: {
-    sessionId: number;
     block: EditableBlock;
+    save: BlockSave;
+    idPrefix: string;
+    answerFixed?: boolean;
     onClose: () => void;
 }) {
-    const edit = useEditBlock(sessionId);
     const fields = textFields(block);
     const diagrams = diagramFields(block);
-    const idOf = (name: string) => `block-${block.id}-${name}`;
-    const answer = 'answer' in block.content ? block.content.answer : null;
+    const idOf = (name: string) => `${idPrefix}-${name}`;
+    const answer =
+        !answerFixed && 'answer' in block.content ? block.content.answer : null;
     const options = 'options' in block.content ? block.content.options : [];
-    const answerError = fieldErrorText(edit.error, answerName);
+    const answerError = fieldErrorText(save.error, answerName);
+    const contentError = fieldErrorText(save.error, 'content');
     return (
         <form
             className="space-y-4"
@@ -46,7 +57,7 @@ export function BlockEditor({
                 );
                 if (answer !== null)
                     content.answer = String(form.get(answerName) ?? answer);
-                edit.mutate(
+                save.mutate(
                     { blockId: block.id, content },
                     { onSuccess: onClose },
                 );
@@ -60,7 +71,7 @@ export function BlockEditor({
                     label: field.label,
                     defaultValue: textAt(block.content, field),
                     required: true,
-                    error: edit.error,
+                    error: save.error,
                 };
                 return (
                     <div key={name}>
@@ -117,13 +128,19 @@ export function BlockEditor({
                     )}
                 </fieldset>
             )}
-            <StudioError
-                error={edit.error}
-                inline={[...fields.map(fieldName), answerName]}
-            />
+            {contentError ? (
+                <p role="alert" className="text-destructive">
+                    {contentError}
+                </p>
+            ) : (
+                <StudioError
+                    error={save.error}
+                    inline={[...fields.map(fieldName), answerName, 'content']}
+                />
+            )}
             <div className="flex flex-wrap gap-3">
-                <Button type="submit" disabled={edit.isPending}>
-                    {edit.isPending ? 'Menyimpan…' : 'Simpan teks'}
+                <Button type="submit" disabled={save.isPending}>
+                    {save.isPending ? 'Menyimpan…' : 'Simpan teks'}
                 </Button>
                 <Button variant="outline" onClick={onClose}>
                     Batal

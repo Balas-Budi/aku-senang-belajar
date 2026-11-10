@@ -14,7 +14,7 @@ import {
     sessionBlocks,
     type subject,
 } from '../../db/schema.ts';
-import { sessionBlock } from '../../learning/blocks.ts';
+import { themedBlock, themesFor } from '../../learning/themed-blocks.ts';
 import { notFound } from '../../lib/errors.ts';
 import { fieldError } from '../../lib/field-error.ts';
 import { currentRuns, decisionsOn, shownOf } from '../results/queries.ts';
@@ -32,6 +32,7 @@ function missionsOf(db: Queryable, studentId: number, only?: Subject) {
             attemptId: attempts.id,
             sessionId: learningSessions.id,
             title: learningSessions.title,
+            theme: attempts.theme,
         })
         .from(attempts)
         .innerJoin(assignments, eq(assignments.id, attempts.assignmentId))
@@ -57,6 +58,11 @@ function missionsOf(db: Queryable, studentId: number, only?: Subject) {
         )
         .orderBy(desc(attempts.submittedAt), desc(attempts.id));
 }
+
+const themeOf = (
+    missions: { sessionId: number; theme: string | null }[],
+    sessionId: number,
+) => missions.find((mission) => mission.sessionId === sessionId)?.theme ?? null;
 
 async function weakCompetencies(db: Queryable, attemptIds: number[]) {
     const finished = [...(await currentRuns(db, attemptIds)).values()]
@@ -204,13 +210,17 @@ export async function reviewOf(
                 one.position - other.position,
         )
         .slice(0, REVIEW_SIZE);
+    const themes = await themesFor(
+        db,
+        chosen.map((row) => ({
+            blockId: row.id,
+            theme: themeOf(missions, row.sessionId),
+        })),
+    );
 
     return {
         questions: chosen.flatMap((row) => {
-            const block = sessionBlock.parse({
-                kind: row.kind,
-                content: row.content,
-            });
+            const block = themedBlock(row, themes);
             const round = roundOf(
                 tries.filter(({ blockId }) => blockId === row.id),
             );
@@ -249,6 +259,7 @@ export async function answerReview(
             : await db
                   .select({
                       id: sessionBlocks.id,
+                      sessionId: sessionBlocks.learningSessionId,
                       position: sessionBlocks.position,
                       kind: sessionBlocks.kind,
                       content: sessionBlocks.content,
@@ -272,7 +283,12 @@ export async function answerReview(
     const block = {
         id: row.id,
         position: row.position,
-        ...sessionBlock.parse({ kind: row.kind, content: row.content }),
+        ...themedBlock(
+            row,
+            await themesFor(db, [
+                { blockId: row.id, theme: themeOf(missions, row.sessionId) },
+            ]),
+        ),
     };
 
     if (block.kind !== 'check') {

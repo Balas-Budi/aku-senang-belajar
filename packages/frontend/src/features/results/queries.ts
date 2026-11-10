@@ -112,6 +112,7 @@ export type StudentEvidence = {
     assignment: Mission;
     progress: Progress;
     attemptId: number | null;
+    theme: string | null;
     analysis: RunStatus | null;
     summary: { id: number; text: string; excluded: boolean } | null;
     competencies: CompetencyEvidence[];

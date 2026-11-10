@@ -8,6 +8,7 @@ import {
     studioSessionQuery,
     useApproveSession,
     useAssignSession,
+    useEditBlock,
     useReviseSession,
     type Issue,
     type StudioBlock,
@@ -16,6 +17,16 @@ import {
 } from './queries';
 import { RemoveDiagramDialog } from './remove-diagram-dialog';
 import { StudioError } from './studio-error';
+import {
+    choiceBox,
+    choiceCard,
+    failures,
+    joined,
+    kindLabels,
+    stepOfKind,
+    themeLabels,
+} from './studio-labels';
+import { ThemesCard } from './themes';
 import { TextAreaField, fieldErrorText } from '../../components/form-field';
 import { RequestError } from '../../components/request-error';
 import { Alert } from '../../components/ui/alert';
@@ -23,35 +34,7 @@ import { Button } from '../../components/ui/button';
 import { Card } from '../../components/ui/card';
 import { textLink } from '../../components/ui/text-link';
 import { classesQuery } from '../classes/queries';
-import type { Step } from '../learning-sessions/queries';
 import { stepLabels, stepOrder } from '../learning-sessions/steps';
-
-const kindLabels: Record<StudioBlock['kind'], string> = {
-    brain_game: 'Permainan memori',
-    hook: 'Pertanyaan pembuka',
-    story: 'Cerita',
-    check: 'Soal cek',
-    challenge: 'Tantangan',
-    reflection: 'Refleksi',
-};
-
-const stepOfKind: Record<StudioBlock['kind'], Step> = {
-    brain_game: 'opening',
-    hook: 'opening',
-    story: 'story',
-    check: 'story',
-    challenge: 'challenge',
-    reflection: 'reflection',
-};
-
-const failures: Record<string, string> = {
-    invalid_output: 'Jawaban AI belum memenuhi aturan sesi.',
-    timeout: 'AI terlalu lama menjawab.',
-    network: 'AI belum bisa dihubungi.',
-    http: 'AI belum bisa dihubungi.',
-    interrupted: 'Server dimulai ulang saat AI sedang bekerja.',
-    not_configured: 'AI belum diatur di server ini.',
-};
 
 function stateOf(session: StudioSession) {
     if (session.prepared) return 'Disiapkan tim Aku Senang Belajar';
@@ -70,18 +53,32 @@ function announcementOf(session: StudioSession) {
     return `Draf versi ${session.version} siap ditinjau.`;
 }
 
-function joined(items: (string | number)[]) {
-    if (items.length < 2) return items.join('');
-    return `${items.slice(0, -1).join(', ')} dan ${items.at(-1)}`;
-}
-
-function issueText({ code, competencies = [], blocks = [] }: Issue) {
-    if (code === 'no_draft') return 'Sesi ini belum punya draf.';
-    if (code === 'missing_rubric')
-        return `Kompetensi ${joined(competencies)} belum punya rubrik.`;
-    if (code === 'untested_competency')
-        return `Kompetensi ${joined(competencies)} belum diuji oleh soal cek atau tantangan.`;
-    return `Layar ${joined(blocks)} belum memenuhi aturan layar siswa.`;
+function issueText({
+    code,
+    competencies = [],
+    blocks = [],
+    themes = [],
+}: Issue) {
+    switch (code) {
+        case 'no_draft':
+            return 'Sesi ini belum punya draf.';
+        case 'missing_rubric':
+            return `Kompetensi ${joined(competencies)} belum punya rubrik.`;
+        case 'untested_competency':
+            return `Kompetensi ${joined(competencies)} belum diuji oleh soal cek atau tantangan.`;
+        case 'invalid_block':
+            return `Layar ${joined(blocks)} belum memenuhi aturan layar siswa.`;
+        case 'theme_drafting':
+            return `Tema ${themeLabels(themes)} masih ditulis AI.`;
+        case 'theme_failed':
+            return `Tema ${themeLabels(themes)} belum berhasil ditulis. Tulis ulang atau hapus temanya.`;
+        case 'theme_mismatch':
+            return `Tema ${themeLabels(themes)} tidak lagi cocok dengan misi dasar. Tulis ulang temanya.`;
+        case 'theme_unread':
+            return `Tema ${themeLabels(themes)} belum dibaca.`;
+        default:
+            return code satisfies never;
+    }
 }
 
 function warningText({ code, blocks = [], pages = [] }: Warning) {
@@ -168,6 +165,7 @@ function ScreenItem({
     block: StudioBlock;
     editable: boolean;
 }) {
+    const edit = useEditBlock(sessionId);
     const [editing, setEditing] = useState(false);
     const [removing, setRemoving] = useState<DiagramField | null>(null);
     const [confirming, setConfirming] = useState(false);
@@ -221,6 +219,7 @@ function ScreenItem({
                         aria-expanded={editing}
                         onClick={() => {
                             setNotice(null);
+                            edit.reset();
                             setEditing(!editing);
                         }}
                     >
@@ -230,8 +229,9 @@ function ScreenItem({
             </div>
             {editable && editing && block.kind !== 'brain_game' ? (
                 <BlockEditor
-                    sessionId={sessionId}
                     block={block}
+                    save={edit}
+                    idPrefix={`block-${block.id}`}
                     onClose={close}
                 />
             ) : (
@@ -251,9 +251,15 @@ function ScreenItem({
     );
 }
 
-function RevisionForm({ session }: { session: StudioSession }) {
+function RevisionForm({
+    session,
+    themeDrafting,
+}: {
+    session: StudioSession;
+    themeDrafting: boolean;
+}) {
     const revise = useReviseSession(session.id);
-    const generating = session.drafting === 'generating';
+    const generating = session.drafting === 'generating' || themeDrafting;
     return (
         <Card>
             <section aria-labelledby="revision-title" className="space-y-4">
@@ -268,7 +274,19 @@ function RevisionForm({ session }: { session: StudioSession }) {
                         Gambar yang Anda hapus tidak digambar lagi kecuali Anda
                         memintanya.
                     </p>
+                    {session.themes.length > 0 && (
+                        <p className="text-muted-foreground mt-1">
+                            Revisi menghapus semua tema cerita; pilih lagi
+                            setelah revisi selesai.
+                        </p>
+                    )}
                 </div>
+                {themeDrafting && (
+                    <Alert>
+                        Tunggu sampai AI selesai menulis tema sebelum meminta
+                        revisi.
+                    </Alert>
+                )}
                 <form
                     className="space-y-4"
                     onSubmit={(event) => {
@@ -300,11 +318,6 @@ function RevisionForm({ session }: { session: StudioSession }) {
         </Card>
     );
 }
-
-export const choiceCard =
-    'border-border has-[:checked]:border-primary has-[:checked]:bg-secondary flex min-h-11 cursor-pointer items-start gap-3 rounded-lg border p-3';
-export const choiceBox =
-    'accent-primary focus-visible:outline-ring mt-0.5 size-5 shrink-0 focus-visible:outline-3 focus-visible:outline-offset-2';
 
 function PublishCard({
     session,
@@ -338,7 +351,7 @@ function PublishCard({
                     </Alert>
                 )}
                 <form
-                    key={session.version}
+                    key={JSON.stringify([session.blocks, session.warnings])}
                     className="space-y-4"
                     onSubmit={(event) => {
                         event.preventDefault();
@@ -536,6 +549,10 @@ export function StudioView({ id }: { id: number }) {
     const session = query.data;
     const draft = !session.prepared && session.status === 'draft';
     const editable = draft && session.drafting !== 'generating';
+    const themeDrafting = session.themes.some(
+        ({ drafting }) => drafting === 'generating',
+    );
+    const baseEditable = editable && !themeDrafting;
     const { module } = session;
     return (
         <>
@@ -619,7 +636,7 @@ export function StudioView({ id }: { id: number }) {
                                             key={block.id}
                                             sessionId={session.id}
                                             block={block}
-                                            editable={editable}
+                                            editable={baseEditable}
                                         />
                                     ))}
                                 </ul>
@@ -627,8 +644,16 @@ export function StudioView({ id }: { id: number }) {
                         </Card>
                     );
                 })}
+                {!session.prepared &&
+                    session.blocks.length > 0 &&
+                    (draft || session.themes.length > 0) && (
+                        <ThemesCard session={session} editable={editable} />
+                    )}
                 {draft && session.blocks.length > 0 && (
-                    <RevisionForm session={session} />
+                    <RevisionForm
+                        session={session}
+                        themeDrafting={themeDrafting}
+                    />
                 )}
                 {editable && session.blocks.length > 0 && (
                     <PublishCard
