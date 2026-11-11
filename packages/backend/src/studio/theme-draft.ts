@@ -22,7 +22,7 @@ export const interestNames: Record<Interest, string> = {
     nature: 'Alam',
 };
 
-export const THEME_PROMPT_VERSION = 'theme-2026-11-10';
+export const THEME_PROMPT_VERSION = 'theme-2026-11-11';
 
 export const THEME_SYSTEM_PROMPT = [
     'You rewrite a primary school mission so its stories are set in a theme a child likes, for grade 4 to 6 students in Indonesia.',
@@ -31,6 +31,7 @@ export const THEME_SYSTEM_PROMPT = [
     '- Write in Indonesian, in short sentences for a 10-year-old. A screen text has at most two sentences.',
     "- Set the story, the examples, the hints, the praise, and the questions in the theme: its people, places, and things. Keep the lesson's idea, what each screen teaches, and how hard it is.",
     '- Never change an option "id", an "answer", a "fraction" number, or how many items a list has.',
+    '- A screen with an "activity" keeps its "type", every card and place "id", its "shape", and its "parts"; rewrite only the "label" of its cards and places, and leave a label that is a number or a term of the lesson, such as "1/4" or "Pembilang", exactly as written.',
     '- Keep every number exactly as written and as many times as the screen writes it: digits stay digits and words stay words ("4" stays "4", "empat" stays "empat", "1/4" stays "1/4").',
     '- Add no number, in digits or words, that the screen does not already have: no scores, shirt numbers, counts of players, ages, or times.',
     '- After the screens, "Pictures:" lists drawings the student sees next to a screen\'s text, which you cannot change and never write in your reply. Keep the objects and amounts the picture shows, and set only what is around them in the theme. Write an amount the picture shows in the text only where the screen\'s text already writes it. Never write a "diagram" or "illustration" key.',

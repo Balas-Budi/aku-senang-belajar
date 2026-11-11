@@ -12,7 +12,7 @@ import {
     type ModuleInfo,
 } from './material-text.ts';
 
-export const SESSION_PROMPT_VERSION = 'session-2026-11-11c';
+export const SESSION_PROMPT_VERSION = 'session-2026-11-11d';
 
 export const SESSION_SYSTEM_PROMPT = [
     'You draft one interactive learning session, a "misi", for Indonesian primary school (SD) students, in Indonesian. You receive the module\'s title, subject, and grade, the competencies this misi teaches with their rubrics, and the text of the module\'s pages between <material> and </material>, each page after a [Page N] marker.',
@@ -38,12 +38,18 @@ export const SESSION_SYSTEM_PROMPT = [
     '',
     'The blocks, in this order:',
     '1. One "hook": a question that wakes curiosity, with two to four options and no right answer.',
-    '2. Four to ten "story" screens that explain the idea step by step, with a "check" after every one to three of them.',
+    '2. Four to ten "story" screens that explain the idea step by step, with a "check" after every one to three of them. Exactly one or two of these checks hold an "activity" instead of "options"; a misi without one is refused.',
     '3. One "challenge": a transfer question. It sets the idea in a new situation that can really happen, with an object or setting no story, check, hint, or example of this misi uses, and the student applies the idea and gives a reason.',
     '4. One "reflection": two to four topics the session covered, as short phrases, and one to three takeaways, as sentences.',
     "5. One \"extra_challenge\" after the reflection: a harder multiple-choice question on this misi's competencies, for students who already show them. It has exactly a check's keys and rules, and names the competencies it uses. Set it in a new situation that can really happen, with an object or setting no other screen of this misi uses, while the idea and its terms stay the material's. Make it harder than every check and the challenge, for example with numbers or a comparison no other screen uses, or with two of the competencies together. Its prompt is at most two sentences like every screen, so give the situation and the question together: one sentence sets the scene, the other asks. Each hint points to a step of thinking, and the third hint still leaves the last step and the choice to the student, so it never states the rule that picks the option.",
     '',
     'A "check" is a multiple-choice question about what was just explained: two to four options with ids "a" to "d", the right one\'s id as "answer", "praise" for a right answer, three "hints" that each come closer without giving the answer away, an "example" with another case of the same idea, and a "reveal" that gives the right answer with one sentence of reason. A check may also ask for the reason, with "reason": a "prompt" and one to three sentence "starters". Spread the right answers over the option ids across the checks, the challenge, and the extra challenge, never always "a".',
+    'Give one check of the misi, two at most, an "activity" in place of "options", choosing the kind that fits what it tests: students learn more by doing than by picking. The other checks stay multiple choice, and the extra challenge may hold an activity too. A check with an activity has no "options", and its "answer" is the solution:',
+    '- {"type": "order", "cards": [{"id": "a", "label": "1/2"}, {"id": "b", "label": "1/8"}, {"id": "c", "label": "1/4"}]} with "answer": "b,c,a": the student puts three to six cards in order. List the cards mixed, never in the right order; "answer" is their ids in the right order.',
+    '- {"type": "match", "places": [{"id": "p", "label": "Setengah"}, {"id": "q", "label": "Seperempat"}], "cards": [{"id": "a", "label": "1/4"}, {"id": "b", "label": "1/2"}]} with "answer": "a:q,b:p": the student pairs two to five cards with as many places, one card each.',
+    '- {"type": "group", "places": [{"id": "p", "label": "Sama besar"}, {"id": "q", "label": "Tidak sama besar"}], "cards": [four to eight cards]} with "answer": "a:p,b:q,c:p,d:q": the student sorts the cards into two or three places, at least one card in each.',
+    '- {"type": "shade", "shape": "bar", "parts": 4} with "answer": "1": the student shades parts of a bar or a circle ("shape" is "bar" or "circle") cut into 2 to 12 equal parts; "answer" is how many parts are shaded.',
+    'Card ids are "a" to "h" and place ids "p" to "t", each once; a label has at most 60 characters; in "answer" the "card:place" pairs are sorted by card id. The prompt says what to do, such as "Urutkan dari yang terkecil." or "Arsir 1/4 dari pita ini.", the hints, the example, and the praise stay as for any check, and the reveal says the right arrangement in words.',
     'Every competency you receive needs at least one check or the challenge that tests it; the extra challenge does not count. Each block names the competency codes it serves in "competencies" and the page numbers it rests on in "pages".',
     '',
     'Reply with one JSON object and nothing else, in this shape:',
@@ -51,6 +57,7 @@ export const SESSION_SYSTEM_PROMPT = [
     '{"kind": "hook", "content": {"prompt": "...", "options": [{"id": "a", "label": "..."}, {"id": "b", "label": "..."}]}, "competencies": [], "pages": [12]},',
     '{"kind": "story", "content": {"text": "...", "diagram": {"label": "Roti dibagi menjadi 4 bagian sama besar, 1 bagian diwarnai: 1/4.", "shapes": [{"type": "rect", "x": 20, "y": 20, "width": 120, "height": 60, "fill": "yellow", "parts": 4, "shaded": 1}, {"type": "text", "x": 35, "y": 100, "text": "1/4"}]}}, "competencies": ["C1"], "pages": [12]},',
     '{"kind": "check", "content": {"prompt": "...", "options": [{"id": "a", "label": "..."}, {"id": "b", "label": "..."}], "answer": "b", "praise": "...", "hints": [{"text": "..."}, {"text": "..."}, {"text": "..."}], "example": {"text": "..."}, "reveal": "..."}, "competencies": ["C1"], "pages": [12]},',
+    '{"kind": "check", "content": {"prompt": "...", "activity": {"type": "order", "cards": [{"id": "a", "label": "..."}, {"id": "b", "label": "..."}, {"id": "c", "label": "..."}]}, "answer": "b,c,a", "praise": "...", "hints": [{"text": "..."}, {"text": "..."}, {"text": "..."}], "example": {"text": "..."}, "reveal": "..."}, "competencies": ["C2"], "pages": [13]},',
     '{"kind": "challenge", "content": {"prompt": "...", "question": "...", "options": [{"id": "a", "label": "..."}, {"id": "b", "label": "..."}], "answer": "a", "reasonStarter": "..."}, "competencies": ["C2"], "pages": [13]},',
     '{"kind": "reflection", "content": {"topics": ["...", "..."], "takeaways": ["..."]}, "competencies": [], "pages": []},',
     '{"kind": "extra_challenge", "content": {"prompt": "...", "options": [{"id": "a", "label": "..."}, {"id": "b", "label": "..."}, {"id": "c", "label": "..."}], "answer": "c", "praise": "...", "hints": [{"text": "..."}, {"text": "..."}, {"text": "..."}], "example": {"text": "..."}, "reveal": "..."}, "competencies": ["C1"], "pages": [13]}',
@@ -366,6 +373,16 @@ export function checkDraft(codes: string[], pages: number[]) {
         }
 
         problems.push(...repeatProblems(read));
+
+        if (
+            !read.some(
+                (block) => block?.kind === 'check' && block.content.activity,
+            )
+        ) {
+            problems.push(
+                'No check has an "activity": give one check an "activity" in place of its "options" (order, match, group, or shade, whichever fits what it tests), with the solution as its "answer"',
+            );
+        }
 
         if (diagrams > MAX_DIAGRAMS) {
             problems.push(

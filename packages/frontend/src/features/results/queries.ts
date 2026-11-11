@@ -52,6 +52,7 @@ export type EvidenceQuestion = {
     question: string;
     picture?: IllustrationName;
     diagram?: string;
+    task?: string;
     options: { id: string; label: string; picture?: IllustrationName }[];
     rightOption: string;
     tries: {

@@ -71,7 +71,7 @@ const extraModule: PreparedModule = {
     ],
 };
 const right = lastCheck.content.answer;
-const wrong = lastCheck.content.options.find(({ id }) => id !== right)?.id;
+const wrong = lastCheck.content.options?.find(({ id }) => id !== right)?.id;
 
 assert.ok(wrong);
 
@@ -192,7 +192,7 @@ test('a drafted misi ends with exactly one extra challenge that names its compet
         }),
         'C3 has no check or challenge that tests it',
     );
-    assert.equal(SESSION_PROMPT_VERSION, 'session-2026-11-11c');
+    assert.equal(SESSION_PROMPT_VERSION, 'session-2026-11-11d');
     assert.ok(
         SESSION_SYSTEM_PROMPT.includes(
             '5. One "extra_challenge" after the reflection',

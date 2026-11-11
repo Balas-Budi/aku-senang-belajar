@@ -154,7 +154,23 @@ export const draft = {
             competencies: ['C2'],
             pages: [3],
         },
-        checkFor('C2', 3),
+        {
+            ...checkFor('C2', 3),
+            content: {
+                ...checkFor('C2', 3).content,
+                prompt: 'Urutkan dari potongan yang terkecil.',
+                options: undefined,
+                activity: {
+                    type: 'order',
+                    cards: [
+                        { id: 'a', label: 'Setengah roti' },
+                        { id: 'b', label: 'Seperdelapan roti' },
+                        { id: 'c', label: 'Seperempat roti' },
+                    ],
+                },
+                answer: 'b,c,a',
+            },
+        },
         {
             kind: 'challenge',
             content: {
@@ -329,7 +345,7 @@ export const fractionDraft = {
 };
 
 function rewritten(value: unknown, theme: string, key?: string): unknown {
-    if (key === 'id' || key === 'answer') return value;
+    if (key && ['id', 'answer', 'type', 'shape'].includes(key)) return value;
     if (typeof value === 'string') return `Tema ${theme}: ${value}`;
     if (Array.isArray(value))
         return value.map((item) => rewritten(item, theme));

@@ -15,7 +15,7 @@ import { notFound } from '../../lib/errors.ts';
 import { fieldError } from '../../lib/field-error.ts';
 import { keptSummaries, namesCode } from '../../memory/adaptations.ts';
 import { currentRuns, decisionsOn, shownOf } from '../results/queries.ts';
-import { earnedOf, followUp, judge } from './attempts.ts';
+import { earnedOf, followUp, judge, placedRight } from './attempts.ts';
 import { missionsOf } from './missions.ts';
 import { answer as storedAnswer, type Answer } from './schema.ts';
 
@@ -338,6 +338,7 @@ export async function answerReview(
 
     return {
         outcome,
+        inPlace: placedRight(block, given.answer, outcome),
         earned: earnedOf(block, {
             answers: [
                 ...history.answers,

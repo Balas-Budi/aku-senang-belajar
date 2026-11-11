@@ -14,6 +14,8 @@ import {
 } from '../../db/schema.ts';
 import { adaptationPair } from '../../learning/adaptation.ts';
 import {
+    answerProblem,
+    inPlace,
     isMissionKind,
     type MissionKind,
     type SessionBlock,
@@ -306,7 +308,11 @@ export function judge(block: Block, given: Answer): Outcome {
             return 'accepted';
         case 'check':
             if (block.kind !== 'check') break;
-            requireOption(block.content.options, given.choice);
+            if (!block.content.activity) {
+                requireOption(block.content.options ?? [], given.choice);
+            } else if (answerProblem(block.content.activity, given.choice)) {
+                throw fieldError('answer/choice', 'Finish the activity');
+            }
             if (block.content.reason && !given.reason) {
                 throw fieldError('answer/reason', 'Write the reason');
             }
@@ -337,6 +343,15 @@ export function judge(block: Block, given: Answer): Outcome {
         'answer/kind',
         `A ${block.kind} block takes no ${given.kind} answer`,
     );
+}
+
+export function placedRight(block: Block, given: Answer, outcome: Outcome) {
+    return block.kind === 'check' &&
+        given.kind === 'check' &&
+        outcome === 'not_yet' &&
+        block.content.activity
+        ? inPlace(block.content.activity, given.choice, block.content.answer)
+        : null;
 }
 
 export function followUp(

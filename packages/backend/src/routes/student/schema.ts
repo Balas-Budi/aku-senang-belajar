@@ -96,7 +96,7 @@ export const answer = z.discriminatedUnion('kind', [
     z.object({ kind: z.literal('hook'), choice }),
     z.object({
         kind: z.literal('check'),
-        choice,
+        choice: z.string().min(1).max(60),
         reason: typedText.optional(),
     }),
     z.object({ kind: z.literal('challenge'), choice, reason: typedText }),
@@ -220,6 +220,7 @@ export const assignmentResponse = z.object({
 export const feedbackResponse = z.object({
     outcome: z.enum(responseOutcome.enumValues),
     earned: earned.nullable(),
+    inPlace: z.number().nullable(),
 });
 
 export const helpResponse = z.object({ earned: earned.nullable() });

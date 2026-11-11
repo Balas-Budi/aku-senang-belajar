@@ -190,7 +190,7 @@ test('a diagram on an option is stripped', () => {
     });
 
     assert.ok(parsed.kind === 'check');
-    assert.deepEqual(parsed.content.options[0], { id: 'a', label: 'Yes' });
+    assert.deepEqual(parsed.content.options?.[0], { id: 'a', label: 'Yes' });
 });
 
 const [quarterLoaf, quarterText] = quarters.shapes;

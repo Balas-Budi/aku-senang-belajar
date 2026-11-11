@@ -41,9 +41,13 @@ export function BlockEditor({
     const fields = textFields(block);
     const diagrams = diagramFields(block);
     const idOf = (name: string) => `${idPrefix}-${name}`;
+    const activity = 'activity' in block.content && block.content.activity;
     const answer =
-        !answerFixed && 'answer' in block.content ? block.content.answer : null;
-    const options = 'options' in block.content ? block.content.options : [];
+        !answerFixed && !activity && 'answer' in block.content
+            ? block.content.answer
+            : null;
+    const options =
+        'options' in block.content ? (block.content.options ?? []) : [];
     const answerError = fieldErrorText(save.error, answerName);
     const contentError = fieldErrorText(save.error, 'content');
     return (
@@ -65,12 +69,20 @@ export function BlockEditor({
         >
             {fields.map((field) => {
                 const name = fieldName(field);
+                if (field.fixed !== undefined)
+                    return (
+                        <p key={name}>
+                            <span className="font-medium">{field.label}:</span>{' '}
+                            {field.fixed}
+                        </p>
+                    );
                 const props = {
                     name,
                     id: idOf(name),
                     label: field.label,
                     defaultValue: textAt(block.content, field),
                     required: true,
+                    maxLength: field.max,
                     error: save.error,
                 };
                 return (
@@ -128,6 +140,11 @@ export function BlockEditor({
                     )}
                 </fieldset>
             )}
+            {activity && (
+                <p className="text-muted-foreground text-sm">
+                    Jenis aktivitas dan jawaban benar tidak bisa diubah di sini.
+                </p>
+            )}
             {contentError ? (
                 <p role="alert" className="text-destructive">
                     {contentError}
@@ -135,7 +152,13 @@ export function BlockEditor({
             ) : (
                 <StudioError
                     error={save.error}
-                    inline={[...fields.map(fieldName), answerName, 'content']}
+                    inline={[
+                        ...fields
+                            .filter((field) => field.fixed === undefined)
+                            .map(fieldName),
+                        ...(activity ? [] : [answerName]),
+                        'content',
+                    ]}
                 />
             )}
             <div className="flex flex-wrap gap-3">

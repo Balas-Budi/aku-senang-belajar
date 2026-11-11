@@ -14,7 +14,7 @@ import { themedBlock, themesFor } from '../../learning/themed-blocks.ts';
 import { notFound } from '../../lib/errors.ts';
 import { fieldError } from '../../lib/field-error.ts';
 import { currentRuns } from '../results/queries.ts';
-import { earnedOf, followUp, judge } from './attempts.ts';
+import { earnedOf, followUp, judge, placedRight } from './attempts.ts';
 import { missionsOf } from './missions.ts';
 import {
     practiceHistoryOf,
@@ -187,6 +187,7 @@ export async function answerExtra(
 
     return {
         outcome,
+        inPlace: placedRight(block, given.answer, outcome),
         earned: earnedOf(block, {
             answers: [
                 ...history.answers,

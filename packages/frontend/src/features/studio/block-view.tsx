@@ -46,7 +46,7 @@ export function BlockView({
                         {field.label}
                     </dt>
                     <dd className="text-pretty">
-                        {textAt(block.content, field)}
+                        {field.fixed ?? textAt(block.content, field)}
                         {field.correct && (
                             <>
                                 {' '}

@@ -5,6 +5,7 @@ import {
 } from '@tanstack/react-query';
 import { api, ApiError } from '../../lib/api';
 import type { Diagram } from '../learning-sessions/diagram';
+import type { Activity } from '../learning-sessions/queries';
 import type { Interest } from '../profile/interests';
 
 export type Option = { id: string; label: string; illustration?: string };
@@ -23,7 +24,8 @@ type CheckContent = {
     prompt: string;
     illustration?: string;
     diagram?: Diagram;
-    options: Option[];
+    options?: Option[];
+    activity?: Activity;
     answer: string;
     reason?: { prompt: string; starters: string[] };
     praise: string;

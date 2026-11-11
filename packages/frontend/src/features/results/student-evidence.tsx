@@ -96,6 +96,12 @@ function QuestionEvidence({
                 {kindLabels[question.kind]}
             </p>
             <p>{question.question}</p>
+            {question.task && (
+                <p className="text-sm">
+                    <span className="font-semibold">Aktivitas:</span>{' '}
+                    {question.task}
+                </p>
+            )}
             {question.picture && (
                 <Illustration name={question.picture} className="max-w-48" />
             )}

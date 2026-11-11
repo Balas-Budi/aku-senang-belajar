@@ -14,6 +14,12 @@ export type Option = {
     label: string;
     illustration?: IllustrationName;
 };
+export type ActivityItem = { id: string; label: string };
+export type Activity =
+    | { type: 'order'; cards: ActivityItem[] }
+    | { type: 'match'; places: ActivityItem[]; cards: ActivityItem[] }
+    | { type: 'group'; places: ActivityItem[]; cards: ActivityItem[] }
+    | { type: 'shade'; shape: 'bar' | 'circle'; parts: number };
 export type Picture = {
     text: string;
     illustration?: IllustrationName;
@@ -57,7 +63,8 @@ export type Block = { id: number; position: number; step: Step } & (
               prompt: string;
               illustration?: IllustrationName;
               diagram?: Diagram;
-              options: Option[];
+              options?: Option[];
+              activity?: Activity;
               reason?: { prompt: string; starters: string[] };
           };
           earned: Earned;
@@ -125,7 +132,11 @@ export type AnswerInput = {
     tryNumber: number;
     answer: Answer;
 };
-export type Feedback = { outcome: Outcome; earned: Earned | null };
+export type Feedback = {
+    outcome: Outcome;
+    earned: Earned | null;
+    inPlace: number | null;
+};
 
 export const sessionQuery = (assignmentId: number, cookie?: string | null) =>
     queryOptions({

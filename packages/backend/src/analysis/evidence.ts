@@ -13,7 +13,7 @@ import {
     sessionBlocks,
     sessionCompetencies,
 } from '../db/schema.ts';
-import { diagramName } from '../learning/blocks.ts';
+import { answerWords, diagramName, taskWords } from '../learning/blocks.ts';
 import { themedBlock, themesFor } from '../learning/themed-blocks.ts';
 import { competencyRubric, type CompetencyRubric } from '../learning/rubric.ts';
 import { answer as storedAnswer } from '../routes/student/schema.ts';
@@ -34,6 +34,7 @@ export const evidenceQuestion = z.object({
     question: z.string(),
     picture: z.string().optional(),
     diagram: z.string().optional(),
+    task: z.string().optional(),
     options: z.array(
         z.object({
             id: z.string(),
@@ -231,7 +232,13 @@ export async function evidenceOf(
 
         if (block.kind !== 'check' && block.kind !== 'challenge') continue;
 
-        const tries = triesOf(saved);
+        const given =
+            block.kind === 'check' ? block.content.activity : undefined;
+        const tries = triesOf(saved).map((entry) =>
+            given
+                ? { ...entry, choice: answerWords(given, entry.choice) }
+                : entry,
+        );
 
         if (tries.length === 0) continue;
 
@@ -272,12 +279,16 @@ export async function evidenceOf(
             ...(content.diagram
                 ? { diagram: diagramName(content.diagram) }
                 : {}),
-            options: content.options.map(({ id, label, illustration }) =>
-                illustration
-                    ? { id, label, picture: illustration }
-                    : { id, label },
+            ...(given ? { task: taskWords(given) } : {}),
+            options: (content.options ?? []).map(
+                ({ id, label, illustration }) =>
+                    illustration
+                        ? { id, label, picture: illustration }
+                        : { id, label },
             ),
-            rightOption: content.answer,
+            rightOption: given
+                ? answerWords(given, content.answer)
+                : content.answer,
             tries,
             help: {
                 hints: kinds.filter((kind) => kind === 'hint').length,

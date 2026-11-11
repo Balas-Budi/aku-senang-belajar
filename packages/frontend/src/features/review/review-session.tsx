@@ -10,6 +10,12 @@ import { textLink } from '../../components/ui/text-link';
 import { useErrorToast } from '../../components/ui/toast';
 import type { Subject } from '../assignments/queries';
 import { subjects } from '../assignments/subject-art';
+import {
+    answerLabels,
+    answerMissing,
+    CheckAnswer,
+    inPlaceNote,
+} from '../learning-sessions/activity-input';
 import { Feedback, HelpCard } from '../learning-sessions/check-block';
 import { DiagramPicture } from '../learning-sessions/diagram';
 import { Illustration } from '../learning-sessions/illustration';
@@ -20,7 +26,6 @@ import {
     useNarration,
 } from '../narration/narration';
 import {
-    OptionPicker,
     ReactingJalak,
     ReasonField,
     ScreenCard,
@@ -61,12 +66,13 @@ export function Question({
     const [earned, setEarned] = useState(question.earned);
     const [tries, setTries] = useState(question.tries);
     const [reactions, setReactions] = useState({ cheers: 0, chirps: 0 });
+    const [inPlace, setInPlace] = useState<number | null>(null);
     const showError = useErrorToast();
     const closed = earned.praise !== null || earned.reveal !== null;
     const reasonMissing = Boolean(content.reason) && !reason.trim();
     const narration = useNarration(
         narrationId,
-        [content.prompt, ...content.options.map(({ label }) => label)],
+        [content.prompt, ...answerLabels(content)],
         true,
     );
 
@@ -86,6 +92,7 @@ export function Question({
                 onSuccess: (feedback) => {
                     setTries((count) => count + 1);
                     if (feedback.earned) setEarned(feedback.earned);
+                    setInPlace(feedback.inPlace);
                     setReactions((current) =>
                         feedback.outcome === 'correct'
                             ? { ...current, cheers: current.cheers + 1 }
@@ -135,17 +142,13 @@ export function Question({
                     sentence={narration.sentenceIn(0)}
                 />
             </p>
-            <OptionPicker
+            <CheckAnswer
                 name={`${narrationId}-choice`}
-                legend={content.prompt}
-                options={content.options}
-                value={choice}
+                content={content}
+                earned={earned}
+                choice={choice}
                 onChange={setChoice}
-                disabled={closed}
-                correct={
-                    earned.reveal?.answer ?? (earned.praise ? choice : null)
-                }
-                reading={optionBeingRead(narration, content.options, 1)}
+                reading={optionBeingRead(narration, content.options ?? [], 1)}
             />
             {content.reason && !closed && (
                 <ReasonField
@@ -157,7 +160,11 @@ export function Question({
                 />
             )}
             {(tries > 0 || closed) && (
-                <Feedback earned={earned} {...reactions} />
+                <Feedback
+                    earned={earned}
+                    {...reactions}
+                    note={closed ? undefined : inPlaceNote(content, inPlace)}
+                />
             )}
             {earned.hints.map((hint, index) => (
                 <HelpCard
@@ -189,7 +196,7 @@ export function Question({
                     {(!choice || reasonMissing) && (
                         <p className="text-muted-foreground">
                             {!choice
-                                ? 'Pilih satu jawaban dulu.'
+                                ? answerMissing(content)
                                 : 'Tulis alasanmu dulu, ya.'}
                         </p>
                     )}

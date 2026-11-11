@@ -15,8 +15,8 @@ const unclosed = whole.replace(
     ',"competencies":["C2"],"pages":[4]',
 );
 const cutShort = whole.replace(
-    '],"example":{"text":"Kue yang dipotong empat sama besar juga perempat."},"reveal":"Roti A, karena keempat potongannya sama besar."},"competencies":["C2"],"pages":[3]',
-    ',"competencies":["C2"],"pages":[3]',
+    '],"example":{"text":"Kue yang dipotong empat sama besar juga perempat."},"reveal":"Roti A, karena keempat potongannya sama besar."},"competencies":["C1"],"pages":[1]',
+    ',"competencies":["C1"],"pages":[1]',
 );
 
 test('mendDraft closes a screen the model left open before its competencies, and leaves a whole draft alone', () => {
@@ -26,11 +26,11 @@ test('mendDraft closes a screen the model left open before its competencies, and
     assert.throws(() => JSON.parse(cutShort));
 
     assert.equal(mendDraft(whole), whole);
-    assert.deepEqual(JSON.parse(mendDraft(unclosed)), draft);
+    assert.deepEqual(JSON.parse(mendDraft(unclosed)), JSON.parse(whole));
 
     const mended = sessionDraft.parse(JSON.parse(mendDraft(cutShort)));
 
-    assert.deepEqual(Object.keys(mended.blocks[4].content), [
+    assert.deepEqual(Object.keys(mended.blocks[2].content), [
         'prompt',
         'options',
         'answer',
@@ -39,7 +39,7 @@ test('mendDraft closes a screen the model left open before its competencies, and
     ]);
     assert.match(
         checkDraft(['C1', 'C2'], [1, 3, 4])(mended) ?? '',
-        /Block 5 \(check\): example /,
+        /Block 3 \(check\): example /,
     );
 });
 

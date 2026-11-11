@@ -466,7 +466,7 @@ test('the summary request names the diagram of each question and the diagrams of
         ],
     );
     assert.match(SUMMARY_PROMPT, /"helpDiagrams" the labels of the pictures/);
-    assert.equal(SUMMARY_PROMPT_VERSION, 'summary-2026-11-11b');
+    assert.equal(SUMMARY_PROMPT_VERSION, 'summary-2026-11-11c');
 });
 
 test('the summary request names what the mission followed and keeps the example the app gave apart from asked help', async (t) => {

@@ -34,6 +34,7 @@ import {
     historyOf,
     isClosed,
     judge,
+    placedRight,
     lockedAttempt,
     openAttempt,
     stateOf,
@@ -340,6 +341,7 @@ export async function answerBlock(
                 created: false,
                 outcome: sent.outcome,
                 earned: earnedFor(block, before),
+                inPlace: placedRight(block, sent.answer, sent.outcome),
             };
         }
 
@@ -384,6 +386,7 @@ export async function answerBlock(
         return {
             created: true,
             outcome,
+            inPlace: placedRight(block, given, outcome),
             earned: earnedFor(block, {
                 answers: [
                     ...before.answers,
@@ -394,9 +397,11 @@ export async function answerBlock(
         };
     });
 
-    return reply
-        .code(result.created ? 201 : 200)
-        .send({ outcome: result.outcome, earned: result.earned });
+    return reply.code(result.created ? 201 : 200).send({
+        outcome: result.outcome,
+        earned: result.earned,
+        inPlace: result.inPlace,
+    });
 }
 
 export async function askForHelp(

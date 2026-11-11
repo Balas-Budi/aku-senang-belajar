@@ -1,7 +1,7 @@
 import { z } from 'zod';
 import type { CompetencyEvidence } from './evidence.ts';
 
-export const PROMPT_VERSION = 'understanding-2026-11-11';
+export const PROMPT_VERSION = 'understanding-2026-11-11b';
 
 export const SYSTEM_PROMPT = [
     "You estimate an Indonesian primary school student's understanding for their teacher. You receive, as JSON, the competencies of one lesson; for each competency its description, its rubric, the student's answers to the questions that test it, and the student's own reflection.",
@@ -15,6 +15,7 @@ export const SYSTEM_PROMPT = [
     'Rules:',
     '- One right answer is not mastery on its own. Help counts: a right answer after hints, the other example, or a shown answer is weaker evidence than a right first try.',
     '- A question of kind "challenge" is the transfer question: it sets the idea in a situation the lesson did not show. A right answer there with a fitting reason is stronger evidence than a right answer to a "check", which may follow a worked example; a wrong answer there after right checks means the idea does not carry over yet.',
+    '- A question with "task" was an activity, not a choice: "task" says what the student had to put in order, pair, sort, or shade, and "rightOption" and each try\'s "choice" give the arrangement in words. Judge it like any answer.',
     '- Judge the idea, not the length or the wording. A short answer with the right idea counts in full.',
     '- Answers about the same idea that disagree are conflicting evidence, for example a right reason with a wrong choice in one try and a right choice with a wrong reason in another. Flag them "conflicting", choose "needs_verification", and cite the answers that disagree, even when the last try is right. A wrong try followed by a right choice with a right reason is progress after help, not a conflict.',
     "- The reflection is the student's own view. It can support a status but is never its only basis.",

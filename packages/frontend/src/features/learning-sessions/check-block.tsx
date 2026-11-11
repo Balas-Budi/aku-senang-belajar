@@ -9,6 +9,12 @@ import {
     Spoken,
     useNarration,
 } from '../narration/narration';
+import {
+    answerLabels,
+    answerMissing,
+    CheckAnswer,
+    inPlaceNote,
+} from './activity-input';
 import { AdaptationContext, useLead } from './adaptation';
 import { DiagramPicture } from './diagram';
 import { Illustration } from './illustration';
@@ -16,7 +22,6 @@ import { answersFor, useHelp, type Earned, type Picture } from './queries';
 import { ScreenPicture } from './screen-picture';
 import {
     OfflineNote,
-    OptionPicker,
     ReactingJalak,
     ReasonField,
     ScreenCard,
@@ -80,10 +85,12 @@ export function Feedback({
     earned,
     cheers,
     chirps,
+    note,
 }: {
     earned: Earned;
     cheers: number;
     chirps: number;
+    note?: string;
 }) {
     const message =
         earned.praise ??
@@ -109,6 +116,14 @@ export function Feedback({
                         className="font-display text-primary-deep text-[1.2em] leading-snug font-semibold"
                     >
                         {message}
+                        {note && (
+                            <>
+                                {' '}
+                                <span className="font-rounded block text-[0.85em] font-bold">
+                                    {note}
+                                </span>
+                            </>
+                        )}
                     </p>
                     {earned.reveal && (
                         <p className="leading-relaxed">
@@ -151,9 +166,10 @@ export function CheckBlock({
     const listen = useHelp(assignmentId);
     const adaptation = useContext(AdaptationContext);
     const [heard, setHeard] = useState<number | null>(null);
+    const [inPlace, setInPlace] = useState<number | null>(null);
     const narration = useNarration(
         `block-${block.id}`,
-        [content.prompt, ...content.options.map(({ label }) => label)],
+        [content.prompt, ...answerLabels(content)],
         true,
     );
 
@@ -180,12 +196,14 @@ export function CheckBlock({
                     ...(content.reason ? { reason: reason.trim() } : {}),
                 },
             },
-            ({ outcome }) =>
+            (feedback) => {
+                setInPlace(feedback.inPlace);
                 setReactions((current) =>
-                    outcome === 'correct'
+                    feedback.outcome === 'correct'
                         ? { ...current, cheers: current.cheers + 1 }
                         : { ...current, chirps: current.chirps + 1 },
-                ),
+                );
+            },
         );
     }
 
@@ -243,17 +261,13 @@ export function CheckBlock({
                 />
             </p>
             {adaptation?.lead === 'text' && picture}
-            <OptionPicker
+            <CheckAnswer
                 name={`check-${block.id}`}
-                legend={content.prompt}
-                options={content.options}
-                value={choice}
+                content={content}
+                earned={earned}
+                choice={choice}
                 onChange={setChoice}
-                disabled={closed}
-                correct={
-                    earned.reveal?.answer ?? (earned.praise ? choice : null)
-                }
-                reading={optionBeingRead(narration, content.options, 1)}
+                reading={optionBeingRead(narration, content.options ?? [], 1)}
             />
             {content.reason && !closed && (
                 <ReasonField
@@ -265,7 +279,11 @@ export function CheckBlock({
                 />
             )}
             {(tries.length > 0 || closed) && (
-                <Feedback earned={earned} {...reactions} />
+                <Feedback
+                    earned={earned}
+                    {...reactions}
+                    note={closed ? undefined : inPlaceNote(content, inPlace)}
+                />
             )}
             {exampleFirst && exampleCard}
             {earned.hints.map((hint, index) => (
@@ -344,7 +362,7 @@ export function CheckBlock({
                     {(!choice || reasonMissing) && (
                         <p className="text-muted-foreground">
                             {!choice
-                                ? 'Pilih satu jawaban dulu.'
+                                ? answerMissing(content)
                                 : 'Tulis alasanmu dulu, ya.'}
                         </p>
                     )}

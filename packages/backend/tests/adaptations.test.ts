@@ -1337,6 +1337,7 @@ test('the own Bacakan otomatis choice of the student beats a read-aloud lead, an
     assert.equal(response.statusCode, 201);
     assert.deepEqual(response.json(), {
         outcome: 'not_yet',
+        inPlace: null,
         earned: {
             hints: demoCheck(0).hints.slice(0, 1),
             example: null,

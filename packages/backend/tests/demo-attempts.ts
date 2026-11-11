@@ -230,7 +230,7 @@ export async function demoClass(
     };
 }
 
-const kept = new Set(['id', 'answer']);
+const kept = new Set(['id', 'answer', 'type', 'shape']);
 const pictures = new Set(['diagram', 'illustration']);
 
 function rewritten(

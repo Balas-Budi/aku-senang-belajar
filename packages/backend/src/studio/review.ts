@@ -73,6 +73,9 @@ function asked(block: SessionBlock) {
     }
 
     const { content } = block;
+
+    if (!content.options) return null;
+
     const labels = content.options
         .map(({ label }) => label.trim().toLowerCase())
         .sort();

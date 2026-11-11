@@ -1,4 +1,5 @@
 import type { Diagram } from '../learning-sessions/diagram';
+import type { Activity } from '../learning-sessions/queries';
 import type { StudioBlock } from './queries';
 
 export type EditableBlock = Exclude<StudioBlock, { kind: 'brain_game' }>;
@@ -8,6 +9,8 @@ export type TextField = {
     label: string;
     long: boolean;
     correct?: boolean;
+    fixed?: string;
+    max?: number;
 };
 type Node = Record<string | number, unknown>;
 
@@ -26,6 +29,78 @@ const optionFields = (options: { id: string }[], answer?: string) =>
         ...line(`Pilihan ${index + 1}`, 'options', index, 'label'),
         correct: option.id === answer,
     }));
+const fixed = (label: string, value: string, ...path: Path): TextField => ({
+    path,
+    label,
+    long: false,
+    fixed: value,
+});
+const quoted = (labels: string[]) =>
+    labels.map((label) => `"${label}"`).join(', ');
+
+function answerWords(activity: Activity, answer: string) {
+    if (activity.type === 'shade')
+        return `${answer} dari ${activity.parts} bagian diarsir`;
+    const labels = new Map(activity.cards.map(({ id, label }) => [id, label]));
+    const labelOf = (id: string) => labels.get(id) ?? id;
+    if (activity.type === 'order')
+        return quoted(answer.split(',').map(labelOf));
+    const pairs = answer.split(',').map((pair) => pair.split(':'));
+    return activity.places
+        .map(
+            ({ id, label }) =>
+                `"${label}": ${
+                    quoted(
+                        pairs
+                            .filter(([, place]) => place === id)
+                            .map(([card]) => labelOf(card)),
+                    ) || 'kosong'
+                }`,
+        )
+        .join('; ');
+}
+
+const activityKinds = {
+    order: 'Mengurutkan kartu',
+    match: 'Memasangkan setiap kartu dengan satu tempat',
+    group: 'Mengelompokkan kartu',
+};
+
+function activityFields(activity: Activity, answer: string): TextField[] {
+    const right = fixed(
+        'Jawaban benar',
+        answerWords(activity, answer),
+        'answer',
+    );
+    if (activity.type === 'shade')
+        return [
+            fixed(
+                'Aktivitas',
+                `Mengarsir bagian ${activity.shape === 'bar' ? 'persegi panjang' : 'lingkaran'} yang dibagi ${activity.parts} sama besar`,
+                'activity',
+                'type',
+            ),
+            right,
+        ];
+    const label = (name: string, list: 'cards' | 'places', index: number) => ({
+        ...line(`${name} ${index + 1}`, 'activity', list, index, 'label'),
+        max: 60,
+    });
+    return [
+        fixed('Aktivitas', activityKinds[activity.type], 'activity', 'type'),
+        ...activity.cards.map((_, index) => label('Kartu', 'cards', index)),
+        ...(activity.type === 'order'
+            ? []
+            : activity.places.map((_, index) =>
+                  label(
+                      activity.type === 'match' ? 'Tempat' : 'Kelompok',
+                      'places',
+                      index,
+                  ),
+              )),
+        right,
+    ];
+}
 
 export const fieldName = ({ path }: TextField) =>
     ['content', ...path].join('/');
@@ -41,10 +116,12 @@ export function textFields(block: EditableBlock): TextField[] {
             return [text('Teks', 'text')];
         case 'check':
         case 'extra_challenge': {
-            const { options, answer, reason, hints } = block.content;
+            const { options, activity, answer, reason, hints } = block.content;
             return [
                 text('Pertanyaan', 'prompt'),
-                ...optionFields(options, answer),
+                ...(activity
+                    ? activityFields(activity, answer)
+                    : optionFields(options ?? [], answer)),
                 ...(reason
                     ? [
                           text('Pertanyaan alasan', 'reason', 'prompt'),
@@ -103,8 +180,9 @@ export function withTexts(
 ) {
     const copy = structuredClone(content);
     for (const field of fields)
-        parentOf(copy, field.path)[field.path[field.path.length - 1]] =
-            read(field);
+        if (field.fixed === undefined)
+            parentOf(copy, field.path)[field.path[field.path.length - 1]] =
+                read(field);
     return copy;
 }
 

@@ -501,11 +501,213 @@ const answerError = {
     message: 'The answer must be one of the options',
 };
 
+const items = (ids: RegExp, min: number, max: number) =>
+    z
+        .array(
+            z.object({
+                id: z.string().regex(ids),
+                label: z.string().trim().min(1).max(60),
+            }),
+        )
+        .min(min)
+        .max(max)
+        .refine(
+            (list) => new Set(list.map(({ id }) => id)).size === list.length,
+            'Each item needs its own id',
+        );
+
+const cardIds = /^[a-h]$/;
+const placeIds = /^[p-t]$/;
+
+export const activity = z.discriminatedUnion('type', [
+    z.object({ type: z.literal('order'), cards: items(cardIds, 3, 6) }),
+    z.object({
+        type: z.literal('match'),
+        places: items(placeIds, 2, 5),
+        cards: items(cardIds, 2, 5),
+    }),
+    z.object({
+        type: z.literal('group'),
+        places: items(placeIds, 2, 3),
+        cards: items(cardIds, 4, 8),
+    }),
+    z.object({
+        type: z.literal('shade'),
+        shape: z.enum(['bar', 'circle']),
+        parts: z.int().min(2).max(12),
+    }),
+]);
+
+export type Activity = z.infer<typeof activity>;
+
+const sorted = (list: string[]) => [...list].sort().join(',');
+
+function placedOf(given: Activity, value: string) {
+    if (given.type === 'shade') return null;
+
+    const ids = given.cards.map(({ id }) => id);
+
+    if (given.type === 'order') {
+        const order = value.split(',');
+        return sorted(order) === sorted(ids)
+            ? new Map(order.map((id, index) => [id, String(index + 1)]))
+            : null;
+    }
+
+    const pairs = value.split(',').map((pair) => pair.split(':'));
+    const places = new Set(given.places.map(({ id }) => id));
+
+    return pairs.map(([card]) => card).join(',') === sorted(ids) &&
+        pairs.every((pair) => pair.length === 2 && places.has(pair[1]))
+        ? new Map(pairs.map(([card, place]) => [card, place]))
+        : null;
+}
+
+export function answerProblem(given: Activity, value: string) {
+    if (given.type === 'shade') {
+        return /^\d{1,2}$/.test(value) && Number(value) <= given.parts
+            ? null
+            : `must be how many of the ${given.parts} parts are shaded, such as "1"`;
+    }
+
+    const placed = placedOf(given, value);
+
+    if (!placed) {
+        return given.type === 'order'
+            ? 'must list every card id once, in order, such as "c,a,b"'
+            : 'must give every card a place, sorted by card id, such as "a:q,b:p"';
+    }
+    if (
+        given.type === 'match' &&
+        new Set(placed.values()).size !== placed.size
+    ) {
+        return 'must give each place exactly one card';
+    }
+
+    return null;
+}
+
+export function inPlace(given: Activity, value: string, answer: string) {
+    const placed = placedOf(given, value);
+    const right = placedOf(given, answer);
+
+    return placed && right
+        ? [...placed].filter(([card, place]) => right.get(card) === place)
+              .length
+        : null;
+}
+
+const quoted = (list: string[]) => list.map((label) => `"${label}"`).join(', ');
+
+export function taskWords(given: Activity) {
+    if (given.type === 'shade') {
+        return `Mengarsir bagian dari ${given.shape === 'bar' ? 'persegi panjang' : 'lingkaran'} yang dibagi ${given.parts} sama besar`;
+    }
+
+    const cards = quoted(given.cards.map(({ label }) => label));
+
+    if (given.type === 'order') return `Mengurutkan kartu ${cards}`;
+
+    return `${given.type === 'match' ? 'Memasangkan' : 'Mengelompokkan'} kartu ${cards} ke ${quoted(given.places.map(({ label }) => label))}`;
+}
+
+export function answerWords(given: Activity, value: string) {
+    if (given.type === 'shade') {
+        return `${value} dari ${given.parts} bagian diarsir`;
+    }
+
+    const placed = placedOf(given, value);
+
+    if (!placed) return value;
+
+    const label = new Map(given.cards.map((card) => [card.id, card.label]));
+
+    if (given.type === 'order') {
+        return quoted([...placed.keys()].map((id) => label.get(id) ?? id));
+    }
+
+    return given.places
+        .map(
+            (place) =>
+                `"${place.label}": ${
+                    quoted(
+                        [...placed]
+                            .filter(([, at]) => at === place.id)
+                            .map(([card]) => label.get(card) ?? card),
+                    ) || 'kosong'
+                }`,
+        )
+        .join('; ');
+}
+
+const activityIds = (given: Activity) =>
+    given.type === 'shade'
+        ? `shade:${given.shape}:${given.parts}`
+        : [
+              given.type,
+              ...given.cards.map(({ id }) => id),
+              ...('places' in given ? given.places.map(({ id }) => id) : []),
+          ].join(',');
+
+function answerFits(
+    content: {
+        options?: { id: string }[];
+        activity?: Activity;
+        answer: string;
+    },
+    context: z.RefinementCtx,
+) {
+    const issue = (path: string, message: string) =>
+        context.addIssue({ code: 'custom', path: [path], message });
+    const given = content.activity;
+
+    if (!given) {
+        if (!content.options) {
+            issue('options', 'A check needs options or an activity');
+        } else if (
+            !answerIsAnOption({ ...content, options: content.options })
+        ) {
+            issue('answer', answerError.message);
+        }
+        return;
+    }
+    if (content.options) {
+        issue('options', 'A check with an activity has no options');
+    }
+
+    const problem = answerProblem(given, content.answer);
+
+    if (problem) return issue('answer', problem);
+
+    if (
+        given.type === 'order' &&
+        content.answer === given.cards.map(({ id }) => id).join(',')
+    ) {
+        issue(
+            'activity',
+            'lists the cards in the right order; list them mixed, since the student sees this order',
+        );
+    }
+    if (
+        given.type === 'group' &&
+        given.places.some(({ id }) => !content.answer.includes(`:${id}`))
+    ) {
+        issue('answer', 'must put at least one card in every place');
+    }
+    if (given.type === 'match' && given.cards.length !== given.places.length) {
+        issue('activity', 'needs as many cards as places');
+    }
+    if (given.type === 'shade' && Number(content.answer) < 1) {
+        issue('answer', 'must shade at least one part');
+    }
+}
+
 const checkContent = z.object({
     prompt: screenText,
     illustration: illustration.optional(),
     diagram: diagram.optional(),
-    options,
+    options: options.optional(),
+    activity: activity.optional(),
     answer: z.string(),
     reason: z
         .object({
@@ -566,7 +768,7 @@ export const sessionBlock = z.discriminatedUnion('kind', [
     z.object({ kind: z.literal('story'), content: blockContent.story }),
     z.object({
         kind: z.literal('check'),
-        content: blockContent.check.refine(answerIsAnOption, answerError),
+        content: blockContent.check.superRefine(answerFits),
     }),
     z.object({
         kind: z.literal('challenge'),
@@ -578,10 +780,7 @@ export const sessionBlock = z.discriminatedUnion('kind', [
     }),
     z.object({
         kind: z.literal('extra_challenge'),
-        content: blockContent.extra_challenge.refine(
-            answerIsAnOption,
-            answerError,
-        ),
+        content: blockContent.extra_challenge.superRefine(answerFits),
     }),
 ]);
 
@@ -628,7 +827,11 @@ export function diagramsOf(block: SessionBlock): DiagramPlace[] {
 }
 
 export const optionIds = ({ content }: SessionBlock) =>
-    'options' in content ? content.options.map(({ id }) => id).join(',') : '';
+    'activity' in content && content.activity
+        ? activityIds(content.activity)
+        : 'options' in content && content.options
+          ? content.options.map(({ id }) => id).join(',')
+          : '';
 
 const isRecord = (value: unknown): value is Record<string, unknown> =>
     typeof value === 'object' && value !== null && !Array.isArray(value);
@@ -749,7 +952,9 @@ export function themeProblems(
     const ids = optionIds(base);
     if (ids !== optionIds(themed))
         problems.push(
-            `Keep the option ids ${ids.split(',').join(', ')} in this order`,
+            'activity' in base.content && base.content.activity
+                ? "Keep the activity's type, cards, places, and their ids; change only the labels"
+                : `Keep the option ids ${ids.split(',').join(', ')} in this order`,
         );
     const answer = answerOf(base);
     if (answer !== answerOf(themed)) problems.push(`Keep the answer ${answer}`);

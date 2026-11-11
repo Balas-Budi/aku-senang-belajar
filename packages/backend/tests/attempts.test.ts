@@ -375,11 +375,13 @@ test('each answer to a check that is not yet right brings the next hint, and the
     assert.equal(first.statusCode, 201);
     assert.deepEqual(first.json(), {
         outcome: 'not_yet',
+        inPlace: null,
         earned: { ...nothingEarned, hints: [firstHint] },
     });
     assert.deepEqual(second.json().earned.hints, [firstHint, secondHint]);
     assert.deepEqual(third.json(), {
         outcome: 'not_yet',
+        inPlace: null,
         earned: {
             ...nothingEarned,
             hints: [firstHint, secondHint],
@@ -417,6 +419,7 @@ test('a right answer earns the praise and closes the check', async (t) => {
     assert.equal(right.statusCode, 201);
     assert.deepEqual(right.json(), {
         outcome: 'correct',
+        inPlace: null,
         earned: { ...nothingEarned, praise: 'Right, the parts must be equal.' },
     });
     assert.equal(more.statusCode, 409);
@@ -608,7 +611,11 @@ test('an answer must fit its block: a needed reason, a typed challenge reason, a
         ],
     );
     assert.equal(typed.statusCode, 201);
-    assert.deepEqual(typed.json(), { outcome: 'accepted', earned: null });
+    assert.deepEqual(typed.json(), {
+        outcome: 'accepted',
+        earned: null,
+        inPlace: null,
+    });
 });
 
 test('finishing returns the takeaways and the topics to practise, and the attempt takes no more answers', async (t) => {

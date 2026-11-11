@@ -90,7 +90,13 @@ export function diagramName({ label, shapes }: Diagram) {
     return `${sentence} Tulisan di gambar: ${[...unsaid].join(', ')}.`;
 }
 
-function wedge(cx: number, cy: number, r: number, parts: number, i: number) {
+export function wedge(
+    cx: number,
+    cy: number,
+    r: number,
+    parts: number,
+    i: number,
+) {
     const a0 = (360 * i) / parts;
     const a1 = (360 * (i + 1)) / parts;
     const p = (a: number) => {
