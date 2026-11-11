@@ -148,6 +148,13 @@
             "when": 1794283492269,
             "tag": "0020_session_themes",
             "breakpoints": true
+        },
+        {
+            "idx": 21,
+            "version": "7",
+            "when": 1794293678588,
+            "tag": "0021_learner_adaptations",
+            "breakpoints": true
         }
     ]
 }

@@ -3,6 +3,7 @@ import { requestErrorMessage } from '../../components/request-error';
 import { Button } from '../../components/ui/button';
 import { useErrorToast } from '../../components/ui/toast';
 import { cn } from '../../lib/cn';
+import { useLead } from '../learning-sessions/adaptation';
 import { useIndonesianVoice } from '../narration/narration';
 import { speak } from '../narration/speech';
 import {
@@ -34,6 +35,7 @@ export function LearningSettingsForm() {
     const save = useSaveSettings();
     const showError = useErrorToast();
     const voice = useIndonesianVoice();
+    const lead = useLead();
     const change = (next: Partial<LearningSettings>) =>
         save.mutate(
             { ...settings, ...next },
@@ -83,9 +85,15 @@ export function LearningSettingsForm() {
                 <input
                     type="checkbox"
                     role="switch"
-                    checked={settings.readAloud}
+                    checked={
+                        settings.readAloud ||
+                        (lead === 'audio' && !settings.readAloudChosen)
+                    }
                     onChange={(event) =>
-                        change({ readAloud: event.target.checked })
+                        change({
+                            readAloud: event.target.checked,
+                            readAloudChosen: true,
+                        })
                     }
                     className="peer sr-only"
                 />

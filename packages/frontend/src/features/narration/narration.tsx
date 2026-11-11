@@ -11,6 +11,7 @@ import { ReplayIcon } from '../../components/icons/replay-icon';
 import { SpeakerIcon } from '../../components/icons/speaker-icon';
 import { Button } from '../../components/ui/button';
 import { cn } from '../../lib/cn';
+import { useLead } from '../learning-sessions/adaptation';
 import { useLearningSettings } from '../settings/queries';
 import {
     indonesianVoice,
@@ -51,7 +52,9 @@ export function useIndonesianVoice() {
 }
 
 export function useNarration(id: string, parts: string[], auto = false) {
-    const { readAloud, speechRate } = useLearningSettings();
+    const { readAloud, readAloudChosen, speechRate } = useLearningSettings();
+    const lead = useLead();
+    const autoRead = readAloud || (lead === 'audio' && !readAloudChosen);
     const voice = useIndonesianVoice();
     const now = useSyncExternalStore(subscribe, speaking, notSpeaking);
     const key = parts.join(separator);
@@ -82,7 +85,7 @@ export function useNarration(id: string, parts: string[], auto = false) {
     };
 
     useEffect(() => {
-        if (auto && readAloud && voice)
+        if (auto && autoRead && voice)
             speak(
                 id,
                 sentences.map(({ text }) => text),
@@ -90,7 +93,7 @@ export function useNarration(id: string, parts: string[], auto = false) {
                 speechRate,
                 voice,
             );
-    }, [auto, readAloud, voice, id, sentences, speechRate]);
+    }, [auto, autoRead, voice, id, sentences, speechRate]);
     useEffect(() => () => stop(id), [id]);
 
     return {

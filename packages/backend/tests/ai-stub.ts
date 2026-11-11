@@ -17,7 +17,12 @@ export type ProviderRequest = {
     body: z.infer<typeof requestBody>;
 };
 
-type Answer = { status?: number; body?: unknown; delay?: number };
+type Answer = {
+    status?: number;
+    body?: unknown;
+    delay?: number;
+    gate?: Promise<unknown>;
+};
 
 export type Reply = Answer | ((request: ProviderRequest) => Answer);
 
@@ -62,6 +67,7 @@ export async function stubProvider(t: TestContext, replies: Reply[]) {
             await new Promise((done) => setTimeout(done, reply.delay));
         }
 
+        await reply.gate;
         response.writeHead(reply.status ?? 200, {
             'content-type': 'application/json',
         });

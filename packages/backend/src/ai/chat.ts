@@ -45,6 +45,7 @@ const Turn = Annotation.Root({
     }),
     reply: Annotation<string>,
     problem: Annotation<string | null>,
+    fix: Annotation<string | null>,
     turns: Annotation<number>,
 });
 
@@ -93,10 +94,27 @@ export function aiFailureOf(error: unknown, timeoutMs: number): AiError {
     return new AiError('network', 'The AI provider could not be reached');
 }
 
+export function jsonBreak(text: string, error: unknown) {
+    const message = error instanceof Error ? error.message : String(error);
+    const at = /at position (\d+)/.exec(message);
+    const position = at
+        ? Number(at[1])
+        : /end of JSON input/.test(message)
+          ? text.length
+          : null;
+
+    if (position === null) return `The parser said: ${message}.`;
+
+    const before = text.slice(Math.max(0, position - 60), position);
+    const after = text.slice(position, position + 20);
+
+    return `The parser stopped at character ${position} of ${text.length}: the text just before it is "${before}" and just after it is "${after}". A string, object, or array opened before that point is not closed there; close each one in its place and keep the rest of the reply.`;
+}
+
 function readReply<T>(
     content: string,
     request: ChatJsonRequest<T>,
-): { value: T } | { problem: string } {
+): { value: T } | { problem: string; repair?: string } {
     const text = content
         .trim()
         .replace(/^```(?:json)?\s*/i, '')
@@ -105,8 +123,11 @@ function readReply<T>(
 
     try {
         json = JSON.parse(text);
-    } catch {
-        return { problem: 'Your reply was not valid JSON.' };
+    } catch (error) {
+        return {
+            problem: 'Your reply was not valid JSON.',
+            repair: `Your reply was not valid JSON. ${jsonBreak(text, error)}`,
+        };
     }
 
     const parsed = request.schema.safeParse(json);
@@ -140,7 +161,13 @@ export async function chatJson<T>(
         maxRetries: 0,
     });
     let accepted:
-        { value: T; model: string; outputTokens: number | null } | undefined;
+        | {
+              value: T;
+              model: string;
+              outputTokens: number | null;
+              turns: number;
+          }
+        | undefined;
     const graph = new StateGraph(Turn)
         .addNode('ask', async (state) => {
             const reply = await model.invoke(state.messages, {
@@ -163,12 +190,17 @@ export async function chatJson<T>(
                     value: result.value,
                     model: typeof name === 'string' ? name : config.model,
                     outputTokens: typeof tokens === 'number' ? tokens : null,
+                    turns: state.turns + 1,
                 };
             }
 
             return {
                 reply: reply.text,
                 problem: 'problem' in result ? result.problem : null,
+                fix:
+                    'problem' in result
+                        ? (result.repair ?? result.problem)
+                        : null,
                 turns: state.turns + 1,
             };
         })
@@ -176,7 +208,7 @@ export async function chatJson<T>(
             messages: [
                 new AIMessage(state.reply),
                 new HumanMessage(
-                    `${state.problem} Reply again with only the corrected JSON object.`,
+                    `${state.fix} Reply again with only the corrected JSON object.`,
                 ),
             ],
         }))
@@ -197,6 +229,7 @@ export async function chatJson<T>(
                 new HumanMessage(request.user),
             ],
             problem: null,
+            fix: null,
             turns: 0,
         });
     } catch (error) {

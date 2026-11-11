@@ -1,4 +1,8 @@
-import { queryOptions, useMutation } from '@tanstack/react-query';
+import {
+    queryOptions,
+    useMutation,
+    type UseMutationResult,
+} from '@tanstack/react-query';
 import { api } from '../../lib/api';
 import type { Subject } from '../assignments/queries';
 import type { BlockOf, Earned, Feedback } from '../learning-sessions/queries';
@@ -21,16 +25,38 @@ export const studentReviewQuery = (subject: Subject, cookie?: string | null) =>
             ),
     });
 
-export function useReviewTry() {
+export const studentExtraQuery = (subject: Subject, cookie?: string | null) =>
+    queryOptions({
+        queryKey: ['student', 'extra', subject],
+        queryFn: () =>
+            api<{ extra: ReviewQuestion | null }>(
+                `/api/student/extra?subject=${subject}`,
+                { headers: cookie ? { cookie } : undefined },
+            ),
+    });
+
+export type PracticeTry = {
+    blockId: number;
+    tryNumber: number;
+    answer: { kind: 'check'; choice: string; reason?: string };
+};
+
+export type PracticeSend = UseMutationResult<Feedback, Error, PracticeTry>;
+
+function usePracticeTry(url: string) {
     return useMutation({
-        mutationFn: (input: {
-            blockId: number;
-            tryNumber: number;
-            answer: { kind: 'check'; choice: string; reason?: string };
-        }) =>
-            api<Feedback>('/api/student/review/tries', {
+        mutationFn: (input: PracticeTry) =>
+            api<Feedback>(url, {
                 method: 'POST',
                 body: JSON.stringify(input),
             }),
     });
+}
+
+export function useReviewTry() {
+    return usePracticeTry('/api/student/review/tries');
+}
+
+export function useExtraTry() {
+    return usePracticeTry('/api/student/extra/tries');
 }

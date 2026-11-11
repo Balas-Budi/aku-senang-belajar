@@ -9,9 +9,13 @@ export const kindLabels: Record<StudioBlock['kind'], string> = {
     check: 'Soal cek',
     challenge: 'Tantangan',
     reflection: 'Refleksi',
+    extra_challenge: 'Tantangan tambahan',
 };
 
-export const stepOfKind: Record<StudioBlock['kind'], Step> = {
+export const stepOfKind: Record<
+    Exclude<StudioBlock['kind'], 'extra_challenge'>,
+    Step
+> = {
     brain_game: 'opening',
     hook: 'opening',
     story: 'story',

@@ -19,6 +19,18 @@ type Fraction = {
     numeratorNote: string;
     denominatorNote: string;
 };
+type CheckContent = {
+    prompt: string;
+    illustration?: string;
+    diagram?: Diagram;
+    options: Option[];
+    answer: string;
+    reason?: { prompt: string; starters: string[] };
+    praise: string;
+    hints: [Picture, Picture, Picture];
+    example: Picture;
+    reveal: string;
+};
 
 export type StudioBlock = {
     id: number;
@@ -45,21 +57,8 @@ export type StudioBlock = {
               fraction?: Fraction;
           };
       }
-    | {
-          kind: 'check';
-          content: {
-              prompt: string;
-              illustration?: string;
-              diagram?: Diagram;
-              options: Option[];
-              answer: string;
-              reason?: { prompt: string; starters: string[] };
-              praise: string;
-              hints: [Picture, Picture, Picture];
-              example: Picture;
-              reveal: string;
-          };
-      }
+    | { kind: 'check'; content: CheckContent }
+    | { kind: 'extra_challenge'; content: CheckContent }
     | {
           kind: 'challenge';
           content: {

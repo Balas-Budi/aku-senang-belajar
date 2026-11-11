@@ -1,5 +1,8 @@
 import { z } from 'zod';
 import {
+    adaptationHelp,
+    adaptationLead,
+    adaptationSource,
     analysisRunStatus,
     sessionDrafting,
     subject,
@@ -14,6 +17,41 @@ export const reportParams = z.object({ reportId: id });
 export const summaryParams = z.object({ summaryId: id });
 export const checkBody = z.object({ text: z.string().trim().min(1).max(3000) });
 export const excludedBody = z.object({ excluded: z.boolean() });
+export const adaptationParams = classStudentParams.extend({
+    subject: z.enum(subject.enumValues),
+});
+
+const help = z.enum(adaptationHelp.enumValues);
+const lead = z.enum(adaptationLead.enumValues);
+
+export const adaptationBody = z.union([
+    z.strictObject({ helpFirst: help, lead: lead.nullable() }),
+    z.strictObject({ off: z.boolean() }),
+    z.strictObject({ source: z.literal('ai') }),
+]);
+
+export const adaptationItem = z.object({
+    subject: z.enum(subject.enumValues),
+    helpFirst: help.nullable(),
+    lead: lead.nullable(),
+    source: z.enum(adaptationSource.enumValues),
+    off: z.boolean(),
+    pending: z.boolean(),
+    failed: z.boolean(),
+    thin: z.boolean(),
+    readAloudChosen: z.boolean(),
+    ai: z
+        .object({
+            helpFirst: help.nullable(),
+            lead: lead.nullable(),
+            reason: z.string().nullable(),
+            suggestedAt: z.date(),
+        })
+        .nullable(),
+    teacher: z
+        .object({ helpFirst: help, lead: lead.nullable(), setAt: z.date() })
+        .nullable(),
+});
 
 const status = z.enum(understandingStatus.enumValues);
 const decision = z.enum(verificationDecision.enumValues);
@@ -120,6 +158,7 @@ export const studentReportResponse = z.object({
     reviews: z.array(
         z.object({
             blockId: z.number(),
+            kind: z.enum(['review', 'extra']),
             mission: z.string(),
             prompt: z.string(),
             rounds: z.array(
@@ -131,6 +170,7 @@ export const studentReportResponse = z.object({
             ),
         }),
     ),
+    adaptations: z.array(adaptationItem),
 });
 
 export const draftingResponse = z.object({ drafting: z.literal('generating') });
@@ -151,3 +191,5 @@ export type ReportParams = z.infer<typeof reportParams>;
 export type SummaryParams = z.infer<typeof summaryParams>;
 export type CheckBody = z.infer<typeof checkBody>;
 export type ExcludedBody = z.infer<typeof excludedBody>;
+export type AdaptationParams = z.infer<typeof adaptationParams>;
+export type AdaptationBody = z.infer<typeof adaptationBody>;

@@ -39,7 +39,8 @@ export function textFields(block: EditableBlock): TextField[] {
             ];
         case 'story':
             return [text('Teks', 'text')];
-        case 'check': {
+        case 'check':
+        case 'extra_challenge': {
             const { options, answer, reason, hints } = block.content;
             return [
                 text('Pertanyaan', 'prompt'),
@@ -129,7 +130,8 @@ export function diagramFields(block: EditableBlock): DiagramField[] {
             return drawn('Gambar pertanyaan', block.content.diagram, 'prompt');
         case 'story':
             return drawn('Gambar cerita', block.content.diagram, 'text');
-        case 'check': {
+        case 'check':
+        case 'extra_challenge': {
             const { diagram, hints, example } = block.content;
             return [
                 ...drawn('Gambar pertanyaan', diagram, 'prompt'),

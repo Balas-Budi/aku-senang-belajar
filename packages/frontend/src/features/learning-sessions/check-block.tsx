@@ -1,4 +1,4 @@
-import { useId, useState } from 'react';
+import { useContext, useId, useState } from 'react';
 import { requestErrorMessage } from '../../components/request-error';
 import { Button } from '../../components/ui/button';
 import { useErrorToast } from '../../components/ui/toast';
@@ -9,9 +9,11 @@ import {
     Spoken,
     useNarration,
 } from '../narration/narration';
+import { AdaptationContext, useLead } from './adaptation';
 import { DiagramPicture } from './diagram';
 import { Illustration } from './illustration';
 import { answersFor, useHelp, type Earned, type Picture } from './queries';
+import { ScreenPicture } from './screen-picture';
 import {
     OfflineNote,
     OptionPicker,
@@ -35,8 +37,9 @@ export function HelpCard({
     onListen?: () => void;
 }) {
     const narration = useNarration(useId(), [picture.text]);
-    return (
-        <div className="bg-student-accent-soft flex flex-col gap-3 rounded-2xl p-4 sm:flex-row sm:items-center">
+    const lead = useLead();
+    const pictures = (
+        <>
             {picture.illustration && (
                 <Illustration
                     name={picture.illustration}
@@ -49,6 +52,11 @@ export function HelpCard({
                     className="w-full max-w-48 shrink-0"
                 />
             )}
+        </>
+    );
+    return (
+        <div className="bg-student-accent-soft flex flex-col gap-3 rounded-2xl p-4 sm:flex-row sm:items-center">
+            {lead !== 'text' && pictures}
             <div className="space-y-2">
                 <p className="text-student-accent-ink font-bold">{title}</p>
                 <p className="leading-relaxed">
@@ -63,6 +71,7 @@ export function HelpCard({
                     quiet
                 />
             </div>
+            {lead === 'text' && pictures}
         </div>
     );
 }
@@ -140,6 +149,7 @@ export function CheckBlock({
     const closed = earned.praise !== null || earned.reveal !== null;
     const reasonMissing = Boolean(content.reason) && !reason.trim();
     const listen = useHelp(assignmentId);
+    const adaptation = useContext(AdaptationContext);
     const [heard, setHeard] = useState<number | null>(null);
     const narration = useNarration(
         `block-${block.id}`,
@@ -158,7 +168,7 @@ export function CheckBlock({
     }
 
     function check() {
-        if (!choice || reasonMissing) return;
+        if (!choice || reasonMissing || sender.sending) return;
         sender.send(
             {
                 attemptId: attempt.id,
@@ -191,6 +201,31 @@ export function CheckBlock({
         );
     }
 
+    const picture = (
+        <ScreenPicture
+            illustration={content.illustration}
+            diagram={content.diagram}
+            className="mx-auto max-w-sm"
+        />
+    );
+    const exampleFirst = adaptation?.helpFirst === 'example';
+    const exampleCard = earned.example && (
+        <HelpCard
+            title="Contoh lain"
+            picture={earned.example}
+            onListen={listenOnce}
+        />
+    );
+    const exampleButton = !earned.example && (
+        <Button
+            variant="outline"
+            disabled={help.isPending}
+            onClick={() => ask('example')}
+        >
+            Contoh lain
+        </Button>
+    );
+
     return (
         <ScreenCard aria-labelledby={`block-${block.id}`}>
             <ScreenHeading
@@ -200,24 +235,14 @@ export function CheckBlock({
                 Cek sebentar!
             </ScreenHeading>
             <NarrationControls narration={narration} onListen={listenOnce} />
-            {content.illustration && (
-                <Illustration
-                    name={content.illustration}
-                    className="mx-auto max-w-sm"
-                />
-            )}
-            {content.diagram && (
-                <DiagramPicture
-                    diagram={content.diagram}
-                    className="mx-auto max-w-sm"
-                />
-            )}
+            {adaptation?.lead !== 'text' && picture}
             <p className="font-display text-primary-deep text-[1.35em] leading-snug font-medium text-pretty">
                 <Spoken
                     text={content.prompt}
                     sentence={narration.sentenceIn(0)}
                 />
             </p>
+            {adaptation?.lead === 'text' && picture}
             <OptionPicker
                 name={`check-${block.id}`}
                 legend={content.prompt}
@@ -242,6 +267,7 @@ export function CheckBlock({
             {(tries.length > 0 || closed) && (
                 <Feedback earned={earned} {...reactions} />
             )}
+            {exampleFirst && exampleCard}
             {earned.hints.map((hint, index) => (
                 <HelpCard
                     key={hint.text}
@@ -250,15 +276,10 @@ export function CheckBlock({
                     onListen={listenOnce}
                 />
             ))}
-            {earned.example && (
-                <HelpCard
-                    title="Contoh lain"
-                    picture={earned.example}
-                    onListen={listenOnce}
-                />
-            )}
+            {!exampleFirst && exampleCard}
             {!closed && (
                 <div className="flex flex-wrap gap-2">
+                    {exampleFirst && exampleButton}
                     {earned.hints.length < HINTS && (
                         <Button
                             variant="outline"
@@ -270,15 +291,7 @@ export function CheckBlock({
                                 : 'Minta petunjuk'}
                         </Button>
                     )}
-                    {!earned.example && (
-                        <Button
-                            variant="outline"
-                            disabled={help.isPending}
-                            onClick={() => ask('example')}
-                        >
-                            Contoh lain
-                        </Button>
-                    )}
+                    {!exampleFirst && exampleButton}
                     {!asked && (
                         <Button
                             variant="outline"
@@ -311,9 +324,9 @@ export function CheckBlock({
                     <div className="flex flex-col gap-3 sm:flex-row">
                         <Button
                             feel="chunky"
-                            disabled={
-                                !choice || reasonMissing || sender.sending
-                            }
+                            disabled={!choice || reasonMissing}
+                            aria-disabled={sender.sending}
+                            className="aria-disabled:opacity-60"
                             onClick={check}
                         >
                             {tries.length ? 'Periksa lagi' : 'Periksa'}

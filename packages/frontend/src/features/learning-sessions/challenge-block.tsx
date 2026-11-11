@@ -6,10 +6,10 @@ import {
     Spoken,
     useNarration,
 } from '../narration/narration';
+import { useLead } from './adaptation';
 import { readStored, store } from './device-storage';
-import { DiagramPicture } from './diagram';
-import { Illustration } from './illustration';
 import { answersFor, useHelp } from './queries';
+import { ScreenPicture } from './screen-picture';
 import {
     OfflineNote,
     OptionPicker,
@@ -46,6 +46,14 @@ export function ChallengeBlock({
         ],
         true,
     );
+    const lead = useLead();
+    const picture = (
+        <ScreenPicture
+            illustration={content.illustration}
+            diagram={content.diagram}
+            className="mx-auto max-w-sm"
+        />
+    );
 
     function listenOnce() {
         if (sent || heard) return;
@@ -69,7 +77,7 @@ export function ChallengeBlock({
     }
 
     function send() {
-        if (!choice || !ready) return;
+        if (!choice || !ready || sender.sending) return;
         sender.send(
             {
                 attemptId: attempt.id,
@@ -90,24 +98,14 @@ export function ChallengeBlock({
                 Tantangan
             </ScreenHeading>
             <NarrationControls narration={narration} onListen={listenOnce} />
+            {lead === 'visual' && picture}
             <p className="leading-relaxed text-pretty">
                 <Spoken
                     text={content.prompt}
                     sentence={narration.sentenceIn(0)}
                 />
             </p>
-            {content.illustration && (
-                <Illustration
-                    name={content.illustration}
-                    className="mx-auto max-w-sm"
-                />
-            )}
-            {content.diagram && (
-                <DiagramPicture
-                    diagram={content.diagram}
-                    className="mx-auto max-w-sm"
-                />
-            )}
+            {lead !== 'visual' && picture}
             <p className="font-display text-primary-deep text-[1.35em] leading-snug font-medium text-pretty">
                 <Spoken
                     text={content.question}
@@ -153,8 +151,9 @@ export function ChallengeBlock({
                 <div className="space-y-2">
                     <Button
                         feel="chunky"
-                        className="w-full sm:w-auto"
-                        disabled={!ready || sender.sending}
+                        className="w-full aria-disabled:opacity-60 sm:w-auto"
+                        disabled={!ready}
+                        aria-disabled={sender.sending}
                         onClick={send}
                     >
                         Kirim jawaban

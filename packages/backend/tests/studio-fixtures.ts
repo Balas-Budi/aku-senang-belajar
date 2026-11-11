@@ -181,6 +181,14 @@ export const draft = {
             competencies: [],
             pages: [],
         },
+        {
+            ...checkFor('C1', 4),
+            kind: 'extra_challenge',
+            content: {
+                ...checkFor('C1', 4).content,
+                prompt: 'Pizza mana yang dipotong empat sama besar?',
+            },
+        },
     ],
 };
 
@@ -239,7 +247,7 @@ function withDiagram<T extends { content: object }>(block: T, diagram: object) {
 }
 
 function drawn(story: object, hint: object) {
-    const [hook, c1Story, , c2Story, c2Check, challenge, reflection] =
+    const [hook, c1Story, , c2Story, c2Check, challenge, reflection, extra] =
         draft.blocks;
     const check = checkFor('C1', 1);
     const [first, , third] = check.content.hints;
@@ -266,6 +274,7 @@ function drawn(story: object, hint: object) {
             c2Check,
             withDiagram(challenge, quarters),
             reflection,
+            extra,
         ],
     };
 }

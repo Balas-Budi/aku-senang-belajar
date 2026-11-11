@@ -8,6 +8,7 @@ import {
     understandingStatus,
     verificationDecision,
 } from '../../db/schema.ts';
+import { adaptationPair } from '../../learning/adaptation.ts';
 import { competencyRubric } from '../../learning/rubric.ts';
 
 const id = z.coerce.number().int().positive();
@@ -126,6 +127,7 @@ export const evidenceResponse = z.object({
     progress,
     attemptId: z.number().nullable(),
     theme: z.string().nullable(),
+    adaptation: adaptationPair.nullable(),
     analysis,
     summary: z
         .object({ id: z.number(), text: z.string(), excluded: z.boolean() })

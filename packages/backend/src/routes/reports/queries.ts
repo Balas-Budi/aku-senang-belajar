@@ -8,15 +8,23 @@ import {
     attempts,
     classes,
     competencies,
+    learnerAdaptations,
     learnerSummaries,
     learningSessions,
     reports,
     reviewTries,
     sessionBlocks,
+    studentSettings,
+    subject,
 } from '../../db/schema.ts';
+import { followedPair } from '../../learning/adaptation.ts';
 import { sessionBlock } from '../../learning/blocks.ts';
 import { themedOr, themesFor } from '../../learning/themed-blocks.ts';
 import { notFound } from '../../lib/errors.ts';
+import {
+    keptSummaries,
+    MAX_ADAPTATION_TRIES,
+} from '../../memory/adaptations.ts';
 import { membersOf } from '../classes/queries.ts';
 import {
     attemptsOf,
@@ -28,6 +36,7 @@ import {
 } from '../results/queries.ts';
 
 type Status = typeof assessments.$inferSelect.status;
+type Subject = (typeof subject.enumValues)[number];
 type Round = {
     tries: number;
     result: 'correct' | 'revealed' | 'open';
@@ -222,16 +231,9 @@ export async function chapterMap(
 export async function studentHistory(
     db: Queryable,
     classId: number,
-    studentId: number,
+    student: { id: number; name: string },
 ) {
-    const student = (await membersOf(db, classId)).find(
-        ({ id }) => id === studentId,
-    );
-
-    if (!student) {
-        throw notFound('Student not found');
-    }
-
+    const studentId = student.id;
     const assigned = await classAssignments(db, classId);
     const taken = (
         await attemptsOf(
@@ -483,6 +485,7 @@ export async function practiceOf(
         number,
         {
             blockId: number;
+            kind: 'review' | 'extra';
             mission: string;
             prompt: string;
             rounds: Round[];
@@ -498,10 +501,16 @@ export async function practiceOf(
         const shown =
             block.success && themedOr(block.data, themes.get(item.blockId));
 
-        if (!shown || shown.kind !== 'check') continue;
+        if (
+            !shown ||
+            (shown.kind !== 'check' && shown.kind !== 'extra_challenge')
+        ) {
+            continue;
+        }
 
         const question = questions.get(item.blockId) ?? {
             blockId: item.blockId,
+            kind: shown.kind === 'check' ? 'review' : 'extra',
             mission: item.mission,
             prompt: shown.content.prompt,
             rounds: [],
@@ -525,4 +534,95 @@ export async function practiceOf(
     }
 
     return [...questions.values()];
+}
+
+export async function adaptationsOf(
+    db: Queryable,
+    classId: number,
+    studentId: number,
+    only?: Subject,
+) {
+    const rows = await db
+        .select()
+        .from(learnerAdaptations)
+        .where(
+            and(
+                eq(learnerAdaptations.studentId, studentId),
+                eq(learnerAdaptations.classId, classId),
+                only === undefined
+                    ? undefined
+                    : eq(learnerAdaptations.subject, only),
+            ),
+        );
+    const [settings] = await db
+        .select({ readAloudChosen: studentSettings.readAloudChosen })
+        .from(studentSettings)
+        .where(eq(studentSettings.studentId, studentId));
+    const readAloudChosen = settings?.readAloudChosen ?? false;
+    const taught =
+        only === undefined
+            ? (await classAssignments(db, classId)).map(
+                  ({ subject: taughtSubject }) => taughtSubject,
+              )
+            : [only];
+    const shown = subject.enumValues.filter(
+        (value) =>
+            taught.includes(value) || rows.some((row) => row.subject === value),
+    );
+
+    return Promise.all(
+        shown.map(async (value) => {
+            const row = rows.find((entry) => entry.subject === value);
+            const thin = (await keptSummaries(db, studentId, value)).length < 2;
+
+            if (!row) {
+                return {
+                    subject: value,
+                    helpFirst: null,
+                    lead: null,
+                    source: 'ai' as const,
+                    off: false,
+                    pending: false,
+                    failed: false,
+                    thin,
+                    readAloudChosen,
+                    ai: null,
+                    teacher: null,
+                };
+            }
+
+            const followed = followedPair(row);
+            const waiting = row.queued > row.handled;
+
+            return {
+                subject: value,
+                helpFirst: followed?.helpFirst ?? null,
+                lead: followed?.lead ?? null,
+                source: row.source,
+                off: row.off,
+                pending: waiting && row.tries < MAX_ADAPTATION_TRIES,
+                failed: waiting && row.tries >= MAX_ADAPTATION_TRIES,
+                thin,
+                readAloudChosen,
+                ai: row.suggestedAt
+                    ? {
+                          helpFirst: row.aiHelpFirst,
+                          lead: row.aiLead,
+                          reason: row.aiReason,
+                          suggestedAt: row.suggestedAt,
+                      }
+                    : null,
+                teacher:
+                    row.source === 'teacher' &&
+                    row.helpFirst !== null &&
+                    row.setAt !== null
+                        ? {
+                              helpFirst: row.helpFirst,
+                              lead: row.lead,
+                              setAt: row.setAt,
+                          }
+                        : null,
+            };
+        }),
+    );
 }

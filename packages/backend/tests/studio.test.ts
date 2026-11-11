@@ -74,6 +74,7 @@ test('a teacher drafts a session from a module; it is stored with the brain game
             'check',
             'challenge',
             'reflection',
+            'extra_challenge',
         ],
     );
     assert.deepEqual(session.blocks[3].competencies, ['C1']);

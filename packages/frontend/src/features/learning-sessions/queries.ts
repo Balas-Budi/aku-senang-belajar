@@ -97,12 +97,17 @@ type SavedAnswer = {
     outcome: Outcome;
 };
 export type Done = { takeaways: string[]; toPractise: string[] };
+export type Adaptation = {
+    helpFirst: 'hint' | 'example' | null;
+    lead: 'text' | 'audio' | 'visual' | null;
+};
 export type Attempt = {
     id: number;
     status: 'in_progress' | 'submitted';
     checkpoint: number;
     answers: SavedAnswer[];
     done: Done | null;
+    adaptation: Adaptation | null;
 };
 export type LearningSession = {
     id: number;

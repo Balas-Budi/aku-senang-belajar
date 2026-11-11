@@ -7,9 +7,11 @@ import {
     joinClass,
     leaveClass,
     moveCheckpoint,
+    answerExtraQuestion,
     answerReviewQuestion,
     myCards,
     myClass,
+    myExtra,
     myPath,
     myProfile,
     myReview,
@@ -28,6 +30,8 @@ import {
     checkpointBody,
     classroomResponse,
     doneResponse,
+    extraQuery,
+    extraResponse,
     feedbackResponse,
     helpBody,
     helpResponse,
@@ -40,6 +44,7 @@ import {
     reviewResponse,
     reviewTryBody,
     settingsBody,
+    settingsResponse,
 } from './schema.ts';
 
 export const studentRoutes: FastifyPluginAsyncZod = async (fastify) => {
@@ -98,6 +103,26 @@ export const studentRoutes: FastifyPluginAsyncZod = async (fastify) => {
         answerReviewQuestion,
     );
     fastify.get(
+        '/extra',
+        {
+            schema: {
+                querystring: extraQuery,
+                response: { 200: extraResponse },
+            },
+        },
+        myExtra,
+    );
+    fastify.post(
+        '/extra/tries',
+        {
+            schema: {
+                body: reviewTryBody,
+                response: { 201: feedbackResponse },
+            },
+        },
+        answerExtraQuestion,
+    );
+    fastify.get(
         '/profile',
         { schema: { response: { 200: profileResponse } } },
         myProfile,
@@ -109,12 +134,12 @@ export const studentRoutes: FastifyPluginAsyncZod = async (fastify) => {
     );
     fastify.get(
         '/settings',
-        { schema: { response: { 200: settingsBody } } },
+        { schema: { response: { 200: settingsResponse } } },
         mySettings,
     );
     fastify.put(
         '/settings',
-        { schema: { body: settingsBody, response: { 200: settingsBody } } },
+        { schema: { body: settingsBody, response: { 200: settingsResponse } } },
         saveSettings,
     );
     fastify.get(

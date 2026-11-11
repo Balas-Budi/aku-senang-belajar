@@ -5,7 +5,10 @@ import type { Subject } from '../features/assignments/queries';
 import { subjects } from '../features/assignments/subject-art';
 import { studentClassQuery } from '../features/classes/queries';
 import { studentPathQuery } from '../features/path/queries';
-import { studentReviewQuery } from '../features/review/queries';
+import {
+    studentExtraQuery,
+    studentReviewQuery,
+} from '../features/review/queries';
 import { SubjectPath } from '../features/path/subject-path';
 import type { Route } from './+types/student-subject';
 export async function loader({ request, params }: Route.LoaderArgs) {
@@ -17,6 +20,9 @@ export async function loader({ request, params }: Route.LoaderArgs) {
         client.prefetchQuery(studentClassQuery(cookie)),
         client.prefetchQuery(
             studentReviewQuery(params.subject as Subject, cookie),
+        ),
+        client.prefetchQuery(
+            studentExtraQuery(params.subject as Subject, cookie),
         ),
     ]);
     return {

@@ -6,6 +6,7 @@ import {
     diagram,
     diagramName,
     diagramsOf,
+    isMissionKind,
     mergeDiagrams,
     numbersOf,
     optionIds,
@@ -597,7 +598,7 @@ test('checkDraft shows eight problems and counts the rest', () => {
         lines?.[1],
         '- Block 1 (hook) names C9, which is not among the competencies you received',
     );
-    assert.equal(lines?.[9], '- and 7 more of the same kinds');
+    assert.equal(lines?.[9], '- and 9 more of the same kinds');
 });
 
 test('a screen of more than two sentences is refused', () => {
@@ -610,6 +611,16 @@ test('a screen of more than two sentences is refused', () => {
             },
         }),
         ['content.prompt'],
+    );
+
+    const result = sessionBlock.safeParse({
+        ...check,
+        content: { ...check.content, prompt: 'Satu. Dua. Tiga? Empat!' },
+    });
+
+    assert.match(
+        result.error?.issues[0]?.message ?? '',
+        /^A student screen holds at most two sentences; this one has 4,/,
     );
 });
 
@@ -656,6 +667,46 @@ test('withTheme merges the base diagrams back, a hint diagram included', () => {
     assert.equal(
         block.kind === 'check' && block.content.hints[1].diagram?.label,
         quarters.label,
+    );
+});
+
+test('an extra challenge parses as a check and refuses an answer outside its options', () => {
+    assert.equal(blockContent.extra_challenge, blockContent.check);
+    assert.deepEqual(issuePaths({ ...check, kind: 'extra_challenge' }), []);
+    assert.deepEqual(
+        issuePaths({
+            kind: 'extra_challenge',
+            content: { ...check.content, answer: 'c' },
+        }),
+        ['content.answer'],
+    );
+});
+
+test('an extra challenge lists its diagrams and keeps its reason question under a theme', () => {
+    const extra = parsed({ ...drawnCheck, kind: 'extra_challenge' });
+    const reason = {
+        prompt: 'Mengapa begitu?',
+        starters: ['Karena'],
+    };
+
+    const plain = rewritten(extra, { reason: undefined });
+
+    assert.equal(extra.kind, 'extra_challenge');
+    assert.deepEqual(diagramsOf(extra), diagramsOf(drawnCheck));
+    assert.deepEqual(themeProblems(rewritten(extra, { reason }), plain), [
+        'Theme rule: Keep the reason question',
+    ]);
+    assert.deepEqual(themeProblems(plain, rewritten(extra, { reason })), [
+        'Theme rule: Remove the reason question; the base screen does not have one',
+    ]);
+});
+
+test('isMissionKind leaves out only the extra challenge', () => {
+    assert.deepEqual(
+        sessionBlock.options
+            .map((option) => option.shape.kind.value)
+            .filter((kind) => !isMissionKind(kind)),
+        ['extra_challenge'],
     );
 });
 

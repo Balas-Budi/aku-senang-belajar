@@ -553,6 +553,9 @@ export function StudioView({ id }: { id: number }) {
         ({ drafting }) => drafting === 'generating',
     );
     const baseEditable = editable && !themeDrafting;
+    const extras = session.blocks.filter(
+        (block) => block.kind === 'extra_challenge',
+    );
     const { module } = session;
     return (
         <>
@@ -615,7 +618,9 @@ export function StudioView({ id }: { id: number }) {
                 )}
                 {stepOrder.map((step) => {
                     const blocks = session.blocks.filter(
-                        (block) => stepOfKind[block.kind] === step,
+                        (block) =>
+                            block.kind !== 'extra_challenge' &&
+                            stepOfKind[block.kind] === step,
                     );
                     if (blocks.length === 0) return null;
                     return (
@@ -644,6 +649,39 @@ export function StudioView({ id }: { id: number }) {
                         </Card>
                     );
                 })}
+                {extras.length > 0 && (
+                    <Card>
+                        <section
+                            aria-labelledby="extra-title"
+                            className="space-y-2"
+                        >
+                            <h2
+                                id="extra-title"
+                                className="text-lg font-semibold"
+                            >
+                                Tantangan tambahan
+                            </h2>
+                            <p className="text-muted-foreground max-w-prose text-sm">
+                                Satu soal latihan sesudah misi. Siswa
+                                mendapatkannya di jalur belajar setelah semua
+                                kompetensi misi ini berstatus Terlihat.
+                                Jawabannya disimpan sebagai latihan, bukan bukti
+                                pemahaman. Contoh lain tidak ditampilkan di
+                                latihan.
+                            </p>
+                            <ul className="divide-paper-edge divide-y">
+                                {extras.map((block) => (
+                                    <ScreenItem
+                                        key={block.id}
+                                        sessionId={session.id}
+                                        block={block}
+                                        editable={baseEditable}
+                                    />
+                                ))}
+                            </ul>
+                        </section>
+                    </Card>
+                )}
                 {!session.prepared &&
                     session.blocks.length > 0 &&
                     (draft || session.themes.length > 0) && (

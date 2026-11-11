@@ -11,7 +11,7 @@ import { cn } from '../../lib/cn';
 import type { Subject } from '../assignments/queries';
 import { SubjectArt, subjects } from '../assignments/subject-art';
 import { studentClassQuery } from '../classes/queries';
-import { studentReviewQuery } from '../review/queries';
+import { studentExtraQuery, studentReviewQuery } from '../review/queries';
 import { stepLabels } from '../learning-sessions/steps';
 import {
     chaptersOf,
@@ -304,6 +304,7 @@ export function SubjectPath({ subject }: { subject: Subject }) {
     const query = useQuery(studentPathQuery());
     const classroom = useQuery(studentClassQuery());
     const review = useQuery(studentReviewQuery(subject));
+    const extra = useQuery(studentExtraQuery(subject)).data?.extra;
     const path = useRef<HTMLDivElement>(null);
     const { label, tint } = subjects[subject];
     useEffect(() => {
@@ -410,6 +411,34 @@ export function SubjectPath({ subject }: { subject: Subject }) {
                         className={buttonVariants({ feel: 'chunky' })}
                     >
                         Mulai Ulang Yuk
+                    </Link>
+                </section>
+            )}
+            {extra && (
+                <section
+                    aria-labelledby="extra-title"
+                    className="border-paper-edge flex flex-col gap-3 rounded-2xl border-2 border-b-[5px] bg-white p-4 sm:flex-row sm:items-center sm:p-5"
+                >
+                    <div className="min-w-0 flex-1">
+                        <h2
+                            id="extra-title"
+                            className="font-display text-primary-deep text-xl font-semibold"
+                        >
+                            Tantangan tambahan
+                        </h2>
+                        <p className="text-lg leading-relaxed">
+                            Satu soal baru dari misi {extra.mission} untuk kamu
+                            coba.
+                        </p>
+                    </div>
+                    <Link
+                        to={`/student/subjects/${subject}/extra`}
+                        className={buttonVariants({
+                            feel: 'chunky',
+                            variant: reviewCount > 0 ? 'outline' : 'primary',
+                        })}
+                    >
+                        Coba tantangannya
                     </Link>
                 </section>
             )}

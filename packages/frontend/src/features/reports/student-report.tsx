@@ -24,6 +24,7 @@ import {
     studentReportQuery,
     useExcludeSummary,
 } from './queries';
+import { Adaptations } from './adaptations';
 import { ReportText } from './report-text';
 
 const day = new Intl.DateTimeFormat('id-ID', { dateStyle: 'medium' });
@@ -33,6 +34,14 @@ const roundResults = {
     revealed: 'jawaban ditunjukkan',
     open: 'belum selesai',
 };
+
+function practiceTitle(reviews: { kind: 'review' | 'extra' }[]) {
+    const review = reviews.some(({ kind }) => kind === 'review');
+    const extra = reviews.some(({ kind }) => kind === 'extra');
+
+    if (review && extra) return 'Latihan: Ulang Yuk dan Tantangan tambahan';
+    return extra ? 'Latihan: Tantangan tambahan' : 'Latihan: Ulang Yuk';
+}
 
 function ChapterHistory({
     classId,
@@ -289,6 +298,11 @@ export function StudentReport({
                 summaryCount={query.data.summaryCount}
                 about="Disusun AI dari ringkasan misi siswa ini yang tidak ditandai tidak sesuai, tanpa nama siswa."
             />
+            <Adaptations
+                classId={classId}
+                studentId={student.id}
+                items={query.data.adaptations}
+            />
             <Card>
                 <section aria-labelledby="history-title" className="space-y-4">
                     <div className="space-y-1">
@@ -353,13 +367,14 @@ export function StudentReport({
                                 id="practice-title"
                                 className="text-lg font-semibold"
                             >
-                                Ulang Yuk
+                                {practiceTitle(query.data.reviews)}
                             </h2>
                             <p className="text-muted-foreground text-sm">
                                 Latihan siswa dengan soal misi yang sudah
-                                disetujui, pada kompetensi yang masih Berkembang
-                                atau Perlu verifikasi. Latihan ini tidak
-                                dianalisis AI.
+                                disetujui: Ulang Yuk pada kompetensi yang masih
+                                Berkembang atau Perlu verifikasi, dan Tantangan
+                                tambahan setelah semua kompetensi misi berstatus
+                                Terlihat. Latihan ini tidak dianalisis AI.
                             </p>
                         </div>
                         <ul className="divide-paper-edge divide-y">
@@ -372,7 +387,9 @@ export function StudentReport({
                                         {review.prompt}
                                     </p>
                                     <p className="text-muted-foreground text-sm">
-                                        {review.mission}
+                                        {review.kind === 'extra'
+                                            ? `Tantangan tambahan · ${review.mission}`
+                                            : review.mission}
                                     </p>
                                     <ul className="text-sm tabular-nums">
                                         {review.rounds.map((round) => (

@@ -15,7 +15,12 @@ import {
 } from './demo-attempts.ts';
 import { TEST_ORIGIN, testApp } from './helpers.ts';
 
-const defaults = { textSize: 'normal', readAloud: false, speechRate: 1 };
+const defaults = {
+    textSize: 'normal',
+    readAloud: false,
+    speechRate: 1,
+    readAloudChosen: false,
+};
 
 function settings(app: FastifyInstance, token: string, payload?: object) {
     return app.inject({
@@ -41,7 +46,12 @@ test("a student's settings start at the defaults, are saved whole, and stay thei
     const { teacherToken, classId } = await demoClass(app);
     const wulan = await demoStudent(app, classId, 'Wulan Sari');
     const budi = await demoStudent(app, classId, 'Budi');
-    const chosen = { textSize: 'larger', readAloud: true, speechRate: 0.75 };
+    const chosen = {
+        textSize: 'larger',
+        readAloud: true,
+        speechRate: 0.75,
+        readAloudChosen: false,
+    };
 
     assert.deepEqual((await settings(app, wulan.token)).json(), defaults);
 
@@ -55,12 +65,43 @@ test("a student's settings start at the defaults, are saved whole, and stay thei
     for (const wrong of [
         { ...chosen, speechRate: 2 },
         { ...chosen, textSize: 'huge' },
+        { ...chosen, readAloudChosen: 'yes' },
         { textSize: 'large' },
     ]) {
         assert.equal((await settings(app, wulan.token, wrong)).statusCode, 400);
     }
 
     assert.equal((await settings(app, teacherToken)).statusCode, 403);
+});
+
+test('choosing "Bacakan otomatis" is remembered and never cleared', async (t) => {
+    const app = await testApp(t);
+    const { classId } = await demoClass(app);
+    const wulan = await demoStudent(app, classId, 'Wulan Sari');
+    const switchedOff = { ...defaults, readAloudChosen: true };
+
+    const chosen = await settings(app, wulan.token, switchedOff);
+
+    assert.equal(chosen.statusCode, 200);
+    assert.deepEqual(chosen.json(), switchedOff);
+
+    const sentBack = await settings(app, wulan.token, {
+        ...defaults,
+        textSize: 'large',
+    });
+
+    assert.equal(sentBack.statusCode, 200);
+    assert.deepEqual(sentBack.json(), { ...switchedOff, textSize: 'large' });
+
+    const without = await settings(app, wulan.token, {
+        textSize: 'normal',
+        readAloud: false,
+        speechRate: 1,
+    });
+
+    assert.equal(without.statusCode, 200);
+    assert.deepEqual(without.json(), switchedOff);
+    assert.deepEqual((await settings(app, wulan.token)).json(), switchedOff);
 });
 
 test('listening to a question is help before its try, the attempt keeps whether screens were read aloud, and the analysis sees neither', async (t) => {

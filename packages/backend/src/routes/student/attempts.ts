@@ -1,4 +1,4 @@
-import { and, asc, eq } from 'drizzle-orm';
+import { and, asc, eq, ne } from 'drizzle-orm';
 import type { Queryable } from '../../db/index.ts';
 import {
     assignments,
@@ -10,8 +10,14 @@ import {
     modules,
     responses,
     sessionBlocks,
+    type Adaptation,
 } from '../../db/schema.ts';
-import { type SessionBlock } from '../../learning/blocks.ts';
+import { adaptationPair } from '../../learning/adaptation.ts';
+import {
+    isMissionKind,
+    type MissionKind,
+    type SessionBlock,
+} from '../../learning/blocks.ts';
 import { themedBlock, themesFor } from '../../learning/themed-blocks.ts';
 import { AppError, notFound } from '../../lib/errors.ts';
 import { fieldError } from '../../lib/field-error.ts';
@@ -20,6 +26,7 @@ import { answer, type Answer, TRY_LIMIT } from './schema.ts';
 type Outcome = typeof responses.$inferSelect.outcome;
 type HelpKind = typeof helpEvents.$inferSelect.kind;
 type Block = SessionBlock & { id: number; position: number };
+export type MissionBlock = Block & { kind: MissionKind };
 type CheckBlock = Extract<Block, { kind: 'check' }>;
 type Saved = {
     blockId: number;
@@ -53,6 +60,7 @@ export async function assignmentFor(
             subject: materials.subject,
             moduleId: modules.id,
             moduleTitle: modules.title,
+            classId: assignments.classId,
         })
         .from(assignments)
         .innerJoin(classMembers, eq(classMembers.classId, assignments.classId))
@@ -87,6 +95,7 @@ export async function lockedAttempt(
             id: attempts.id,
             status: attempts.status,
             theme: attempts.theme,
+            adaptation: attempts.adaptation,
             sessionId: assignments.learningSessionId,
         })
         .from(attempts)
@@ -172,10 +181,17 @@ export async function blocksOf(
     const rows = await db
         .select(blockColumns)
         .from(sessionBlocks)
-        .where(eq(sessionBlocks.learningSessionId, sessionId))
+        .where(
+            and(
+                eq(sessionBlocks.learningSessionId, sessionId),
+                ne(sessionBlocks.kind, 'extra_challenge'),
+            ),
+        )
         .orderBy(asc(sessionBlocks.position));
 
-    return themed(db, theme, rows);
+    return (await themed(db, theme, rows)).filter(
+        (block): block is MissionBlock => isMissionKind(block.kind),
+    );
 }
 
 export async function blockOf(
@@ -191,6 +207,7 @@ export async function blockOf(
             and(
                 eq(sessionBlocks.id, blockId),
                 eq(sessionBlocks.learningSessionId, sessionId),
+                ne(sessionBlocks.kind, 'extra_challenge'),
             ),
         );
 
@@ -327,6 +344,7 @@ export function followUp(
     history: BlockHistory,
     tryNumber: number,
     outcome: Outcome,
+    helpFirst: Adaptation['helpFirst'] = null,
 ): HelpKind | null {
     if (block.kind !== 'check' || outcome !== 'not_yet') {
         return null;
@@ -334,6 +352,10 @@ export function followUp(
 
     if (tryNumber === TRY_LIMIT) {
         return 'reveal';
+    }
+
+    if (helpFirst === 'example' && !history.help.includes('example')) {
+        return 'example';
     }
 
     return hintsSeen(history) < block.content.hints.length ? 'hint' : null;
@@ -360,6 +382,7 @@ export function stateOf(
         id: number;
         status: typeof attempts.$inferSelect.status;
         currentBlockId: number;
+        adaptation: unknown;
     },
     blocks: Block[],
     history: History,
@@ -370,5 +393,6 @@ export function stateOf(
         checkpoint: attempt.currentBlockId,
         answers: history.answers,
         done: attempt.status === 'submitted' ? doneOf(blocks, history) : null,
+        adaptation: adaptationPair.nullable().parse(attempt.adaptation),
     };
 }

@@ -26,7 +26,9 @@ import {
     ScreenCard,
     ScreenHeading,
 } from '../learning-sessions/session-ui';
+import { ApiError } from '../../lib/api';
 import {
+    type PracticeSend,
     type ReviewQuestion,
     studentReviewQuery,
     useReviewTry,
@@ -34,15 +36,23 @@ import {
 
 const HINTS = 3;
 
-function Question({
+export function Question({
     question,
-    number,
-    total,
+    heading,
+    label,
+    nextLabel,
+    send,
+    onMissing,
+    narrationId,
     onNext,
 }: {
     question: ReviewQuestion;
-    number: number;
-    total: number;
+    heading: string;
+    label: string;
+    nextLabel: string;
+    send: PracticeSend;
+    onMissing?: () => void;
+    narrationId: string;
     onNext: () => void;
 }) {
     const { content } = question;
@@ -51,18 +61,17 @@ function Question({
     const [earned, setEarned] = useState(question.earned);
     const [tries, setTries] = useState(question.tries);
     const [reactions, setReactions] = useState({ cheers: 0, chirps: 0 });
-    const send = useReviewTry();
     const showError = useErrorToast();
     const closed = earned.praise !== null || earned.reveal !== null;
     const reasonMissing = Boolean(content.reason) && !reason.trim();
     const narration = useNarration(
-        `review-${question.id}`,
+        narrationId,
         [content.prompt, ...content.options.map(({ label }) => label)],
         true,
     );
 
     function check() {
-        if (!choice || reasonMissing) return;
+        if (!choice || reasonMissing || send.isPending) return;
         send.mutate(
             {
                 blockId: question.id,
@@ -83,21 +92,29 @@ function Question({
                             : { ...current, chirps: current.chirps + 1 },
                     );
                 },
-                onError: (error) => showError(requestErrorMessage(error)),
+                onError: (error) => {
+                    if (
+                        onMissing &&
+                        error instanceof ApiError &&
+                        error.status === 404
+                    ) {
+                        onMissing();
+                        return;
+                    }
+                    showError(requestErrorMessage(error));
+                },
             },
         );
     }
 
     return (
-        <ScreenCard aria-labelledby={`review-${question.id}`}>
-            <p className="text-muted-foreground">
-                Soal {number} dari {total} · {question.mission}
-            </p>
+        <ScreenCard aria-labelledby={narrationId}>
+            <p className="text-muted-foreground">{label}</p>
             <ScreenHeading
-                id={`review-${question.id}`}
+                id={narrationId}
                 className="text-primary text-[1.1em]"
             >
-                Ulang Yuk!
+                {heading}
             </ScreenHeading>
             <NarrationControls narration={narration} />
             {content.illustration && (
@@ -119,7 +136,7 @@ function Question({
                 />
             </p>
             <OptionPicker
-                name={`review-${question.id}-choice`}
+                name={`${narrationId}-choice`}
                 legend={content.prompt}
                 options={content.options}
                 value={choice}
@@ -132,7 +149,7 @@ function Question({
             />
             {content.reason && !closed && (
                 <ReasonField
-                    id={`review-${question.id}-reason`}
+                    id={`${narrationId}-reason`}
                     label={content.reason.prompt}
                     starters={content.reason.starters}
                     value={reason}
@@ -156,13 +173,15 @@ function Question({
                     autoFocus
                     onClick={onNext}
                 >
-                    {number < total ? 'Soal berikutnya' : 'Selesai'}
+                    {nextLabel}
                 </Button>
             ) : (
                 <div className="space-y-2">
                     <Button
                         feel="chunky"
-                        disabled={!choice || reasonMissing || send.isPending}
+                        disabled={!choice || reasonMissing}
+                        aria-disabled={send.isPending}
+                        className="w-full aria-disabled:opacity-60 sm:w-auto"
                         onClick={check}
                     >
                         {tries ? 'Periksa lagi' : 'Periksa'}
@@ -190,6 +209,7 @@ function ReviewRun({
     const [questions] = useState(started);
     const [index, setIndex] = useState(0);
     const client = useQueryClient();
+    const send = useReviewTry();
     const back = (
         <Link
             to={`/student/subjects/${subject}`}
@@ -233,8 +253,13 @@ function ReviewRun({
         <Question
             key={question.id}
             question={question}
-            number={index + 1}
-            total={questions.length}
+            heading="Ulang Yuk!"
+            label={`Soal ${index + 1} dari ${questions.length} · ${question.mission}`}
+            nextLabel={
+                index + 1 < questions.length ? 'Soal berikutnya' : 'Selesai'
+            }
+            send={send}
+            narrationId={`review-${question.id}`}
             onNext={() => {
                 if (index + 1 === questions.length)
                     void client.invalidateQueries({

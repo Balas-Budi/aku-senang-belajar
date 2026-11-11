@@ -12,12 +12,14 @@ export type LearningSettings = {
     textSize: TextSize;
     readAloud: boolean;
     speechRate: SpeechRate;
+    readAloudChosen: boolean;
 };
 
 export const DEFAULT_SETTINGS: LearningSettings = {
     textSize: 'normal',
     readAloud: false,
     speechRate: 1,
+    readAloudChosen: false,
 };
 
 const settingsKey = ['student', 'settings'];

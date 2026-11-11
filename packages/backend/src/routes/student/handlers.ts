@@ -8,11 +8,14 @@ import {
     classes,
     classMembers,
     helpEvents,
+    learnerAdaptations,
     responses,
     sessionThemes,
     studentProfiles,
     studentSettings,
+    type Adaptation,
 } from '../../db/schema.ts';
+import { adaptationPair, followedPair } from '../../learning/adaptation.ts';
 import { stepOfKind } from '../../learning/blocks.ts';
 import { AppError, notFound } from '../../lib/errors.ts';
 import { fieldError } from '../../lib/field-error.ts';
@@ -36,9 +39,10 @@ import {
     stateOf,
 } from './attempts.ts';
 import { cardsOf } from './cards.ts';
+import { answerExtra, extraOf } from './extra.ts';
 import { isStageLocked, pathOf, stageLocked } from './path.ts';
-import { answerReview, reviewOf } from './review.ts';
-import { DEFAULT_SETTINGS, INTERESTS, settingsBody } from './schema.ts';
+import { answerReview, lockTries, reviewOf } from './review.ts';
+import { DEFAULT_SETTINGS, INTERESTS, settingsResponse } from './schema.ts';
 import type {
     AssignmentParams,
     AttemptParams,
@@ -123,6 +127,7 @@ async function attemptOf(request: FastifyRequest, assignmentId: number) {
             status: attempts.status,
             currentBlockId: attempts.currentBlockId,
             theme: attempts.theme,
+            adaptation: attempts.adaptation,
         })
         .from(attempts)
         .where(
@@ -191,19 +196,49 @@ export async function startAttempt(
         throw notFound('This session has no content yet');
     }
 
-    const { readAloud } = await settingsOf(db, studentId);
-    const [created] = await db
-        .insert(attempts)
-        .values({
-            assignmentId: assignment.id,
-            studentId,
-            currentBlockId: base[0].id,
-            readAloud,
-            theme: await themeFor(db, studentId, assignment.sessionId),
-        })
-        .onConflictDoNothing()
-        .returning({ id: attempts.id });
-    const attempt = await attemptOf(request, assignment.id);
+    const existing = await attemptOf(request, assignment.id);
+    const created =
+        !existing &&
+        (await db.transaction(async (tx) => {
+            const settings = await settingsOf(tx, studentId);
+            const [row] = await tx
+                .select({
+                    off: learnerAdaptations.off,
+                    source: learnerAdaptations.source,
+                    helpFirst: learnerAdaptations.helpFirst,
+                    lead: learnerAdaptations.lead,
+                    aiHelpFirst: learnerAdaptations.aiHelpFirst,
+                    aiLead: learnerAdaptations.aiLead,
+                })
+                .from(learnerAdaptations)
+                .where(
+                    and(
+                        eq(learnerAdaptations.studentId, studentId),
+                        eq(learnerAdaptations.subject, assignment.subject),
+                        eq(learnerAdaptations.classId, assignment.classId),
+                    ),
+                )
+                .for('share');
+            const followed = ownReading(
+                followedPair(row),
+                settings.readAloudChosen,
+            );
+            const inserted = await tx
+                .insert(attempts)
+                .values({
+                    assignmentId: assignment.id,
+                    studentId,
+                    currentBlockId: base[0].id,
+                    readAloud: settings.readAloud || followed?.lead === 'audio',
+                    theme: await themeFor(tx, studentId, assignment.sessionId),
+                    adaptation: followed,
+                })
+                .onConflictDoNothing()
+                .returning({ id: attempts.id });
+
+            return inserted.length > 0;
+        }));
+    const attempt = existing ?? (await attemptOf(request, assignment.id));
     const blocks = attempt.theme
         ? await blocksOf(db, assignment.sessionId, attempt.theme)
         : base;
@@ -211,6 +246,15 @@ export async function startAttempt(
     return reply
         .code(created ? 201 : 200)
         .send(stateOf(attempt, blocks, await historyOf(db, attempt.id)));
+}
+
+function ownReading(
+    followed: Adaptation | null,
+    readAloudChosen: boolean,
+): Adaptation | null {
+    if (followed?.lead !== 'audio' || !readAloudChosen) return followed;
+
+    return followed.helpFirst === null ? null : { ...followed, lead: null };
 }
 
 async function themeFor(db: Queryable, studentId: number, sessionId: number) {
@@ -311,7 +355,14 @@ export async function answerBlock(
         }
 
         const outcome = judge(block, given);
-        const help = followUp(block, before, tryNumber, outcome);
+        const help = followUp(
+            block,
+            before,
+            tryNumber,
+            outcome,
+            adaptationPair.nullable().parse(attempt.adaptation)?.helpFirst ??
+                null,
+        );
 
         await tx.insert(responses).values({
             attemptId: attempt.id,
@@ -326,6 +377,7 @@ export async function answerBlock(
                 attemptId: attempt.id,
                 blockId: block.id,
                 kind: help,
+                given: true,
             });
         }
 
@@ -461,6 +513,7 @@ const settingsColumns = {
     textSize: studentSettings.textSize,
     readAloud: studentSettings.readAloud,
     speechRate: studentSettings.speechRate,
+    readAloudChosen: studentSettings.readAloudChosen,
 };
 
 async function settingsOf(db: Queryable, studentId: number) {
@@ -469,7 +522,7 @@ async function settingsOf(db: Queryable, studentId: number) {
         .from(studentSettings)
         .where(eq(studentSettings.studentId, studentId));
 
-    return settings ? settingsBody.parse(settings) : DEFAULT_SETTINGS;
+    return settings ? settingsResponse.parse(settings) : DEFAULT_SETTINGS;
 }
 
 export async function mySettings(request: FastifyRequest) {
@@ -480,16 +533,22 @@ export async function saveSettings(
     request: FastifyRequest<{ Body: SettingsBody }>,
 ) {
     const studentId = currentUser(request).id;
-    const settings = request.body;
+    const { readAloudChosen, ...settings } = request.body;
+    const chosen = readAloudChosen === true;
 
-    await request.server.db.transaction(async (tx) => {
-        await tx
+    const stored = await request.server.db.transaction(async (tx) => {
+        const [row] = await tx
             .insert(studentSettings)
-            .values({ studentId, ...settings })
+            .values({ studentId, ...settings, readAloudChosen: chosen })
             .onConflictDoUpdate({
                 target: studentSettings.studentId,
-                set: { ...settings, updatedAt: new Date() },
-            });
+                set: {
+                    ...settings,
+                    updatedAt: new Date(),
+                    ...(chosen ? { readAloudChosen: true } : {}),
+                },
+            })
+            .returning(settingsColumns);
 
         if (settings.readAloud) {
             await tx
@@ -502,9 +561,11 @@ export async function saveSettings(
                     ),
                 );
         }
+
+        return row;
     });
 
-    return settings;
+    return settingsResponse.parse(stored);
 }
 
 export async function myReview(
@@ -517,17 +578,42 @@ export async function myReview(
     );
 }
 
+export async function myExtra(
+    request: FastifyRequest<{ Querystring: ReviewQuery }>,
+) {
+    return extraOf(
+        request.server.db,
+        currentUser(request).id,
+        request.query.subject,
+    );
+}
+
+export async function answerExtraQuestion(
+    request: FastifyRequest<{ Body: ReviewTryBody }>,
+    reply: FastifyReply,
+) {
+    const studentId = currentUser(request).id;
+
+    return reply.code(201).send(
+        await request.server.db.transaction(async (tx) => {
+            await lockTries(tx, studentId, request.body.blockId);
+
+            return answerExtra(tx, studentId, request.body);
+        }),
+    );
+}
+
 export async function answerReviewQuestion(
     request: FastifyRequest<{ Body: ReviewTryBody }>,
     reply: FastifyReply,
 ) {
-    return reply
-        .code(201)
-        .send(
-            await answerReview(
-                request.server.db,
-                currentUser(request).id,
-                request.body,
-            ),
-        );
+    const studentId = currentUser(request).id;
+
+    return reply.code(201).send(
+        await request.server.db.transaction(async (tx) => {
+            await lockTries(tx, studentId, request.body.blockId);
+
+            return answerReview(tx, studentId, request.body);
+        }),
+    );
 }

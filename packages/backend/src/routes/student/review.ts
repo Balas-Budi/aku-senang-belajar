@@ -1,75 +1,45 @@
-import { and, asc, desc, eq, inArray } from 'drizzle-orm';
+import { and, asc, eq, inArray, sql } from 'drizzle-orm';
 import type { Queryable } from '../../db/index.ts';
 import {
     analysisRuns,
     assessments,
-    assignments,
-    attempts,
     blockCompetencies,
-    classMembers,
-    learningSessions,
-    materials,
-    modules,
+    competencies,
     reviewTries,
     sessionBlocks,
     type subject,
+    type understandingStatus,
 } from '../../db/schema.ts';
 import { themedBlock, themesFor } from '../../learning/themed-blocks.ts';
 import { notFound } from '../../lib/errors.ts';
 import { fieldError } from '../../lib/field-error.ts';
+import { keptSummaries, namesCode } from '../../memory/adaptations.ts';
 import { currentRuns, decisionsOn, shownOf } from '../results/queries.ts';
 import { earnedOf, followUp, judge } from './attempts.ts';
+import { missionsOf } from './missions.ts';
 import { answer as storedAnswer, type Answer } from './schema.ts';
 
 type Subject = (typeof subject.enumValues)[number];
+type UnderstandingStatus = (typeof understandingStatus.enumValues)[number];
 type Try = typeof reviewTries.$inferSelect;
 
 const REVIEW_SIZE = 3;
-
-function missionsOf(db: Queryable, studentId: number, only?: Subject) {
-    return db
-        .select({
-            attemptId: attempts.id,
-            sessionId: learningSessions.id,
-            title: learningSessions.title,
-            theme: attempts.theme,
-        })
-        .from(attempts)
-        .innerJoin(assignments, eq(assignments.id, attempts.assignmentId))
-        .innerJoin(
-            classMembers,
-            and(
-                eq(classMembers.classId, assignments.classId),
-                eq(classMembers.studentId, attempts.studentId),
-            ),
-        )
-        .innerJoin(
-            learningSessions,
-            eq(learningSessions.id, assignments.learningSessionId),
-        )
-        .innerJoin(modules, eq(modules.id, learningSessions.moduleId))
-        .innerJoin(materials, eq(materials.id, modules.materialId))
-        .where(
-            and(
-                eq(attempts.studentId, studentId),
-                eq(attempts.status, 'submitted'),
-                only === undefined ? undefined : eq(materials.subject, only),
-            ),
-        )
-        .orderBy(desc(attempts.submittedAt), desc(attempts.id));
-}
 
 const themeOf = (
     missions: { sessionId: number; theme: string | null }[],
     sessionId: number,
 ) => missions.find((mission) => mission.sessionId === sessionId)?.theme ?? null;
 
-async function weakCompetencies(db: Queryable, attemptIds: number[]) {
+export async function shownStatuses(
+    db: Queryable,
+    attemptIds: number[],
+): Promise<Map<number, UnderstandingStatus>> {
     const finished = [...(await currentRuns(db, attemptIds)).values()]
         .filter(({ status }) => status === 'succeeded')
         .map(({ id }) => id);
+    const newest = new Map<number, UnderstandingStatus>();
 
-    if (finished.length === 0) return [];
+    if (finished.length === 0) return newest;
 
     const estimates = await db
         .select({
@@ -85,7 +55,6 @@ async function weakCompetencies(db: Queryable, attemptIds: number[]) {
         db,
         estimates.map(({ id }) => id),
     );
-    const newest = new Map<number, string>();
 
     for (const attemptId of attemptIds) {
         for (const estimate of estimates.filter(
@@ -104,15 +73,20 @@ async function weakCompetencies(db: Queryable, attemptIds: number[]) {
         }
     }
 
-    return [...newest]
-        .filter(
-            ([, status]) =>
-                status === 'developing' || status === 'needs_verification',
-        )
-        .map(([competencyId]) => competencyId);
+    return newest;
 }
 
-function triesOf(db: Queryable, studentId: number, blockIds: number[]) {
+export async function lockTries(
+    tx: Queryable,
+    studentId: number,
+    blockId: number,
+) {
+    await tx.execute(
+        sql`select pg_advisory_xact_lock(${studentId}::int, ${blockId}::int)`,
+    );
+}
+
+export function triesOf(db: Queryable, studentId: number, blockIds: number[]) {
     return blockIds.length === 0
         ? Promise.resolve([] as Try[])
         : db
@@ -127,7 +101,7 @@ function triesOf(db: Queryable, studentId: number, blockIds: number[]) {
               .orderBy(asc(reviewTries.id));
 }
 
-function roundOf(tries: Try[]) {
+export function roundOf(tries: Try[]) {
     const ended = tries.reduce(
         (last, item, index) =>
             item.outcome === 'correct' || item.help === 'reveal' ? index : last,
@@ -143,7 +117,7 @@ function roundOf(tries: Try[]) {
     }));
 }
 
-function historyOf(round: ReturnType<typeof roundOf>) {
+export function practiceHistoryOf(round: ReturnType<typeof roundOf>) {
     return {
         answers: round.map(({ blockId, tryNumber, answer, outcome }) => ({
             blockId,
@@ -161,25 +135,40 @@ export async function reviewOf(
     only: Subject,
 ) {
     const missions = await missionsOf(db, studentId, only);
-    const weak = await weakCompetencies(
-        db,
-        missions.map(({ attemptId }) => attemptId),
-    );
+    const weak = [
+        ...(
+            await shownStatuses(
+                db,
+                missions.map(({ attemptId }) => attemptId),
+            )
+        ).entries(),
+    ]
+        .filter(
+            ([, status]) =>
+                status === 'developing' || status === 'needs_verification',
+        )
+        .map(([competencyId]) => competencyId);
 
     if (weak.length === 0) return { questions: [] };
 
-    const rows = await db
-        .selectDistinct({
+    const linked = await db
+        .select({
             id: sessionBlocks.id,
             sessionId: sessionBlocks.learningSessionId,
             position: sessionBlocks.position,
             kind: sessionBlocks.kind,
             content: sessionBlocks.content,
+            code: competencies.code,
+            moduleId: competencies.moduleId,
         })
         .from(sessionBlocks)
         .innerJoin(
             blockCompetencies,
             eq(blockCompetencies.blockId, sessionBlocks.id),
+        )
+        .innerJoin(
+            competencies,
+            eq(competencies.id, blockCompetencies.competencyId),
         )
         .where(
             and(
@@ -190,6 +179,34 @@ export async function reviewOf(
                 ),
                 inArray(blockCompetencies.competencyId, weak),
             ),
+        );
+    const rows = [
+        ...new Map(
+            linked.map(({ code: _, moduleId: _module, ...row }) => [
+                row.id,
+                row,
+            ]),
+        ).values(),
+    ];
+    const notes = (await keptSummaries(db, studentId, only, missions)).slice(
+        0,
+        5,
+    );
+    const memoryRank = (blockId: number) =>
+        Math.min(
+            notes.length,
+            ...linked
+                .filter(({ id }) => id === blockId)
+                .map(({ code, moduleId }) =>
+                    notes.findIndex(
+                        (note) =>
+                            missions.find(
+                                ({ attemptId }) => attemptId === note.attemptId,
+                            )?.moduleId === moduleId &&
+                            namesCode(note.text, code),
+                    ),
+                )
+                .filter((index) => index !== -1),
         );
     const tries = await triesOf(
         db,
@@ -206,6 +223,7 @@ export async function reviewOf(
         .sort(
             (one, other) =>
                 Number(mastered(one.id)) - Number(mastered(other.id)) ||
+                memoryRank(one.id) - memoryRank(other.id) ||
                 order(one.sessionId) - order(other.sessionId) ||
                 one.position - other.position,
         )
@@ -237,7 +255,7 @@ export async function reviewOf(
                           content: block.content,
                           earned: earnedOf(
                               { ...block, id: row.id, position: row.position },
-                              historyOf(round),
+                              practiceHistoryOf(round),
                           ),
                           tries: round.length,
                       },
@@ -295,7 +313,7 @@ export async function answerReview(
         throw notFound('Question not found');
     }
 
-    const history = historyOf(
+    const history = practiceHistoryOf(
         roundOf(await triesOf(db, studentId, [block.id])),
     );
 

@@ -5,6 +5,7 @@ import {
     aiConfig,
     AiError,
     chatJson,
+    jsonBreak,
     requireAiConfig,
 } from '../src/ai/chat.ts';
 import { loadEnv } from '../src/env.ts';
@@ -33,6 +34,7 @@ test('a valid JSON reply comes back parsed, with the model the provider named', 
         value: { status: 'visible' },
         model: 'provider-model-name',
         outputTokens: 42,
+        turns: 1,
     });
     assert.equal(provider.requests.length, 1);
     assert.equal(provider.requests[0].path, '/v1/chat/completions');
@@ -80,6 +82,33 @@ test('a reply that is not JSON is retried once with the problem named', async (t
     );
     assert.equal(retry[2].content, 'The student understands.');
     assert.match(retry[3].content, /not valid JSON/);
+});
+
+test('broken JSON is repaired with where the parser stopped, and the error keeps the reply out', async (t) => {
+    const broken = '{"status":"visible","note":{"text":"Siswa A"';
+    const provider = await stubProvider(t, [
+        { body: completion(broken) },
+        { body: completion(broken) },
+    ]);
+
+    await assert.rejects(
+        chatJson(provider.config, { ...ask, schema: verdict }),
+        (error) =>
+            error instanceof AiError &&
+            error.message === 'Your reply was not valid JSON.',
+    );
+
+    const repair = provider.requests[1].body.messages[3].content;
+
+    assert.ok(
+        repair.startsWith(
+            `Your reply was not valid JSON. The parser stopped at character ${broken.length} of ${broken.length}: the text just before it is "${broken}" and just after it is "".`,
+        ),
+    );
+    assert.equal(
+        jsonBreak('{"a":1,}', new SyntaxError('Bad thing at position 7')),
+        'The parser stopped at character 7 of 8: the text just before it is "{"a":1," and just after it is "}". A string, object, or array opened before that point is not closed there; close each one in its place and keep the rest of the reply.',
+    );
 });
 
 test('a reply that fails twice ends as invalid output after two requests', async (t) => {

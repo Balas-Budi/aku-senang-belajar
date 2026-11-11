@@ -4,9 +4,9 @@ import {
     Spoken,
     useNarration,
 } from '../narration/narration';
-import { DiagramPicture } from './diagram';
-import { Illustration } from './illustration';
+import { useLead } from './adaptation';
 import type { BlockOf } from './queries';
+import { ScreenPicture } from './screen-picture';
 import { ScreenCard, ScreenHeading } from './session-ui';
 
 type Fraction = NonNullable<BlockOf<'story'>['content']['fraction']>;
@@ -56,6 +56,14 @@ export function StoryBlock({
 }) {
     const { content } = block;
     const narration = useNarration(`block-${block.id}`, [content.text], true);
+    const lead = useLead();
+    const picture = (
+        <ScreenPicture
+            illustration={content.illustration}
+            diagram={content.diagram}
+            className="mx-auto max-w-sm"
+        />
+    );
     return (
         <ScreenCard aria-labelledby={`block-${block.id}`}>
             <ScreenHeading
@@ -65,24 +73,14 @@ export function StoryBlock({
                 Cerita {number} dari {total}
             </ScreenHeading>
             <NarrationControls narration={narration} />
-            {content.illustration && (
-                <Illustration
-                    name={content.illustration}
-                    className="mx-auto max-w-sm"
-                />
-            )}
-            {content.diagram && (
-                <DiagramPicture
-                    diagram={content.diagram}
-                    className="mx-auto max-w-sm"
-                />
-            )}
+            {lead !== 'text' && picture}
             <p className="font-display text-primary-deep text-[1.35em] leading-snug font-medium text-pretty">
                 <Spoken
                     text={content.text}
                     sentence={narration.sentenceIn(0)}
                 />
             </p>
+            {lead === 'text' && picture}
             {content.fraction && <FractionNote fraction={content.fraction} />}
             <Button feel="chunky" className="w-full sm:w-auto" onClick={onNext}>
                 Lanjut

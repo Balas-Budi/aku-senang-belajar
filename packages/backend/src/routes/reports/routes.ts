@@ -9,9 +9,13 @@ import {
     draftChapterReport,
     draftStudentReport,
     excludeSummary,
+    setAdaptation,
     studentReport,
 } from './handlers.ts';
 import {
+    adaptationBody,
+    adaptationItem,
+    adaptationParams,
     chapterReportResponse,
     checkBody,
     checkedResponse,
@@ -87,6 +91,12 @@ export const reportRoutes: FastifyPluginAsyncZod = async (fastify) => {
     fastify.put(
         '/learner-summaries/:summaryId/excluded',
         {
+            preHandler: fastify.rateLimit({
+                max: 30,
+                timeWindow: '1 minute',
+                keyGenerator: (request) =>
+                    `exclude-summary:${request.user?.id ?? request.ip}`,
+            }),
             schema: {
                 params: summaryParams,
                 body: excludedBody,
@@ -94,5 +104,16 @@ export const reportRoutes: FastifyPluginAsyncZod = async (fastify) => {
             },
         },
         excludeSummary,
+    );
+    fastify.put(
+        '/classes/:classId/students/:studentId/adaptations/:subject',
+        {
+            schema: {
+                params: adaptationParams,
+                body: adaptationBody,
+                response: { 200: adaptationItem },
+            },
+        },
+        setAdaptation,
     );
 };

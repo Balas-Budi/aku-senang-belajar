@@ -1,22 +1,30 @@
-import { and, eq, isNull, ne, or } from 'drizzle-orm';
+import { and, eq, gt, gte, isNull, ne, or, sql } from 'drizzle-orm';
 import type { FastifyInstance, FastifyReply, FastifyRequest } from 'fastify';
 import { currentUser } from '../../auth/guards.ts';
 import {
     assessments,
+    classMembers,
+    learnerAdaptations,
     learnerSummaries,
     reports,
     verifications,
 } from '../../db/schema.ts';
-import { AppError } from '../../lib/errors.ts';
+import type { Queryable } from '../../db/index.ts';
+import { AppError, notFound } from '../../lib/errors.ts';
+import {
+    MAX_ADAPTATION_TRIES,
+    requeueForSummary,
+} from '../../memory/adaptations.ts';
 import {
     CLASS_REPORT_PROMPT,
     type ReportRequest,
     STUDENT_REPORT_PROMPT,
     startReportDraft,
 } from '../../memory/reports.ts';
-import { ownedClassId } from '../classes/queries.ts';
+import { membersOf, ownedClassId } from '../classes/queries.ts';
 import type { ChapterParams } from '../classes/schema.ts';
 import {
+    adaptationsOf,
     chapterMap,
     ownedReport,
     ownedSummary,
@@ -27,6 +35,8 @@ import {
     studentHistory,
 } from './queries.ts';
 import type {
+    AdaptationBody,
+    AdaptationParams,
     CheckBody,
     ClassStudentParams,
     ExcludedBody,
@@ -66,19 +76,38 @@ async function ownedChapter(
     };
 }
 
+async function ownedMember(
+    db: Queryable,
+    classId: number,
+    teacherId: number,
+    studentId: number,
+) {
+    const owned = await ownedClassId(db, classId, teacherId);
+    const student = (await membersOf(db, owned)).find(
+        ({ id }) => id === studentId,
+    );
+
+    if (!student) {
+        throw notFound('Student not found');
+    }
+
+    return { classId: owned, student };
+}
+
 async function ownedStudent(
     request: FastifyRequest<{ Params: ClassStudentParams }>,
 ) {
     const { db } = request.server;
-    const classId = await ownedClassId(
+    const { classId, student } = await ownedMember(
         db,
         request.params.classId,
         currentUser(request).id,
+        request.params.studentId,
     );
 
     return {
         classId,
-        history: await studentHistory(db, classId, request.params.studentId),
+        history: await studentHistory(db, classId, student),
     };
 }
 
@@ -247,7 +276,112 @@ export async function studentReport(
             classId,
             history.student.id,
         ),
+        adaptations: await adaptationsOf(
+            request.server.db,
+            classId,
+            history.student.id,
+        ),
     };
+}
+
+export async function setAdaptation(
+    request: FastifyRequest<{
+        Params: AdaptationParams;
+        Body: AdaptationBody;
+    }>,
+) {
+    const { db } = request.server;
+    const teacher = currentUser(request);
+    const { classId, student } = await ownedMember(
+        db,
+        request.params.classId,
+        teacher.id,
+        request.params.studentId,
+    );
+    const { subject } = request.params;
+    const { body } = request;
+    const choice =
+        'helpFirst' in body
+            ? {
+                  helpFirst: body.helpFirst,
+                  lead: body.lead,
+                  source: 'teacher' as const,
+                  off: false,
+              }
+            : 'off' in body
+              ? { off: body.off }
+              : {
+                    source: 'ai' as const,
+                    helpFirst: null,
+                    lead: null,
+                    off: false,
+                };
+    const queues = !('helpFirst' in body) && choice.off === false;
+    const now = new Date();
+    const stamp = { setBy: teacher.id, setAt: now, updatedAt: now };
+    const requeue = or(
+        eq(learnerAdaptations.off, true),
+        'source' in choice && choice.source === 'ai'
+            ? eq(learnerAdaptations.source, 'teacher')
+            : undefined,
+        and(
+            gt(learnerAdaptations.queued, learnerAdaptations.handled),
+            gte(learnerAdaptations.tries, MAX_ADAPTATION_TRIES),
+        ),
+    );
+
+    await db.transaction(async (tx) => {
+        const [member] = await tx
+            .select({ classId: classMembers.classId })
+            .from(classMembers)
+            .where(eq(classMembers.studentId, student.id))
+            .for('share');
+
+        if (member?.classId !== classId) {
+            throw notFound('Student not found');
+        }
+
+        await tx
+            .delete(learnerAdaptations)
+            .where(
+                and(
+                    eq(learnerAdaptations.studentId, student.id),
+                    eq(learnerAdaptations.subject, subject),
+                    ne(learnerAdaptations.classId, classId),
+                ),
+            );
+        await tx
+            .insert(learnerAdaptations)
+            .values({
+                studentId: student.id,
+                classId,
+                subject,
+                ...choice,
+                ...stamp,
+                queued: queues ? 1 : 0,
+            })
+            .onConflictDoUpdate({
+                target: [
+                    learnerAdaptations.studentId,
+                    learnerAdaptations.subject,
+                ],
+                set: {
+                    ...choice,
+                    ...stamp,
+                    ...(queues
+                        ? {
+                              queued: sql`case when ${requeue} then ${learnerAdaptations.queued} + 1 else ${learnerAdaptations.queued} end`,
+                              tries: sql`case when ${requeue} then 0 else ${learnerAdaptations.tries} end`,
+                              runAfter: sql`case when ${requeue} then now() else ${learnerAdaptations.runAfter} end`,
+                          }
+                        : {}),
+                },
+            });
+    });
+
+    const [item] = await adaptationsOf(db, classId, student.id, subject);
+
+    return item;
 }
 
 export async function draftStudentReport(
@@ -320,14 +454,17 @@ export async function excludeSummary(
         request.params.summaryId,
     );
 
-    await db
-        .update(learnerSummaries)
-        .set(
-            request.body.excluded
-                ? { excludedAt: new Date(), excludedBy: teacher.id }
-                : { excludedAt: null, excludedBy: null },
-        )
-        .where(eq(learnerSummaries.id, summary.id));
+    await db.transaction(async (tx) => {
+        await tx
+            .update(learnerSummaries)
+            .set(
+                request.body.excluded
+                    ? { excludedAt: new Date(), excludedBy: teacher.id }
+                    : { excludedAt: null, excludedBy: null },
+            )
+            .where(eq(learnerSummaries.id, summary.id));
+        await requeueForSummary(tx, summary.id);
+    });
 
     return { id: summary.id, excluded: request.body.excluded };
 }

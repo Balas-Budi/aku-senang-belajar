@@ -8,6 +8,7 @@ import {
     attempts,
     learnerSummaries,
 } from '../db/schema.ts';
+import { runNextAdaptation } from '../memory/adaptations.ts';
 import { runNextSummary } from '../memory/summaries.ts';
 import { type CompetencyEvidence, evidenceOf } from './evidence.ts';
 import {
@@ -265,7 +266,8 @@ export function startAnalysisRunner(
             for (let more = true; more && !closing;) {
                 more =
                     (await runNextAnalysis(app, { attemptId })) ||
-                    (await runNextSummary(app, { attemptId }));
+                    (await runNextSummary(app, { attemptId })) ||
+                    (await runNextAdaptation(app, { attemptId }));
             }
         } catch (error) {
             app.log.error(error, 'The analysis runner stopped a round');

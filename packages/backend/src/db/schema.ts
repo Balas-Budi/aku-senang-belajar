@@ -37,7 +37,19 @@ export const blockKind = pgEnum('block_kind', [
     'check',
     'challenge',
     'reflection',
+    'extra_challenge',
 ]);
+export const adaptationHelp = pgEnum('adaptation_help', ['hint', 'example']);
+export const adaptationLead = pgEnum('adaptation_lead', [
+    'text',
+    'audio',
+    'visual',
+]);
+export const adaptationSource = pgEnum('adaptation_source', ['ai', 'teacher']);
+export type Adaptation = {
+    helpFirst: (typeof adaptationHelp.enumValues)[number] | null;
+    lead: (typeof adaptationLead.enumValues)[number] | null;
+};
 export const attemptStatus = pgEnum('attempt_status', [
     'in_progress',
     'submitted',
@@ -145,6 +157,7 @@ export const studentSettings = pgTable('student_settings', {
     textSize: textSize().notNull().default('normal'),
     readAloud: boolean().notNull().default(false),
     speechRate: real().notNull().default(1),
+    readAloudChosen: boolean().notNull().default(false),
     updatedAt: timestamp({ withTimezone: true }).notNull().defaultNow(),
 });
 
@@ -419,6 +432,7 @@ export const attempts = pgTable(
         memoryDeletedAt: timestamp({ withTimezone: true }),
         readAloud: boolean().notNull().default(false),
         theme: text(),
+        adaptation: jsonb().$type<Adaptation>(),
     },
     (table) => [
         unique('attempts_assignment_id_student_id_unique').on(
@@ -466,6 +480,7 @@ export const helpEvents = pgTable(
             .notNull()
             .references(() => sessionBlocks.id, { onDelete: 'cascade' }),
         kind: helpKind().notNull(),
+        given: boolean().notNull().default(false),
         createdAt: timestamp({ withTimezone: true }).notNull().defaultNow(),
     },
     (table) => [
@@ -586,6 +601,44 @@ export const reviewTries = pgTable(
         index('review_tries_student_id_block_id_idx').on(
             table.studentId,
             table.blockId,
+        ),
+    ],
+);
+
+export const learnerAdaptations = pgTable(
+    'learner_adaptations',
+    {
+        id: integer().primaryKey().generatedAlwaysAsIdentity(),
+        studentId: integer()
+            .notNull()
+            .references(() => users.id, { onDelete: 'cascade' }),
+        classId: integer()
+            .notNull()
+            .references(() => classes.id, { onDelete: 'cascade' }),
+        subject: subject().notNull(),
+        aiHelpFirst: adaptationHelp(),
+        aiLead: adaptationLead(),
+        aiReason: text(),
+        summaryIds: jsonb().$type<number[]>().notNull().default([]),
+        model: text(),
+        promptVersion: text(),
+        suggestedAt: timestamp({ withTimezone: true }),
+        helpFirst: adaptationHelp(),
+        lead: adaptationLead(),
+        setBy: integer().references(() => users.id, { onDelete: 'set null' }),
+        setAt: timestamp({ withTimezone: true }),
+        source: adaptationSource().notNull().default('ai'),
+        off: boolean().notNull().default(false),
+        queued: integer().notNull().default(0),
+        handled: integer().notNull().default(0),
+        tries: integer().notNull().default(0),
+        runAfter: timestamp({ withTimezone: true }).notNull().defaultNow(),
+        updatedAt: timestamp({ withTimezone: true }).notNull().defaultNow(),
+    },
+    (table) => [
+        unique('learner_adaptations_student_id_subject_unique').on(
+            table.studentId,
+            table.subject,
         ),
     ],
 );

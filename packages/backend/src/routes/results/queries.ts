@@ -89,6 +89,7 @@ export async function attemptsOf(
             submittedAt: attempts.submittedAt,
             memoryDeletedAt: attempts.memoryDeletedAt,
             theme: attempts.theme,
+            adaptation: attempts.adaptation,
         })
         .from(attempts)
         .where(

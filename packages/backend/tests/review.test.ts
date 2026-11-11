@@ -1,4 +1,5 @@
 import assert from 'node:assert/strict';
+import { randomUUID } from 'node:crypto';
 import { test } from 'node:test';
 import { and, eq } from 'drizzle-orm';
 import type { FastifyInstance } from 'fastify';
@@ -6,10 +7,14 @@ import { z } from 'zod';
 import {
     analysisRuns,
     assessments,
+    assignments,
     blockCompetencies,
     competencies,
+    learningSessions,
     sessionBlocks,
 } from '../src/db/schema.ts';
+import { demoModule } from '../src/learning/demo-module.ts';
+import { seedModule } from '../src/learning/seed-module.ts';
 import { stubProvider } from './ai-stub.ts';
 import {
     asStudent,
@@ -18,6 +23,7 @@ import {
     demoStudent,
     drawnDemoModule,
     drawnLabel,
+    keptSummary,
     refsOf,
     runFor,
     takeDemo,
@@ -264,6 +270,191 @@ test('a practice try is judged like a mission try, earns a hint after a wrong tr
             })
         ).statusCode,
         403,
+    );
+});
+
+test('Ulang Yuk puts first the question whose weak competency the newest kept summary names, and keeps the mission order without summaries', async (t) => {
+    const app = await testApp(t);
+    const provider = await stubProvider(t, [
+        verdicts((competency) =>
+            competency.code === 'C2'
+                ? {
+                      status: 'developing',
+                      evidence: refsOf(competency),
+                      followUps: ['Mengapa potongannya harus sama besar?'],
+                  }
+                : {},
+        ),
+        verdicts((competency) =>
+            competency.code === 'C1'
+                ? {
+                      status: 'developing',
+                      evidence: refsOf(competency),
+                      followUps: ['Bagian mana yang diarsir?'],
+                  }
+                : {},
+        ),
+    ]);
+    const demo = await demoClass(app);
+    const { sessionId: newerSession } = await seedModule(app.db, demo.classId, {
+        ...demoModule,
+        material: `Demo module ${randomUUID()}`,
+    });
+    const [newer] = await app.db
+        .select({ id: assignments.id })
+        .from(assignments)
+        .where(
+            and(
+                eq(assignments.learningSessionId, newerSession),
+                eq(assignments.classId, demo.classId),
+            ),
+        );
+
+    assert.ok(newer);
+
+    const student = await demoStudent(app, demo.classId);
+
+    await runFor(
+        app,
+        await takeDemo(app, student.token, demo.assignmentId),
+        provider.config,
+    );
+    await runFor(
+        app,
+        await takeDemo(app, student.token, newer.id),
+        provider.config,
+    );
+
+    const checkOn = async (sessionId: number, code: string) => {
+        const [row] = await app.db
+            .select({ id: sessionBlocks.id })
+            .from(sessionBlocks)
+            .innerJoin(
+                blockCompetencies,
+                eq(blockCompetencies.blockId, sessionBlocks.id),
+            )
+            .innerJoin(
+                competencies,
+                eq(competencies.id, blockCompetencies.competencyId),
+            )
+            .where(
+                and(
+                    eq(sessionBlocks.learningSessionId, sessionId),
+                    eq(sessionBlocks.kind, 'check'),
+                    eq(competencies.code, code),
+                ),
+            );
+
+        assert.ok(row);
+
+        return row.id;
+    };
+    const olderC2 = await checkOn(demo.sessionId, 'C2');
+    const newerC1 = await checkOn(newerSession, 'C1');
+    const order = async () =>
+        (
+            await asStudent(
+                app,
+                student.token,
+                'GET',
+                '/review?subject=mathematics',
+            )
+        )
+            .json()
+            .questions.map(({ id }: { id: number }) => id);
+
+    assert.deepEqual(await order(), [newerC1, olderC2]);
+
+    const note = (text: string, ago: number, assignmentId?: number) =>
+        keptSummary(app, {
+            studentId: student.id,
+            classId: demo.classId,
+            assignmentId,
+            text,
+            writtenAt: new Date(Date.now() - ago),
+        });
+
+    const sibling = async (sessionId: number) => {
+        const [first] = await app.db
+            .select({
+                moduleId: learningSessions.moduleId,
+                kind: sessionBlocks.kind,
+                content: sessionBlocks.content,
+            })
+            .from(sessionBlocks)
+            .innerJoin(
+                learningSessions,
+                eq(learningSessions.id, sessionBlocks.learningSessionId),
+            )
+            .where(
+                and(
+                    eq(sessionBlocks.learningSessionId, sessionId),
+                    eq(sessionBlocks.position, 1),
+                ),
+            );
+
+        assert.ok(first);
+
+        const [session] = await app.db
+            .insert(learningSessions)
+            .values({
+                moduleId: first.moduleId,
+                title: `Misi ${randomUUID()}`,
+                summary: 'Misi lanjutan di bab yang sama.',
+                status: 'ready',
+            })
+            .returning({ id: learningSessions.id });
+
+        assert.ok(session);
+        await app.db.insert(sessionBlocks).values({
+            learningSessionId: session.id,
+            position: 1,
+            kind: first.kind,
+            content: first.content,
+        });
+
+        const [assigned] = await app.db
+            .insert(assignments)
+            .values({ learningSessionId: session.id, classId: demo.classId })
+            .returning({ id: assignments.id });
+
+        assert.ok(assigned);
+
+        return assigned.id;
+    };
+
+    await note(
+        'Siswa menunjuk bagian yang diarsir pada C1.',
+        120_000,
+        await sibling(newerSession),
+    );
+    await note(
+        'Siswa masih membagi tidak sama besar pada C2.',
+        60_000,
+        await sibling(demo.sessionId),
+    );
+    await note('Di misi lain, C1 masih berkembang.', 30_000);
+    await note(
+        'Siswa membandingkan pecahan dengan gambar, tanpa catatan kompetensi.',
+        0,
+    );
+
+    assert.deepEqual(
+        await order(),
+        [olderC2, newerC1],
+        'the newer note on the same chapter wins, and a code named in another chapter moves nothing',
+    );
+
+    await note(
+        'Siswa masih ragu menunjuk bagian pada C1.',
+        -1_000,
+        await sibling(newerSession),
+    );
+
+    assert.deepEqual(
+        await order(),
+        [newerC1, olderC2],
+        'the newest note naming a weak competency puts its question first',
     );
 });
 

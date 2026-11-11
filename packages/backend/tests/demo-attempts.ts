@@ -1,13 +1,16 @@
 import assert from 'node:assert/strict';
 import { randomUUID } from 'node:crypto';
-import { and, eq } from 'drizzle-orm';
+import { and, asc, eq } from 'drizzle-orm';
 import type { FastifyInstance } from 'fastify';
 import { z } from 'zod';
 import type { AiConfig } from '../src/ai/chat.ts';
 import { claimRun, processRun } from '../src/analysis/runner.ts';
 import {
+    analysisRuns,
     assignments,
+    attempts,
     classMembers,
+    learnerSummaries,
     sessionBlocks,
     sessionBlockThemes,
     sessionThemes,
@@ -216,17 +219,7 @@ export async function demoClass(
               ]
             : prepared.competencies,
     });
-    const [assignment] = await app.db
-        .select({ id: assignments.id })
-        .from(assignments)
-        .where(
-            and(
-                eq(assignments.learningSessionId, sessionId),
-                eq(assignments.classId, classroom.id),
-            ),
-        );
-
-    assert.ok(assignment, 'the demo module is assigned to the class');
+    const assignment = await demoAssignment(app, classroom.id, sessionId);
 
     return {
         teacher,
@@ -405,6 +398,111 @@ export async function takeDemo(
     assert.equal(submitted.statusCode, 200);
 
     return attempt.id;
+}
+
+export async function keptSummary(
+    app: FastifyInstance,
+    given: {
+        studentId: number;
+        classId: number;
+        assignmentId?: number;
+        text: string;
+        embedding?: number[];
+        writtenAt: Date;
+        excluded?: boolean;
+    },
+) {
+    const assignmentId =
+        given.assignmentId ??
+        (
+            await demoAssignment(
+                app,
+                given.classId,
+                (
+                    await seedModule(app.db, given.classId, {
+                        ...demoModule,
+                        material: `Demo module ${randomUUID()}`,
+                    })
+                ).sessionId,
+            )
+        ).id;
+    const [block] = await app.db
+        .select({ id: sessionBlocks.id })
+        .from(sessionBlocks)
+        .innerJoin(
+            assignments,
+            eq(assignments.learningSessionId, sessionBlocks.learningSessionId),
+        )
+        .where(eq(assignments.id, assignmentId))
+        .orderBy(asc(sessionBlocks.position))
+        .limit(1);
+
+    assert.ok(block, 'the mission has blocks');
+
+    const [attempt] = await app.db
+        .insert(attempts)
+        .values({
+            assignmentId,
+            studentId: given.studentId,
+            status: 'submitted',
+            currentBlockId: block.id,
+            submittedAt: given.writtenAt,
+        })
+        .returning({ id: attempts.id });
+
+    assert.ok(attempt);
+
+    const [run] = await app.db
+        .insert(analysisRuns)
+        .values({
+            attemptId: attempt.id,
+            status: 'succeeded',
+            model: 'provider-model-name',
+        })
+        .returning({ id: analysisRuns.id });
+
+    assert.ok(run);
+
+    const [summary] = await app.db
+        .insert(learnerSummaries)
+        .values({
+            runId: run.id,
+            text: given.text,
+            embedding: given.embedding,
+            writtenAt: given.writtenAt,
+            embeddedAt: given.embedding ? given.writtenAt : null,
+            excludedAt: given.excluded ? given.writtenAt : null,
+        })
+        .returning({ id: learnerSummaries.id });
+
+    assert.ok(summary);
+
+    return {
+        assignmentId,
+        attemptId: attempt.id,
+        runId: run.id,
+        summaryId: summary.id,
+    };
+}
+
+async function demoAssignment(
+    app: FastifyInstance,
+    classId: number,
+    sessionId: number,
+) {
+    const [assignment] = await app.db
+        .select({ id: assignments.id })
+        .from(assignments)
+        .where(
+            and(
+                eq(assignments.learningSessionId, sessionId),
+                eq(assignments.classId, classId),
+            ),
+        );
+
+    assert.ok(assignment, 'the demo module is assigned to the class');
+
+    return assignment;
 }
 
 export async function runFor(

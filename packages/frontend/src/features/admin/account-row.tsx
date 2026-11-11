@@ -122,10 +122,11 @@ function ForgetMemory({
                 id={`forget-${user.id}-description`}
                 className="text-muted-foreground mt-2 leading-relaxed"
             >
-                Ringkasan setiap misi dan laporan siswa yang disusun AI dihapus
-                dan tidak bisa dipulihkan. Misi yang sudah dikerjakan tidak
-                diringkas lagi. Jawaban, hasil misi, dan keputusan guru tetap
-                tersimpan.
+                Ringkasan setiap misi, laporan siswa, dan urutan bantuan yang
+                disarankan AI atau diatur guru dihapus dan tidak bisa
+                dipulihkan. Misi yang sudah dikerjakan tidak diringkas lagi.
+                Jawaban, latihan, hasil misi, dan keputusan guru tentang
+                pemahaman tetap tersimpan.
             </p>
             <div className="mt-5 space-y-4">
                 <RequestError error={forget.error} />

@@ -1,4 +1,4 @@
-import { and, asc, count, eq, inArray, isNull } from 'drizzle-orm';
+import { and, asc, count, eq, inArray, isNotNull, isNull } from 'drizzle-orm';
 import { alias } from 'drizzle-orm/pg-core';
 import type { FastifyReply, FastifyRequest } from 'fastify';
 import { generatePassword } from '../../auth/codes.ts';
@@ -10,6 +10,7 @@ import {
     attempts,
     classes,
     classMembers,
+    learnerAdaptations,
     learnerSummaries,
     reports,
     users,
@@ -328,6 +329,18 @@ export async function deleteMemory(
                 ),
             );
         await tx.delete(reports).where(eq(reports.studentId, student.id));
+        await tx
+            .delete(learnerAdaptations)
+            .where(eq(learnerAdaptations.studentId, student.id));
+        await tx
+            .update(attempts)
+            .set({ adaptation: null })
+            .where(
+                and(
+                    eq(attempts.studentId, student.id),
+                    isNotNull(attempts.adaptation),
+                ),
+            );
     });
 
     return reply.code(204).send();

@@ -10,6 +10,7 @@ import {
     learnerSummaries,
     verifications,
 } from '../../db/schema.ts';
+import { adaptationPair } from '../../learning/adaptation.ts';
 import { AppError, notFound } from '../../lib/errors.ts';
 import { fieldError } from '../../lib/field-error.ts';
 import { membersOf, ownedClassId } from '../classes/queries.ts';
@@ -204,6 +205,7 @@ export async function studentEvidence(
             progress: 'not_started' as const,
             attemptId: null,
             theme: null,
+            adaptation: null,
             analysis: null,
             summary: null,
             competencies: [],
@@ -245,6 +247,7 @@ export async function studentEvidence(
         progress: attempt.status,
         attemptId: attempt.id,
         theme: attempt.theme,
+        adaptation: adaptationPair.nullable().parse(attempt.adaptation),
         analysis: run?.status ?? null,
         summary: summary
             ? {

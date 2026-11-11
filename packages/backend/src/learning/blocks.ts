@@ -18,10 +18,16 @@ const screenText = z
     .string()
     .trim()
     .min(1)
-    .refine(
-        (text) => text.split(/(?<=[.!?])\s+/).length <= 2,
-        'A student screen holds at most two sentences',
-    );
+    .superRefine((text, context) => {
+        const sentences = text.split(/(?<=[.!?])\s+/).length;
+
+        if (sentences > 2) {
+            context.addIssue({
+                code: 'custom',
+                message: `A student screen holds at most two sentences; this one has ${sentences}, as each ".", "!", or "?" ends one. Join them with a comma or "dan", or cut one, rather than only rewording`,
+            });
+        }
+    });
 
 export const diagramFills = [
     'none',
@@ -495,6 +501,24 @@ const answerError = {
     message: 'The answer must be one of the options',
 };
 
+const checkContent = z.object({
+    prompt: screenText,
+    illustration: illustration.optional(),
+    diagram: diagram.optional(),
+    options,
+    answer: z.string(),
+    reason: z
+        .object({
+            prompt: screenText,
+            starters: z.array(z.string().trim().min(1)).min(1).max(3),
+        })
+        .optional(),
+    praise: screenText,
+    hints: z.tuple([picture, picture, picture]),
+    example: picture,
+    reveal: screenText,
+});
+
 export const blockContent = {
     brain_game: z.object({ game: z.enum(['memory_pairs']) }),
     hook: z.object({
@@ -516,23 +540,7 @@ export const blockContent = {
             })
             .optional(),
     }),
-    check: z.object({
-        prompt: screenText,
-        illustration: illustration.optional(),
-        diagram: diagram.optional(),
-        options,
-        answer: z.string(),
-        reason: z
-            .object({
-                prompt: screenText,
-                starters: z.array(z.string().trim().min(1)).min(1).max(3),
-            })
-            .optional(),
-        praise: screenText,
-        hints: z.tuple([picture, picture, picture]),
-        example: picture,
-        reveal: screenText,
-    }),
+    check: checkContent,
     challenge: z.object({
         prompt: screenText,
         question: screenText,
@@ -546,6 +554,7 @@ export const blockContent = {
         topics: z.array(z.string().trim().min(1)).min(2).max(4),
         takeaways: z.array(screenText).min(1).max(3),
     }),
+    extra_challenge: checkContent,
 };
 
 export const sessionBlock = z.discriminatedUnion('kind', [
@@ -567,6 +576,13 @@ export const sessionBlock = z.discriminatedUnion('kind', [
         kind: z.literal('reflection'),
         content: blockContent.reflection,
     }),
+    z.object({
+        kind: z.literal('extra_challenge'),
+        content: blockContent.extra_challenge.refine(
+            answerIsAnOption,
+            answerError,
+        ),
+    }),
 ]);
 
 export type SessionBlock = z.infer<typeof sessionBlock>;
@@ -582,6 +598,7 @@ export function diagramsOf(block: SessionBlock): DiagramPlace[] {
                 ? [{ path: ['diagram'], diagram: block.content.diagram }]
                 : [];
         case 'check':
+        case 'extra_challenge':
             return [
                 ...(block.content.diagram
                     ? [{ path: ['diagram'], diagram: block.content.diagram }]
@@ -712,7 +729,8 @@ const fractionOf = ({ content }: SessionBlock) =>
         : undefined;
 
 const hasReason = (block: SessionBlock) =>
-    block.kind === 'check' && block.content.reason !== undefined;
+    (block.kind === 'check' || block.kind === 'extra_challenge') &&
+    block.content.reason !== undefined;
 
 const listOf = (block: SessionBlock, key: 'topics' | 'takeaways') =>
     block.kind === 'reflection' ? block.content[key].length : 0;
@@ -791,4 +809,10 @@ export const stepOfKind = {
     check: 'story',
     challenge: 'challenge',
     reflection: 'reflection',
-} satisfies Record<SessionBlock['kind'], (typeof steps)[number]>;
+} satisfies Record<MissionKind, (typeof steps)[number]>;
+
+export type MissionKind = Exclude<SessionBlock['kind'], 'extra_challenge'>;
+
+export const isMissionKind = (
+    kind: SessionBlock['kind'],
+): kind is MissionKind => kind !== 'extra_challenge';

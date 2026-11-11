@@ -5,6 +5,7 @@ import {
 } from '@tanstack/react-query';
 import { api } from '../../lib/api';
 import type { Subject } from '../assignments/queries';
+import type { Adaptation } from '../learning-sessions/queries';
 import type {
     Competency,
     Decision,
@@ -79,6 +80,7 @@ export type StudentReport = {
     report: Report;
     reviews: {
         blockId: number;
+        kind: 'review' | 'extra';
         mission: string;
         prompt: string;
         rounds: {
@@ -87,7 +89,34 @@ export type StudentReport = {
             at: string;
         }[];
     }[];
+    adaptations: AdaptationItem[];
 };
+
+export type AdaptationItem = {
+    subject: Subject;
+    helpFirst: Adaptation['helpFirst'];
+    lead: Adaptation['lead'];
+    source: 'ai' | 'teacher';
+    off: boolean;
+    pending: boolean;
+    failed: boolean;
+    thin: boolean;
+    readAloudChosen: boolean;
+    ai: (Adaptation & { reason: string | null; suggestedAt: string }) | null;
+    teacher: {
+        helpFirst: NonNullable<Adaptation['helpFirst']>;
+        lead: Adaptation['lead'];
+        setAt: string;
+    } | null;
+};
+
+export type AdaptationBody =
+    | {
+          helpFirst: NonNullable<Adaptation['helpFirst']>;
+          lead: Adaptation['lead'];
+      }
+    | { off: boolean }
+    | { source: 'ai' };
 
 const headers = (cookie?: string | null) => (cookie ? { cookie } : undefined);
 
@@ -121,8 +150,40 @@ export const studentReportQuery = (
                 `/api/classes/${classId}/students/${studentId}/report`,
                 { headers: headers(cookie) },
             ),
-        refetchInterval: (query) => generating(query.state.data?.report),
+        refetchInterval: (query) =>
+            generating(query.state.data?.report) ||
+            (query.state.data?.adaptations.some(({ pending }) => pending)
+                ? 5_000
+                : false),
     });
+
+export function useSetAdaptation(classId: number, studentId: number) {
+    const client = useQueryClient();
+
+    return useMutation({
+        mutationFn: ({
+            subject,
+            body,
+        }: {
+            subject: Subject;
+            body: AdaptationBody;
+        }) =>
+            api<AdaptationItem>(
+                `/api/classes/${classId}/students/${studentId}/adaptations/${subject}`,
+                { method: 'PUT', body: JSON.stringify(body) },
+            ),
+        onSettled: () =>
+            client.invalidateQueries({
+                queryKey: [
+                    'classes',
+                    classId,
+                    'reports',
+                    'students',
+                    studentId,
+                ],
+            }),
+    });
+}
 
 export function useReportActions(classId: number, reportUrl: string) {
     const client = useQueryClient();

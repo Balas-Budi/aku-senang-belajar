@@ -6,6 +6,7 @@ import {
 import { api } from '../../lib/api';
 import type { Subject } from '../assignments/queries';
 import type { IllustrationName } from '../learning-sessions/illustration';
+import type { Adaptation } from '../learning-sessions/queries';
 
 export type UnderstandingStatus =
     'not_observed' | 'developing' | 'visible' | 'needs_verification';
@@ -113,6 +114,7 @@ export type StudentEvidence = {
     progress: Progress;
     attemptId: number | null;
     theme: string | null;
+    adaptation: Adaptation | null;
     analysis: RunStatus | null;
     summary: { id: number; text: string; excluded: boolean } | null;
     competencies: CompetencyEvidence[];

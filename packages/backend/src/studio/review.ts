@@ -56,7 +56,12 @@ export type Warning =
     | { code: 'unreadable_pages'; pages: number[] }
     | { code: 'ai_diagrams'; blocks: number[] };
 
-const sourcedKinds = new Set(['story', 'check', 'challenge']);
+const sourcedKinds = new Set([
+    'story',
+    'check',
+    'challenge',
+    'extra_challenge',
+]);
 const testingKinds = new Set(['check', 'challenge']);
 
 async function unreadablePages(db: Queryable, moduleId: number) {

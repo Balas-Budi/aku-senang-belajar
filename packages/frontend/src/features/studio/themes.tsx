@@ -259,6 +259,7 @@ function ThemeCompare({
     const contents = new Map(
         theme.blocks.map(({ id, content }) => [id, content]),
     );
+    const extras = bases.filter((block) => block.kind === 'extra_challenge');
     const canRead =
         editable &&
         theme.drafting === null &&
@@ -269,7 +270,9 @@ function ThemeCompare({
         <div className="@container space-y-4">
             {stepOrder.map((step) => {
                 const blocks = bases.filter(
-                    (block) => stepOfKind[block.kind] === step,
+                    (block) =>
+                        block.kind !== 'extra_challenge' &&
+                        stepOfKind[block.kind] === step,
                 );
                 if (blocks.length === 0) return null;
                 const id = `theme-${theme.theme}-step-${step}`;
@@ -296,6 +299,30 @@ function ThemeCompare({
                     </section>
                 );
             })}
+            {extras.length > 0 && (
+                <section aria-labelledby={`theme-${theme.theme}-extra`}>
+                    <h4
+                        id={`theme-${theme.theme}-extra`}
+                        className="font-semibold"
+                    >
+                        Tantangan tambahan
+                    </h4>
+                    <ul className="divide-paper-edge divide-y">
+                        {extras.map((block) => (
+                            <ThemeScreen
+                                key={block.id}
+                                sessionId={session.id}
+                                theme={theme.theme}
+                                base={block}
+                                content={contents.get(block.id)}
+                                editable={
+                                    editable && theme.drafting !== 'generating'
+                                }
+                            />
+                        ))}
+                    </ul>
+                </section>
+            )}
             {canRead && (
                 <div className="space-y-3">
                     <StudioError error={read.error} />

@@ -197,6 +197,16 @@ async function helpKinds(app: FastifyInstance, attemptId: number) {
     return rows.map(({ kind }) => kind);
 }
 
+async function helpGiven(app: FastifyInstance, attemptId: number) {
+    const rows = await app.db
+        .select({ given: helpEvents.given })
+        .from(helpEvents)
+        .where(eq(helpEvents.attemptId, attemptId))
+        .orderBy(asc(helpEvents.id));
+
+    return rows.map(({ given }) => given);
+}
+
 test('a student reads an assigned session without its answers, hints, praise, or reveal', async (t) => {
     const app = await testApp(t);
     const classId = await newClass(app);
@@ -342,6 +352,7 @@ test('starting twice resumes the same attempt at the first block', async (t) => 
         checkpoint: detail.blocks[0].id,
         answers: [],
         done: null,
+        adaptation: null,
     });
     assert.equal(again.statusCode, 200);
     assert.deepEqual(again.json(), first.json());
@@ -383,6 +394,11 @@ test('each answer to a check that is not yet right brings the next hint, and the
         'hint',
         'reveal',
     ]);
+    assert.deepEqual(
+        await helpGiven(app, attemptId),
+        [true, true, true],
+        'help that follows a wrong try is given, not asked',
+    );
 });
 
 test('a right answer earns the praise and closes the check', async (t) => {
@@ -521,6 +537,13 @@ test('hints and the other example come only when asked, and asking the teacher i
         'ask_teacher',
         'hint',
         'hint',
+    ]);
+    assert.deepEqual(await helpGiven(app, attemptId), [
+        false,
+        false,
+        false,
+        false,
+        false,
     ]);
 });
 

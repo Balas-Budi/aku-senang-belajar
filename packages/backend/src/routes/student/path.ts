@@ -10,7 +10,11 @@ import {
     sessionBlocks,
     subject,
 } from '../../db/schema.ts';
-import { stepOfKind } from '../../learning/blocks.ts';
+import {
+    isMissionKind,
+    type SessionBlock,
+    stepOfKind,
+} from '../../learning/blocks.ts';
 import { AppError } from '../../lib/errors.ts';
 
 type Subject = (typeof subject.enumValues)[number];
@@ -23,7 +27,7 @@ type StageRow = {
     summary: string;
     moduleId: number;
     status: 'in_progress' | 'submitted' | null;
-    checkpointKind: keyof typeof stepOfKind | null;
+    checkpointKind: SessionBlock['kind'] | null;
 };
 
 export const stageLocked = () =>
@@ -45,7 +49,9 @@ function buildPath(chapterRows: ChapterRow[], stageRows: StageRow[]) {
                 summary: row.summary,
                 progress,
                 step:
-                    row.status === 'in_progress' && row.checkpointKind
+                    row.status === 'in_progress' &&
+                    row.checkpointKind &&
+                    isMissionKind(row.checkpointKind)
                         ? stepOfKind[row.checkpointKind]
                         : null,
                 locked:

@@ -25,17 +25,20 @@ import {
     learnerSummaries,
     responses,
 } from '../db/schema.ts';
+import { adaptationPair } from '../learning/adaptation.ts';
+import { queueAdaptation } from './adaptations.ts';
+import { helpBetween } from './help.ts';
 
-export const SUMMARY_PROMPT_VERSION = 'summary-2026-11-10';
+export const SUMMARY_PROMPT_VERSION = 'summary-2026-11-11b';
 
 export const MAX_SUMMARY_TRIES = 3;
 
 const MODEL_TIMEOUT = 60_000;
 
 export const SUMMARY_PROMPT = [
-    "You write a short memory note on one Indonesian primary school student's work in one lesson, for their teacher and for planning the student's next lessons. You receive, as JSON, the lesson's competencies; for each competency its description, the AI estimate the teacher may still change (status, reason, uncertainty), the questions that test it with every try in order and the help the student asked before each try, the help asked after the last try, and the student's own reflection.",
+    'You write a short memory note on one Indonesian primary school student\'s work in one lesson, for their teacher and for planning the student\'s next lessons. You receive, as JSON, the lesson\'s competencies; for each competency its description, the AI estimate the teacher may still change (status, reason, uncertainty), the questions that test it with every try in order and the help the student asked before each try ("helpBefore"), the help the app showed after the previous wrong try ("helpGiven"), the help asked after the last try ("helpAfter") and the help the app showed after it ("helpGivenAfter", where "reveal" means the app showed the answer after the last wrong try), and the student\'s own reflection.',
     '',
-    'Help kinds, with the Indonesian words to use for them: "hint" is a hint ("petunjuk"), "example" is another example ("contoh lain"), "ask_teacher" means the student asked the teacher ("bertanya ke guru"), "reveal" means the answer was shown ("jawaban ditunjukkan"), and "listen" means the student had the question read aloud ("mendengarkan soal"). "readAloud": true means every screen was read aloud without the student asking. Hearing a question helps with reading, not with the answer. "diagram" is the label of the picture a question showed, and "helpDiagrams" the labels of the pictures in the help the student opened; they describe the lesson, not the student.',
+    'Help kinds, with the Indonesian words to use for them: "hint" is a hint ("petunjuk"), "example" is another example ("contoh lain"), "ask_teacher" means the student asked the teacher ("bertanya ke guru"), "reveal" means the answer was shown ("jawaban ditunjukkan"), and "listen" means the student had the question read aloud ("mendengarkan soal"). "readAloud": true means every screen was read aloud without the student asking. "followed" says what the app put first in this lesson: "helpFirst" the help it showed first after a wrong try, "lead" "audio" when screens were read aloud on their own because of it, "text" when text came before pictures, "visual" when pictures came first. Help in "helpGiven" and "helpGivenAfter" was the app\'s choice, not the student\'s: never say the student asked for it. Help in "helpBefore" and "helpAfter" the student opened themselves: say so, as in "siswa membuka petunjuk" or "siswa membuka contoh lain", not "mendapat", so the teacher can tell it from help the app gave. Hearing a question helps with reading, not with the answer. "diagram" is the label of the picture a question showed, and "helpDiagrams" the labels of the pictures in the help the student saw, asked or given; they describe the lesson, not the student.',
     '',
     'Write two to four short sentences in Indonesian, without English words, that say:',
     '- what the answers show for each competency, naming its code;',
@@ -55,29 +58,12 @@ const summaryAnswer = z.object({
     summary: z.string().trim().min(40).max(600),
 });
 
-type HelpEvent = { blockId: number; kind: string; at: Date };
-
-function helpBetween(
-    help: HelpEvent[],
-    blockId: number,
-    from: Date | null,
-    before: Date | null,
-) {
-    return help
-        .filter(
-            ({ blockId: id, at }) =>
-                id === blockId &&
-                (from === null || at >= from) &&
-                (before === null || at < before),
-        )
-        .map(({ kind }) => kind);
-}
-
 export async function summaryMessage(db: Queryable, runId: number) {
     const [run] = await db
         .select({
             attemptId: analysisRuns.attemptId,
             readAloud: attempts.readAloud,
+            adaptation: attempts.adaptation,
         })
         .from(analysisRuns)
         .innerJoin(attempts, eq(attempts.id, analysisRuns.attemptId))
@@ -113,6 +99,7 @@ export async function summaryMessage(db: Queryable, runId: number) {
         .select({
             blockId: helpEvents.blockId,
             kind: helpEvents.kind,
+            given: helpEvents.given,
             at: helpEvents.createdAt,
         })
         .from(helpEvents)
@@ -121,6 +108,7 @@ export async function summaryMessage(db: Queryable, runId: number) {
 
     return JSON.stringify({
         readAloud: run.readAloud,
+        followed: adaptationPair.nullable().parse(run.adaptation),
         competencies: evidence.map((competency) => {
             const estimate = estimates.find(
                 ({ competencyId }) => competencyId === competency.id,
@@ -157,6 +145,14 @@ export async function summaryMessage(db: Queryable, runId: number) {
                                 blockId,
                                 saved[index - 1]?.at ?? null,
                                 saved[index]?.at ?? null,
+                                false,
+                            ),
+                            helpGiven: helpBetween(
+                                help,
+                                blockId,
+                                saved[index - 1]?.at ?? null,
+                                saved[index]?.at ?? null,
+                                true,
                             ),
                         })),
                         helpAfter: helpBetween(
@@ -164,6 +160,14 @@ export async function summaryMessage(db: Queryable, runId: number) {
                             blockId,
                             saved.at(-1)?.at ?? null,
                             null,
+                            false,
+                        ),
+                        helpGivenAfter: helpBetween(
+                            help,
+                            blockId,
+                            saved.at(-1)?.at ?? null,
+                            null,
+                            true,
                         ),
                     };
                 }),
@@ -249,6 +253,8 @@ export async function processSummary(
     ai: AiConfig | null,
     embed: EmbedConfig | null,
 ) {
+    let written = false;
+
     try {
         let { text } = summary;
 
@@ -260,18 +266,19 @@ export async function processSummary(
                 );
             }
 
-            const written = await writeSummary(app.db, summary.runId, ai);
+            const reply = await writeSummary(app.db, summary.runId, ai);
 
-            text = written.text;
+            text = reply.text;
             await app.db
                 .update(learnerSummaries)
                 .set({
                     text,
-                    model: written.model,
+                    model: reply.model,
                     promptVersion: SUMMARY_PROMPT_VERSION,
                     writtenAt: new Date(),
                 })
                 .where(eq(learnerSummaries.id, summary.id));
+            written = true;
         }
 
         if (embed) {
@@ -298,6 +305,17 @@ export async function processSummary(
             },
             'A learner summary failed',
         );
+    }
+
+    if (written) {
+        try {
+            await queueAdaptation(app.db, summary.runId);
+        } catch {
+            app.log.warn(
+                { summaryId: summary.id, failure: 'error' },
+                'A learner adaptation could not be queued',
+            );
+        }
     }
 }
 

@@ -10,6 +10,7 @@ import { cn } from '../../lib/cn';
 import { subjects } from '../assignments/subject-art';
 import { Illustration } from '../learning-sessions/illustration';
 import { interests } from '../profile/interests';
+import { adaptationParts } from '../reports/adaptations';
 import { AnalyseAgain, waitsForTeacher } from './analysis-state';
 import {
     analysing,
@@ -444,7 +445,8 @@ export function StudentEvidence({
         );
     }
 
-    const { student, assignment, competencies, summary, theme } = evidence.data;
+    const { student, assignment, competencies, summary, theme, adaptation } =
+        evidence.data;
 
     return (
         <div className="space-y-6">
@@ -460,6 +462,15 @@ export function StudentEvidence({
                         Tema cerita:{' '}
                         {interests.find((interest) => interest.key === theme)
                             ?.label ?? theme}
+                    </p>
+                )}
+                {adaptation && (
+                    <p>
+                        Penyesuaian misi ini:{' '}
+                        {adaptationParts(
+                            adaptation,
+                            'dibacakan otomatis (bila perangkat punya suara)',
+                        )}
                     </p>
                 )}
                 <AnalysisSummary classId={classId} evidence={evidence.data} />

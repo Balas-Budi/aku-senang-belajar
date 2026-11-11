@@ -7,6 +7,7 @@ import {
     subject,
     textSize,
 } from '../../db/schema.ts';
+import { adaptationPair } from '../../learning/adaptation.ts';
 import { blockContent, steps } from '../../learning/blocks.ts';
 
 export const TRY_LIMIT = 3;
@@ -126,12 +127,18 @@ export const settingsBody = z.object({
     textSize: z.enum(textSize.enumValues),
     readAloud: z.boolean(),
     speechRate: z.union([z.literal(0.75), z.literal(1), z.literal(1.25)]),
+    readAloudChosen: z.boolean().optional(),
 });
 
-export const DEFAULT_SETTINGS: SettingsBody = {
+export const settingsResponse = settingsBody.extend({
+    readAloudChosen: z.boolean(),
+});
+
+export const DEFAULT_SETTINGS: z.infer<typeof settingsResponse> = {
     textSize: 'normal',
     readAloud: false,
     speechRate: 1,
+    readAloudChosen: false,
 };
 
 const picture = blockContent.check.shape.example;
@@ -203,6 +210,7 @@ export const attemptResponse = z.object({
         }),
     ),
     done: doneResponse.nullable(),
+    adaptation: adaptationPair.nullable(),
 });
 
 export const assignmentResponse = z.object({
@@ -220,23 +228,25 @@ export const helpResponse = z.object({ earned: earned.nullable() });
 
 export const reviewQuery = z.object({ subject: z.enum(subject.enumValues) });
 
-export const reviewResponse = z.object({
-    questions: z.array(
-        z.object({
-            id: z.number(),
-            mission: z.string(),
-            content: blockContent.check.omit({
-                answer: true,
-                praise: true,
-                hints: true,
-                example: true,
-                reveal: true,
-            }),
-            earned,
-            tries: z.number(),
-        }),
-    ),
+const reviewQuestion = z.object({
+    id: z.number(),
+    mission: z.string(),
+    content: blockContent.check.omit({
+        answer: true,
+        praise: true,
+        hints: true,
+        example: true,
+        reveal: true,
+    }),
+    earned,
+    tries: z.number(),
 });
+
+export const reviewResponse = z.object({ questions: z.array(reviewQuestion) });
+
+export const extraQuery = reviewQuery;
+
+export const extraResponse = z.object({ extra: reviewQuestion.nullable() });
 
 export const reviewTryBody = z.object({
     blockId: z.int().positive(),

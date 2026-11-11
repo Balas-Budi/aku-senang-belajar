@@ -72,13 +72,13 @@ test('checkTheme wants every base screen once and in order', () => {
 
     assert.match(
         check({ blocks: [story, hook, ...rest] }) ?? '',
-        /in the same order: screens 2, 3, 4, 5, 6, 7, 8$/,
+        /in the same order: screens 2, 3, 4, 5, 6, 7, 8, 9$/,
     );
     assert.match(
         check({
             blocks: reply.blocks.filter(({ screen }) => screen !== 5),
         }) ?? '',
-        /screens 2, 3, 4, 5, 6, 7, 8; screen 5 is missing$/,
+        /screens 2, 3, 4, 5, 6, 7, 8, 9; screen 5 is missing$/,
     );
 });
 
@@ -177,7 +177,7 @@ test('checkTheme reports a screen that fails the block schema', () => {
                 text: 'Satu. Dua. Tiga.',
             })),
         ),
-        'Screen 3 (story): text A student screen holds at most two sentences',
+        'Screen 3 (story): text A student screen holds at most two sentences; this one has 3, as each ".", "!", or "?" ends one. Join them with a comma or "dan", or cut one, rather than only rewording',
     );
 });
 
@@ -201,6 +201,7 @@ test('themeMessage sends the screens without diagrams and names each picture wit
             [6, 'check'],
             [7, 'challenge'],
             [8, 'reflection'],
+            [9, 'extra_challenge'],
         ],
     );
     assert.ok(sent.every((screen) => !('picture' in screen)));

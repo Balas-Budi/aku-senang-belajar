@@ -7,6 +7,7 @@ import { startAnalysisRunner } from '../src/analysis/runner.ts';
 import { buildApp } from '../src/app.ts';
 import {
     analysisRuns,
+    attempts,
     helpEvents,
     learnerSummaries,
     responses,
@@ -38,6 +39,12 @@ const written =
 const summaryReply = { body: completion(JSON.stringify({ summary: written })) };
 
 const sentSummary = z.object({
+    followed: z
+        .object({
+            helpFirst: z.string().nullable(),
+            lead: z.string().nullable(),
+        })
+        .nullable(),
     competencies: z.array(
         z.object({
             code: z.string(),
@@ -45,9 +52,13 @@ const sentSummary = z.object({
             questions: z.array(
                 z.object({
                     tries: z.array(
-                        z.object({ helpBefore: z.array(z.string()) }),
+                        z.object({
+                            helpBefore: z.array(z.string()),
+                            helpGiven: z.array(z.string()),
+                        }),
                     ),
                     helpAfter: z.array(z.string()),
+                    helpGivenAfter: z.array(z.string()),
                 }),
             ),
         }),
@@ -130,8 +141,8 @@ test('an analysed mission queues one summary, written from the estimates and the
                     eq(helpEvents.blockId, second.blockId),
                 ),
             )
-            .returning({ kind: helpEvents.kind }),
-        [{ kind: 'hint' }],
+            .returning({ kind: helpEvents.kind, given: helpEvents.given }),
+        [{ kind: 'hint', given: true }],
         'the wrong first try earned a hint, stored with that try',
     );
     await app.db
@@ -148,8 +159,15 @@ test('an analysed mission queues one summary, written from the estimates and the
         {
             attemptId,
             blockId: second.blockId,
-            kind: 'reveal',
+            kind: 'listen',
             createdAt: new Date(start + 3_000),
+        },
+        {
+            attemptId,
+            blockId: second.blockId,
+            kind: 'reveal',
+            given: true,
+            createdAt: new Date(start + 4_000),
         },
     ]);
 
@@ -194,11 +212,23 @@ test('an analysed mission queues one summary, written from the estimates and the
         ],
     );
     assert.ok(retried);
+    assert.equal(sent.followed, null);
     assert.deepEqual(
-        retried.tries.map(({ helpBefore }) => helpBefore),
-        [[], ['hint', 'example']],
+        retried.tries.map(({ helpBefore, helpGiven }) => [
+            helpBefore,
+            helpGiven,
+        ]),
+        [
+            [[], []],
+            [['example'], ['hint']],
+        ],
+        'the hint the wrong try earned is given, the example asked',
     );
-    assert.deepEqual(retried.helpAfter, ['reveal']);
+    assert.deepEqual(
+        [retried.helpAfter, retried.helpGivenAfter],
+        [['listen'], ['reveal']],
+        'the reveal the app gave after the last try is not filed as asked',
+    );
 
     for (const withheld of [
         'Wulan',
@@ -436,5 +466,57 @@ test('the summary request names the diagram of each question and the diagrams of
         ],
     );
     assert.match(SUMMARY_PROMPT, /"helpDiagrams" the labels of the pictures/);
-    assert.equal(SUMMARY_PROMPT_VERSION, 'summary-2026-11-10');
+    assert.equal(SUMMARY_PROMPT_VERSION, 'summary-2026-11-11b');
+});
+
+test('the summary request names what the mission followed and keeps the example the app gave apart from asked help', async (t) => {
+    const app = await testApp(t);
+    const { attemptId } = await submittedDemo(app);
+    const [given] = await app.db
+        .update(helpEvents)
+        .set({ kind: 'example' })
+        .where(
+            and(
+                eq(helpEvents.attemptId, attemptId),
+                eq(helpEvents.given, true),
+            ),
+        )
+        .returning({ id: helpEvents.id });
+
+    assert.ok(given, 'the wrong first try earned help');
+    await app.db
+        .update(attempts)
+        .set({ adaptation: { helpFirst: 'example', lead: null } })
+        .where(eq(attempts.id, attemptId));
+
+    const provider = await stubProvider(t, [verdicts(), summaryReply]);
+
+    await runFor(app, attemptId, provider.config);
+
+    const claimed = await claimSummary(app.db, { embedding: false, attemptId });
+
+    assert.ok(claimed);
+    await processSummary(app, claimed, provider.config, null);
+
+    const sent = sentSummary.parse(
+        JSON.parse(provider.requests[1]?.body.messages[1]?.content ?? ''),
+    );
+    const retried = sent.competencies
+        .flatMap(({ questions }) => questions)
+        .find(({ tries }) => tries.length === 2);
+
+    assert.deepEqual(sent.followed, { helpFirst: 'example', lead: null });
+    assert.deepEqual(retried?.tries[1], {
+        helpBefore: [],
+        helpGiven: ['example'],
+    });
+    assert.match(SUMMARY_PROMPT, /\("helpGiven"\)/);
+    assert.match(
+        SUMMARY_PROMPT,
+        /Help in "helpGiven" and "helpGivenAfter" was the app's choice, not the student's/,
+    );
+    assert.match(
+        SUMMARY_PROMPT,
+        /Help in "helpBefore" and "helpAfter" the student opened themselves: say so/,
+    );
 });
