@@ -187,6 +187,10 @@ export const draft = {
             content: {
                 ...checkFor('C1', 4).content,
                 prompt: 'Pizza mana yang dipotong empat sama besar?',
+                options: [
+                    { id: 'a', label: 'Pizza A' },
+                    { id: 'b', label: 'Pizza B' },
+                ],
             },
         },
     ],

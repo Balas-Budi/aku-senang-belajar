@@ -24,7 +24,10 @@ import {
 import { decisionLabels, ShownStatus, StatusChip } from './status';
 import { VerificationForm } from './verification-form';
 
-const kindLabels = { check: 'Soal cek', challenge: 'Tantangan' } as const;
+const kindLabels = {
+    check: 'Soal cek',
+    challenge: 'Tantangan (soal transfer)',
+} as const;
 const outcomeLabels = {
     correct: 'Benar',
     not_yet: 'Belum tepat',

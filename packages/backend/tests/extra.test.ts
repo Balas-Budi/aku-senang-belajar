@@ -43,6 +43,7 @@ import {
     draft,
     draftedSession,
     get,
+    post,
     teacherWithModule,
 } from './studio-fixtures.ts';
 
@@ -191,7 +192,7 @@ test('a drafted misi ends with exactly one extra challenge that names its compet
         }),
         'C3 has no check or challenge that tests it',
     );
-    assert.equal(SESSION_PROMPT_VERSION, 'session-2026-11-11b');
+    assert.equal(SESSION_PROMPT_VERSION, 'session-2026-11-11c');
     assert.ok(
         SESSION_SYSTEM_PROMPT.includes(
             '5. One "extra_challenge" after the reflection',
@@ -207,6 +208,112 @@ test('a drafted misi ends with exactly one extra challenge that names its compet
             'needs at least one check or the challenge that tests it; the extra challenge does not count.',
         ),
     );
+});
+
+test('a drafted challenge or extra challenge is a transfer question: it may not repeat a sentence of a story, a hint, or an example (FR-038)', () => {
+    const check = checkDraft(['C1', 'C2'], [1, 3, 4]);
+    const parsed = sessionDraft.parse(draft);
+    const changed = (kind: string, content: object) => ({
+        ...parsed,
+        blocks: parsed.blocks.map((block) =>
+            block.kind === kind
+                ? { ...block, content: { ...block.content, ...content } }
+                : block,
+        ),
+    });
+    const rule =
+        'a transfer question sets the idea in a new situation, so write it with another object or setting and its own words';
+
+    assert.equal(
+        check(
+            changed('challenge', {
+                prompt: 'Satu dari empat bagian sama besar disebut satu perempat.',
+            }),
+        ),
+        `Block 6 (challenge): the sentence "Satu dari empat bagian sama besar disebut satu perempat." repeats block 4; ${rule}`,
+    );
+    assert.equal(
+        check(
+            changed('challenge', {
+                question: 'Bandingkan potongan satu dengan yang lain.',
+            }),
+        ),
+        `Block 6 (challenge): the sentence "Bandingkan potongan satu dengan yang lain." repeats block 3; ${rule}`,
+    );
+    assert.equal(
+        check(
+            changed('extra_challenge', {
+                prompt: 'Lihat pizza ini. KUE yang dipotong empat sama besar juga perempat!',
+            }),
+        ),
+        `Block 8 (extra_challenge): the sentence "KUE yang dipotong empat sama besar juga perempat!" repeats block 3; ${rule}`,
+    );
+    assert.equal(
+        check(changed('challenge', { question: 'Kancil punya satu roti?' })),
+        null,
+    );
+    assert.match(
+        SESSION_SYSTEM_PROMPT,
+        /The challenge and the extra challenge are transfer questions/,
+    );
+    assert.match(
+        SESSION_SYSTEM_PROMPT,
+        /neither asks with the same numbers and the same options as a check/,
+    );
+});
+
+test('the gate warns when the challenge asks with the numbers and options of a check, and publishing needs it acknowledged (FR-038)', async (t) => {
+    const repeating = {
+        ...draft,
+        blocks: draft.blocks.map((block) =>
+            block.kind === 'challenge'
+                ? {
+                      ...block,
+                      content: {
+                          ...block.content,
+                          question: 'Roti mana yang benar?',
+                          options: [
+                              { id: 'a', label: 'Roti A' },
+                              { id: 'b', label: 'Roti B' },
+                          ],
+                      },
+                  }
+                : block,
+        ),
+    };
+    const provider = await stubProvider(t, [
+        { body: completion(JSON.stringify(repeating)) },
+    ]);
+    const app = await testApp(t, provider.config);
+    const { token, moduleId } = await teacherWithModule(app);
+    const session = await draftedSession(app, token, moduleId);
+    const url = `/api/studio/sessions/${session.id}`;
+    const review = (await get(app, token, url)).json();
+    const position =
+        session.blocks.findIndex(
+            ({ kind }: { kind: string }) => kind === 'challenge',
+        ) + 1;
+
+    assert.deepEqual(review.issues, []);
+    assert.deepEqual(review.warnings, [
+        { code: 'unreadable_pages', pages: [2] },
+        { code: 'repeats_example', blocks: [position] },
+    ]);
+
+    const refused = await post(app, token, `${url}/approval`, {
+        acknowledged: ['unreadable_pages'],
+        version: review.version,
+    });
+
+    assert.equal(refused.statusCode, 409);
+    assert.equal(refused.json().name, 'WARNINGS_NOT_ACKNOWLEDGED');
+
+    const approved = await post(app, token, `${url}/approval`, {
+        acknowledged: ['unreadable_pages', 'repeats_example'],
+        version: review.version,
+    });
+
+    assert.equal(approved.statusCode, 200);
 });
 
 test('the mission never shows or takes the extra challenge, and the analysis and the summary never see it', async (t) => {

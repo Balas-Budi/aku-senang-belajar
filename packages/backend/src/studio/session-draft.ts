@@ -12,7 +12,7 @@ import {
     type ModuleInfo,
 } from './material-text.ts';
 
-export const SESSION_PROMPT_VERSION = 'session-2026-11-11b';
+export const SESSION_PROMPT_VERSION = 'session-2026-11-11c';
 
 export const SESSION_SYSTEM_PROMPT = [
     'You draft one interactive learning session, a "misi", for Indonesian primary school (SD) students, in Indonesian. You receive the module\'s title, subject, and grade, the competencies this misi teaches with their rubrics, and the text of the module\'s pages between <material> and </material>, each page after a [Page N] marker.',
@@ -34,11 +34,12 @@ export const SESSION_SYSTEM_PROMPT = [
     '- Write the JSON without indentation or line breaks.',
     '- Name no real person, student, or school.',
     '- Teach and test only the competencies you receive. A module can hold several misi, so its other competencies belong to other misi, even where its pages explain them.',
+    '- The challenge and the extra challenge are transfer questions: a student who only remembers an example of the lesson must not be able to answer them from memory. Neither repeats a sentence of a story, a check, a hint, or an example, and neither asks with the same numbers and the same options as a check.',
     '',
     'The blocks, in this order:',
     '1. One "hook": a question that wakes curiosity, with two to four options and no right answer.',
     '2. Four to ten "story" screens that explain the idea step by step, with a "check" after every one to three of them.',
-    '3. One "challenge": a new situation where the student applies the idea and gives a reason.',
+    '3. One "challenge": a transfer question. It sets the idea in a new situation that can really happen, with an object or setting no story, check, hint, or example of this misi uses, and the student applies the idea and gives a reason.',
     '4. One "reflection": two to four topics the session covered, as short phrases, and one to three takeaways, as sentences.',
     "5. One \"extra_challenge\" after the reflection: a harder multiple-choice question on this misi's competencies, for students who already show them. It has exactly a check's keys and rules, and names the competencies it uses. Set it in a new situation that can really happen, with an object or setting no other screen of this misi uses, while the idea and its terms stay the material's. Make it harder than every check and the challenge, for example with numbers or a comparison no other screen uses, or with two of the competencies together. Its prompt is at most two sentences like every screen, so give the situation and the question together: one sentence sets the scene, the other asks. Each hint points to a step of thinking, and the third hint still leaves the last step and the choice to the student, so it never states the rule that picks the option.",
     '',
@@ -118,6 +119,53 @@ export function sessionMessage(
     ].join('\n');
 }
 
+const BLOCK_DEPTH = 3;
+
+export function mendDraft(text: string) {
+    const open: string[] = [];
+    let mended = '';
+    let quoted = false;
+
+    for (let index = 0; index < text.length; index += 1) {
+        const char = text[index];
+
+        if (quoted) {
+            mended += char;
+            if (char === '\\') mended += text[++index] ?? '';
+            else if (char === '"') quoted = false;
+            continue;
+        }
+
+        if (char === '"') {
+            const comma = mended.trimEnd().length - 1;
+
+            if (
+                open.length > BLOCK_DEPTH &&
+                mended[comma] === ',' &&
+                text.startsWith('"competencies"', index)
+            ) {
+                const closers = open
+                    .splice(BLOCK_DEPTH)
+                    .reverse()
+                    .map((bracket) => (bracket === '{' ? '}' : ']'))
+                    .join('');
+
+                mended = `${mended.slice(0, comma)}${closers}${mended.slice(comma)}`;
+            }
+
+            quoted = true;
+        } else if (char === '{' || char === '[') {
+            open.push(char);
+        } else if (char === '}' || char === ']') {
+            open.pop();
+        }
+
+        mended += char;
+    }
+
+    return mended;
+}
+
 export function withoutPictures(value: unknown): unknown {
     if (Array.isArray(value)) return value.map(withoutPictures);
     if (value && typeof value === 'object') {
@@ -189,6 +237,67 @@ export function problemList(problems: string[]) {
     ].join('\n');
 }
 
+const sentencesOf = (text: string) => text.split(/(?<=[.!?])\s+/);
+
+const plain = (sentence: string) =>
+    sentence
+        .toLowerCase()
+        .replace(/[^\p{L}\p{N}/]+/gu, ' ')
+        .trim();
+
+// shortcut: sentences under five words may repeat, since question stems recur; tighten if short repeats slip through
+const LONG_SENTENCE = 5;
+
+function taughtTexts(block: SessionBlock) {
+    if (block.kind === 'story') return [block.content.text];
+    if (block.kind === 'check') {
+        return [
+            block.content.prompt,
+            ...block.content.hints.map(({ text }) => text),
+            block.content.example.text,
+        ];
+    }
+    return [];
+}
+
+function transferTexts(block: SessionBlock) {
+    if (block.kind === 'challenge') {
+        return [block.content.prompt, block.content.question];
+    }
+    if (block.kind === 'extra_challenge') return [block.content.prompt];
+    return [];
+}
+
+function repeatProblems(blocks: (SessionBlock | null)[]) {
+    const taught = new Map<string, number>();
+
+    for (const [index, block] of blocks.entries()) {
+        if (!block) continue;
+
+        for (const sentence of taughtTexts(block).flatMap(sentencesOf)) {
+            const key = plain(sentence);
+
+            if (key.split(' ').length >= LONG_SENTENCE && !taught.has(key)) {
+                taught.set(key, index + 1);
+            }
+        }
+    }
+
+    return blocks.flatMap((block, index) => {
+        if (!block) return [];
+
+        const repeated = transferTexts(block)
+            .flatMap(sentencesOf)
+            .find((sentence) => taught.has(plain(sentence)));
+
+        return repeated
+            ? [
+                  `Block ${index + 1} (${block.kind}): the sentence "${repeated}" repeats block ${taught.get(plain(repeated))}; a transfer question sets the idea in a new situation, so write it with another object or setting and its own words`,
+              ]
+            : [];
+    });
+}
+
 export function checkDraft(codes: string[], pages: number[]) {
     return (draft: SessionDraft) => {
         const structure = structureProblem(
@@ -198,6 +307,7 @@ export function checkDraft(codes: string[], pages: number[]) {
         if (structure) return structure;
 
         const problems: string[] = [];
+        const read: (SessionBlock | null)[] = [];
         let diagrams = 0;
         let shapes = 0;
 
@@ -207,6 +317,8 @@ export function checkDraft(codes: string[], pages: number[]) {
                 kind: block.kind,
                 content: withoutPictures(block.content),
             });
+
+            read.push(parsed.success ? parsed.data : null);
 
             if (parsed.success) {
                 for (const place of diagramsOf(parsed.data)) {
@@ -252,6 +364,8 @@ export function checkDraft(codes: string[], pages: number[]) {
                 problems.push(`${at} must name the competency it tests`);
             }
         }
+
+        problems.push(...repeatProblems(read));
 
         if (diagrams > MAX_DIAGRAMS) {
             problems.push(

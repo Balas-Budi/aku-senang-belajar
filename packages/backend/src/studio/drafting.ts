@@ -19,6 +19,7 @@ import { competencyRubric } from '../learning/rubric.ts';
 import { inBackground } from '../lib/background.ts';
 import {
     checkDraft,
+    mendDraft,
     SESSION_PROMPT_VERSION,
     SESSION_SYSTEM_PROMPT,
     sessionDraft,
@@ -233,6 +234,7 @@ async function draftSession(
                     context.competencies.map(({ code }) => code),
                     context.pages.map(({ number }) => number),
                 ),
+                mend: mendDraft,
                 turns: DRAFT_TURNS,
                 cutOff: context.current
                     ? 'Your reply was cut off because it was too long. Reply again with the whole JSON object, without indentation: keep every diagram the teacher did not ask to change exactly as it is in the current draft, and make the screen texts shorter instead.'

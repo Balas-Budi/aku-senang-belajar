@@ -471,5 +471,9 @@ test('the evidence names the diagram a question showed and the diagrams of the h
         plainRequest.body.messages[1]?.content.includes('"diagram'),
         false,
     );
-    assert.equal(PROMPT_VERSION, 'understanding-2026-11-10');
+    assert.match(
+        drawnRequest.body.messages[0]?.content ?? '',
+        /A question of kind "challenge" is the transfer question/,
+    );
+    assert.equal(PROMPT_VERSION, 'understanding-2026-11-11');
 });

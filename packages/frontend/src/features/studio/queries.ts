@@ -102,7 +102,11 @@ export type StudioTheme = {
     blocks: { id: number; content: Record<string, unknown> }[];
 };
 export type Warning = {
-    code: 'no_page_source' | 'unreadable_pages' | 'ai_diagrams';
+    code:
+        | 'no_page_source'
+        | 'unreadable_pages'
+        | 'ai_diagrams'
+        | 'repeats_example';
     blocks?: number[];
     pages?: number[];
 };

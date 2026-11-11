@@ -31,6 +31,7 @@ export type ChatJsonRequest<T> = {
     user: string;
     schema: ZodType<T>;
     check?: (value: T) => string | null;
+    mend?: (text: string) => string;
     cutOff?: string;
     turns?: number;
 };
@@ -124,10 +125,15 @@ function readReply<T>(
     try {
         json = JSON.parse(text);
     } catch (error) {
-        return {
-            problem: 'Your reply was not valid JSON.',
-            repair: `Your reply was not valid JSON. ${jsonBreak(text, error)}`,
-        };
+        try {
+            if (!request.mend) throw error;
+            json = JSON.parse(request.mend(text));
+        } catch {
+            return {
+                problem: 'Your reply was not valid JSON.',
+                repair: `Your reply was not valid JSON. ${jsonBreak(text, error)}`,
+            };
+        }
     }
 
     const parsed = request.schema.safeParse(json);

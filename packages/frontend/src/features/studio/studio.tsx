@@ -89,6 +89,8 @@ function warningText({ code, blocks = [], pages = [] }: Warning) {
             return `Halaman ${joined(pages)} tidak terbaca, jadi isinya tidak dipakai dalam sesi ini.`;
         case 'ai_diagrams':
             return `Layar ${joined(blocks)} punya gambar buatan AI. Saya sudah memeriksa setiap gambar: jumlah, ukuran, dan warnanya sesuai dengan teks, misalnya bagian pecahan sama besar.`;
+        case 'repeats_example':
+            return `Layar ${joined(blocks)} memakai angka dan pilihan yang sama dengan sebuah soal cek, jadi belum menguji penerapan di situasi baru.`;
         default:
             return code satisfies never;
     }

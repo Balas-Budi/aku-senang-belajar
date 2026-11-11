@@ -705,14 +705,17 @@ function textsOf(value: unknown, key?: string): string[] {
     return [];
 }
 
-export const numbersOf = ({ content }: SessionBlock) =>
-    textsOf(content)
+export const numbersIn = (texts: string[]) =>
+    texts
         .flatMap(
             (text) =>
                 text.replace(numberIdioms, ' ').match(numberPattern) ?? [],
         )
         .map((number) => number.toLowerCase())
         .sort();
+
+export const numbersOf = ({ content }: SessionBlock) =>
+    numbersIn(textsOf(content));
 
 function tally(list: string[]) {
     const counts = new Map<string, number>();

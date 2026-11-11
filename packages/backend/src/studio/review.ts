@@ -1,7 +1,12 @@
 import { and, asc, eq, gte, inArray, isNull, lte } from 'drizzle-orm';
 import type { Queryable } from '../db/index.ts';
 import { competencies, materialPages, modules } from '../db/schema.ts';
-import { diagramsOf, sessionBlock } from '../learning/blocks.ts';
+import {
+    diagramsOf,
+    numbersIn,
+    sessionBlock,
+    type SessionBlock,
+} from '../learning/blocks.ts';
 import { competencyRubric } from '../learning/rubric.ts';
 import { blocksWithCodes, sessionCompetencyIds } from './drafting.ts';
 import { themeStates } from './theming.ts';
@@ -10,6 +15,7 @@ export const warningCodes = [
     'no_page_source',
     'unreadable_pages',
     'ai_diagrams',
+    'repeats_example',
 ] as const;
 
 export type Issue =
@@ -54,7 +60,30 @@ function themeIssues(states: ThemeState[]): Issue[] {
 export type Warning =
     | { code: 'no_page_source'; blocks: number[] }
     | { code: 'unreadable_pages'; pages: number[] }
-    | { code: 'ai_diagrams'; blocks: number[] };
+    | { code: 'ai_diagrams'; blocks: number[] }
+    | { code: 'repeats_example'; blocks: number[] };
+
+function asked(block: SessionBlock) {
+    if (
+        block.kind !== 'check' &&
+        block.kind !== 'challenge' &&
+        block.kind !== 'extra_challenge'
+    ) {
+        return null;
+    }
+
+    const { content } = block;
+    const labels = content.options
+        .map(({ label }) => label.trim().toLowerCase())
+        .sort();
+    const numbers = numbersIn([
+        content.prompt,
+        ...('question' in content ? [content.question] : []),
+        ...labels,
+    ]);
+
+    return numbers.length > 0 ? JSON.stringify([numbers, labels]) : null;
+}
 
 const sourcedKinds = new Set([
     'story',
@@ -139,6 +168,17 @@ export async function reviewSession(
             return parsed.success && diagramsOf(parsed.data).length > 0;
         })
         .map(({ position }) => position);
+    const questions = blocks.flatMap(({ kind, content, position }) => {
+        const parsed = sessionBlock.safeParse({ kind, content });
+        const key = parsed.success ? asked(parsed.data) : null;
+        return key ? [{ kind, position, key }] : [];
+    });
+    const checked = new Set(
+        questions.filter(({ kind }) => kind === 'check').map(({ key }) => key),
+    );
+    const repeating = questions
+        .filter(({ kind, key }) => kind !== 'check' && checked.has(key))
+        .map(({ position }) => position);
     const unreadable = await unreadablePages(db, moduleId);
 
     const issues: Issue[] = [
@@ -162,6 +202,9 @@ export async function reviewSession(
             : []),
         ...(drawn.length > 0
             ? [{ code: 'ai_diagrams' as const, blocks: drawn }]
+            : []),
+        ...(repeating.length > 0
+            ? [{ code: 'repeats_example' as const, blocks: repeating }]
             : []),
     ];
 
