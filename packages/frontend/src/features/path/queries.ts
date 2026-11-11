@@ -14,7 +14,6 @@ export type Stage = {
 export type Chapter = {
     id: number;
     title: string;
-    book: string;
     open: boolean;
     stages: Stage[];
 };
@@ -38,12 +37,7 @@ export function chaptersOf(path: LearningPath, subject: Subject) {
 export function findChapter(path: LearningPath, chapterId: number) {
     for (const { subject, chapters } of path.subjects) {
         const chapter = chapters.find(({ id }) => id === chapterId);
-        if (chapter) {
-            const sameBook = chapters.filter(
-                ({ book }) => book === chapter.book,
-            );
-            return { subject, chapter, number: sameBook.indexOf(chapter) + 1 };
-        }
+        if (chapter) return { subject, chapter };
     }
     return null;
 }

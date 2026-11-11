@@ -358,7 +358,6 @@ export function SubjectPath({ subject }: { subject: Subject }) {
             </div>
         );
     const chapters = chaptersOf(query.data, subject) ?? [];
-    const books = [...new Set(chapters.map(({ book }) => book))];
     const stages = chapters.flatMap((chapter) => chapter.stages);
     const current = currentStage(chapters)?.stage;
     const teacher = classroom.data?.classroom?.teacherName ?? 'gurumu';
@@ -455,37 +454,24 @@ export function SubjectPath({ subject }: { subject: Subject }) {
                             berikutnya dari {teacher}, ya.
                         </p>
                     )}
-                    {books.map((book) => (
-                        <div key={book} className="space-y-8">
-                            {books.length > 1 && (
-                                <p className="font-display text-primary-deep text-xl font-semibold">
-                                    {book}
-                                </p>
-                            )}
-                            {visibleChapters(
-                                chapters.filter(
-                                    (chapter) => chapter.book === book,
-                                ),
-                            ).map((chapter, index) =>
-                                chapter.open ? (
-                                    <OpenChapter
-                                        key={chapter.id}
-                                        subject={subject}
-                                        chapter={chapter}
-                                        number={index + 1}
-                                        current={current}
-                                    />
-                                ) : (
-                                    <LockedChapter
-                                        key={chapter.id}
-                                        chapter={chapter}
-                                        number={index + 1}
-                                        teacher={teacher}
-                                    />
-                                ),
-                            )}
-                        </div>
-                    ))}
+                    {visibleChapters(chapters).map((chapter, index) =>
+                        chapter.open ? (
+                            <OpenChapter
+                                key={chapter.id}
+                                subject={subject}
+                                chapter={chapter}
+                                number={index + 1}
+                                current={current}
+                            />
+                        ) : (
+                            <LockedChapter
+                                key={chapter.id}
+                                chapter={chapter}
+                                number={index + 1}
+                                teacher={teacher}
+                            />
+                        ),
+                    )}
                 </div>
             )}
         </div>

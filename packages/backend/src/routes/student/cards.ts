@@ -88,7 +88,7 @@ export async function cardsOf(db: Queryable, studentId: number) {
                             ({ progress }) => progress === 'submitted',
                         ),
                 )
-                .map(({ id, title, book }) => ({ id, title, book, subject })),
+                .map(({ id, title }) => ({ id, title, subject })),
         ),
     };
 }

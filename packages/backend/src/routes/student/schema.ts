@@ -54,7 +54,6 @@ export const pathResponse = z.object({
                 z.object({
                     id: z.number(),
                     title: z.string(),
-                    book: z.string(),
                     open: z.boolean(),
                     stages: z.array(stage),
                 }),
@@ -77,7 +76,6 @@ export const cardsResponse = z.object({
         z.object({
             id: z.number(),
             title: z.string(),
-            book: z.string(),
             subject: z.enum(subject.enumValues),
         }),
     ),

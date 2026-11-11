@@ -19,7 +19,7 @@ import { AppError } from '../../lib/errors.ts';
 
 type Subject = (typeof subject.enumValues)[number];
 
-type ChapterRow = { id: number; title: string; book: string; subject: Subject };
+type ChapterRow = { id: number; title: string; subject: Subject };
 
 type StageRow = {
     id: number;
@@ -70,10 +70,9 @@ function buildPath(chapterRows: ChapterRow[], stageRows: StageRow[]) {
                 subject: name,
                 chapters: chapters
                     .filter((chapter) => chapter.subject === name)
-                    .map(({ id, title, book, open, stages }) => ({
+                    .map(({ id, title, open, stages }) => ({
                         id,
                         title,
-                        book,
                         open,
                         stages,
                     })),
@@ -123,7 +122,6 @@ export async function pathOf(db: Queryable, studentId: number) {
                   .select({
                       id: modules.id,
                       title: modules.title,
-                      book: materials.title,
                       subject: materials.subject,
                   })
                   .from(modules)

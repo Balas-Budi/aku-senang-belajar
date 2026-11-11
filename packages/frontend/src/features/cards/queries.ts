@@ -10,7 +10,7 @@ export type KnowledgeCards = {
         subject: Subject;
         takeaways: string[];
     }[];
-    stickers: { id: number; title: string; book: string; subject: Subject }[];
+    stickers: { id: number; title: string; subject: Subject }[];
 };
 
 export const studentCardsQuery = (cookie?: string | null) =>

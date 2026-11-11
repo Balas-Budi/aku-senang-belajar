@@ -119,13 +119,15 @@ function call(
 
 const fresh = { progress: 'not_started', step: null };
 
-test('the path lists chapters in book order with stages in order, later stages locked, and the unopened chapters of the same book (FR-016)', async (t) => {
+test('the path lists a subject as one run of chapters across its books, in book and page order, with stages in order, later stages locked, and the unopened chapters (FR-016)', async (t) => {
     const app = await testApp(t);
     const { classId, token } = await studentInClass(app);
     const maths = await book(app);
     const late = await chapter(app, maths, 'Decimals', 30);
     const early = await chapter(app, maths, 'Fractions', 10);
     const unpaged = await chapter(app, maths, 'Shapes');
+    const worksheet = await book(app);
+    const angles = await chapter(app, worksheet, 'Angles', 2);
     const science = await book(app, 'natural_and_social_science');
     const plants = await chapter(app, science, 'Plants', 5);
     const [halves, quarters, compare] = await assign(
@@ -138,10 +140,13 @@ test('the path lists chapters in book order with stages in order, later stages l
         ],
         new Date('2026-11-02T01:00:00.000Z'),
     );
-    const [roots] = await assign(
+    const [roots, corners] = await assign(
         app,
         classId,
-        [await stage(app, plants, 'Roots')],
+        [
+            await stage(app, plants, 'Roots'),
+            await stage(app, angles, 'Corners'),
+        ],
         new Date('2026-11-03T01:00:00.000Z'),
     );
 
@@ -156,7 +161,6 @@ test('the path lists chapters in book order with stages in order, later stages l
                     {
                         id: early,
                         title: 'Fractions',
-                        book: 'Book of mathematics',
                         open: true,
                         stages: [
                             {
@@ -185,16 +189,28 @@ test('the path lists chapters in book order with stages in order, later stages l
                     {
                         id: late,
                         title: 'Decimals',
-                        book: 'Book of mathematics',
                         open: false,
                         stages: [],
                     },
                     {
                         id: unpaged,
                         title: 'Shapes',
-                        book: 'Book of mathematics',
                         open: false,
                         stages: [],
+                    },
+                    {
+                        id: angles,
+                        title: 'Angles',
+                        open: true,
+                        stages: [
+                            {
+                                id: corners,
+                                title: 'Corners',
+                                summary: 'About Corners',
+                                ...fresh,
+                                locked: false,
+                            },
+                        ],
                     },
                 ],
             },
@@ -204,7 +220,6 @@ test('the path lists chapters in book order with stages in order, later stages l
                     {
                         id: plants,
                         title: 'Plants',
-                        book: 'Book of natural_and_social_science',
                         open: true,
                         stages: [
                             {
