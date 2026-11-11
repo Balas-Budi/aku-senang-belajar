@@ -1,6 +1,7 @@
 import { dehydrate, HydrationBoundary } from '@tanstack/react-query';
 import { data } from 'react-router';
 import { classesQuery } from '../features/classes/queries';
+import { liveMonitorQuery } from '../features/live/queries';
 import { sessionResultsQuery } from '../features/results/queries';
 import { SessionResults } from '../features/results/session-results';
 import { ApiError } from '../lib/api';
@@ -22,6 +23,9 @@ export async function loader({ request, params }: Route.LoaderArgs) {
     try {
         await Promise.all([
             client.prefetchQuery(classesQuery(cookie)),
+            client.prefetchQuery(
+                liveMonitorQuery(classId, assignmentId, cookie),
+            ),
             client.fetchQuery(
                 sessionResultsQuery(classId, assignmentId, cookie),
             ),

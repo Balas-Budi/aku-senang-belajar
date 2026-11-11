@@ -147,23 +147,60 @@ export const sessionQuery = (assignmentId: number, cookie?: string | null) =>
             }),
     });
 
+export type LiveSession = {
+    mode: 'together' | 'own_pace';
+    state: 'open' | 'paused' | 'ended';
+    openStep: Step;
+    endsAt: string | null;
+};
+
+export const studentLiveQuery = (assignmentId: number) =>
+    queryOptions({
+        queryKey: ['student', 'live', assignmentId],
+        queryFn: () =>
+            api<{ live: LiveSession | null }>(
+                `/api/student/assignments/${assignmentId}/live`,
+            ),
+        refetchInterval: 5_000,
+        retry: false,
+        gcTime: 0,
+    });
+
+export const liveRefusal = (error: unknown) =>
+    error instanceof ApiError &&
+    error.status === 409 &&
+    (error.body.name === 'LIVE_PAUSED' || error.body.name === 'LIVE_WAIT');
+
 export function answersFor(attempt: Attempt, blockId: number) {
     return attempt.answers.filter((saved) => saved.blockId === blockId);
 }
 
 const listKey = ['student', 'path'];
 
+const withCheckpoint = (
+    session: LearningSession,
+    checkpoint: number,
+): LearningSession =>
+    session.attempt
+        ? { ...session, attempt: { ...session.attempt, checkpoint } }
+        : session;
+
 function useSession(assignmentId: number) {
     const client = useQueryClient();
     const key = sessionQuery(assignmentId).queryKey;
 
     return {
+        read: () => client.getQueryData(key),
         update: (change: (session: LearningSession) => LearningSession) =>
             client.setQueryData(key, (session) => session && change(session)),
         refetch: () =>
             client.refetchQueries({ queryKey: key }, { throwOnError: true }),
         resync: (error: Error) => {
-            if (error instanceof ApiError && error.status === 409)
+            if (liveRefusal(error))
+                void client.invalidateQueries({
+                    queryKey: studentLiveQuery(assignmentId).queryKey,
+                });
+            else if (error instanceof ApiError && error.status === 409)
                 void client.invalidateQueries({ queryKey: key });
         },
         refreshList: () =>
@@ -218,16 +255,16 @@ export function useMoveCheckpoint(assignmentId: number) {
                 method: 'PUT',
                 body: JSON.stringify({ blockId }),
             }),
-        onMutate: ({ blockId }) =>
-            session.update((current) =>
-                current.attempt
-                    ? {
-                          ...current,
-                          attempt: { ...current.attempt, checkpoint: blockId },
-                      }
-                    : current,
-            ),
-        onError: session.resync,
+        onMutate: ({ blockId }) => {
+            const before = session.read()?.attempt?.checkpoint;
+            session.update((current) => withCheckpoint(current, blockId));
+            return before;
+        },
+        onError: (error, _input, before) => {
+            if (liveRefusal(error) && before !== undefined)
+                session.update((current) => withCheckpoint(current, before));
+            session.resync(error);
+        },
         onSettled: session.refreshList,
     });
 }

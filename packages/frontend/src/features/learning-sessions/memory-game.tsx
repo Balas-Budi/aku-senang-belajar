@@ -1,7 +1,6 @@
 import { useEffect, useMemo, useState, type ReactNode } from 'react';
-import { Button } from '../../components/ui/button';
 import { cn } from '../../lib/cn';
-import { ScreenCard, ScreenHeading } from './session-ui';
+import { NextButton, ScreenCard, ScreenHeading } from './session-ui';
 
 const pink = 'var(--color-activity-pink)';
 const green = 'var(--color-activity-green)';
@@ -209,24 +208,13 @@ export function MemoryGame({
                     ? 'Semua pasangan ketemu! Fokusmu sudah siap.'
                     : message}
             </p>
-            {finished ? (
-                <Button
-                    feel="chunky"
-                    className="w-full sm:w-auto"
-                    onClick={onDone}
-                >
-                    Lanjut
-                </Button>
-            ) : (
-                <Button
-                    feel="chunky"
-                    variant="outline"
-                    className="w-full sm:w-auto"
-                    onClick={onDone}
-                >
-                    Lewati game
-                </Button>
-            )}
+            <NextButton
+                variant={finished ? 'primary' : 'outline'}
+                className="w-full sm:w-auto"
+                onClick={onDone}
+            >
+                {finished ? 'Lanjut' : 'Lewati game'}
+            </NextButton>
         </ScreenCard>
     );
 }

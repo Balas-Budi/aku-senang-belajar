@@ -1,14 +1,13 @@
 import { useCallback, useEffect, useRef, useState } from 'react';
-import { requestErrorMessage } from '../../components/request-error';
-import { useErrorToast } from '../../components/ui/toast';
 import { ApiError } from '../../lib/api';
 import { useAnswer, type AnswerInput, type Feedback } from './queries';
+import { useActionError } from './session-ui';
 
 type Sending = { input: AnswerInput; then: (feedback: Feedback) => void };
 
 export function useAnswerSender(assignmentId: number) {
     const { mutate, isPending, isPaused } = useAnswer(assignmentId);
-    const showError = useErrorToast();
+    const showError = useActionError();
     const [waiting, setWaiting] = useState(false);
     const last = useRef<Sending | null>(null);
 
@@ -25,7 +24,7 @@ export function useAnswerSender(assignmentId: number) {
                     if (error instanceof ApiError) {
                         last.current = null;
                         setWaiting(false);
-                        showError(requestErrorMessage(error));
+                        showError(error);
                     } else setWaiting(true);
                 },
             });

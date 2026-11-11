@@ -20,6 +20,7 @@ import {
     type MissionKind,
     type SessionBlock,
 } from '../../learning/blocks.ts';
+import { liveOf } from '../../learning/live.ts';
 import { themedBlock, themesFor } from '../../learning/themed-blocks.ts';
 import { AppError, notFound } from '../../lib/errors.ts';
 import { fieldError } from '../../lib/field-error.ts';
@@ -98,6 +99,7 @@ export async function lockedAttempt(
             status: attempts.status,
             theme: attempts.theme,
             adaptation: attempts.adaptation,
+            assignmentId: attempts.assignmentId,
             sessionId: assignments.learningSessionId,
         })
         .from(attempts)
@@ -143,7 +145,16 @@ export async function openAttempt(
         });
     }
 
-    return attempt;
+    const live = await liveOf(tx, attempt.assignmentId);
+
+    if (live?.state === 'paused') {
+        throw new AppError(409, {
+            message: 'The teacher paused the session',
+            code: 'LIVE_PAUSED',
+        });
+    }
+
+    return { ...attempt, live };
 }
 
 const blockColumns = {

@@ -11,6 +11,7 @@ import { readStored, store } from './device-storage';
 import { answersFor, useHelp } from './queries';
 import { ScreenPicture } from './screen-picture';
 import {
+    NextButton,
     OfflineNote,
     OptionPicker,
     ReasonField,
@@ -138,14 +139,13 @@ export function ChallengeBlock({
                     >
                         Jawabanmu sudah tersimpan untuk {teacher}.
                     </p>
-                    <Button
-                        feel="chunky"
+                    <NextButton
                         className="w-full sm:w-auto"
                         autoFocus
                         onClick={onNext}
                     >
                         Lanjut
-                    </Button>
+                    </NextButton>
                 </>
             ) : (
                 <div className="space-y-2">

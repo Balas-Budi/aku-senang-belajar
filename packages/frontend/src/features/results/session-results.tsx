@@ -13,6 +13,7 @@ import {
 } from '../../components/ui/table';
 import { subjects } from '../assignments/subject-art';
 import { classesQuery } from '../classes/queries';
+import { LiveCard } from '../live/live-card';
 import { AnalyseAgain, stateLabel, waitsForTeacher } from './analysis-state';
 import { sessionResultsQuery } from './queries';
 import { reviewLabel, ShownStatus, statusLabels, StatusLegend } from './status';
@@ -86,6 +87,7 @@ export function SessionResults({
                     {analysed} sudah dianalisis
                 </p>
             </div>
+            <LiveCard classId={classId} assignmentId={assignmentId} />
             <Card>
                 <section
                     aria-labelledby="competencies-title"

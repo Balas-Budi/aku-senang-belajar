@@ -46,6 +46,14 @@ export const adaptationLead = pgEnum('adaptation_lead', [
     'visual',
 ]);
 export const adaptationSource = pgEnum('adaptation_source', ['ai', 'teacher']);
+export const liveMode = pgEnum('live_mode', ['together', 'own_pace']);
+export const liveState = pgEnum('live_state', ['open', 'paused', 'ended']);
+export const liveStep = pgEnum('live_step', [
+    'opening',
+    'story',
+    'challenge',
+    'reflection',
+]);
 export type Adaptation = {
     helpFirst: (typeof adaptationHelp.enumValues)[number] | null;
     lead: (typeof adaptationLead.enumValues)[number] | null;
@@ -433,6 +441,7 @@ export const attempts = pgTable(
         readAloud: boolean().notNull().default(false),
         theme: text(),
         adaptation: jsonb().$type<Adaptation>(),
+        lastSeenAt: timestamp({ withTimezone: true }),
     },
     (table) => [
         unique('attempts_assignment_id_student_id_unique').on(
@@ -481,6 +490,7 @@ export const helpEvents = pgTable(
             .references(() => sessionBlocks.id, { onDelete: 'cascade' }),
         kind: helpKind().notNull(),
         given: boolean().notNull().default(false),
+        handledAt: timestamp({ withTimezone: true }),
         createdAt: timestamp({ withTimezone: true }).notNull().defaultNow(),
     },
     (table) => [
@@ -579,6 +589,22 @@ export const learnerSummaries = pgTable('learner_summaries', {
     excludedAt: timestamp({ withTimezone: true }),
     excludedBy: integer().references(() => users.id),
     createdAt: timestamp({ withTimezone: true }).notNull().defaultNow(),
+});
+
+export const liveSessions = pgTable('live_sessions', {
+    id: integer().primaryKey().generatedAlwaysAsIdentity(),
+    assignmentId: integer()
+        .notNull()
+        .unique()
+        .references(() => assignments.id, { onDelete: 'cascade' }),
+    mode: liveMode().notNull(),
+    state: liveState().notNull().default('open'),
+    openStep: liveStep().notNull(),
+    endsAt: timestamp({ withTimezone: true }),
+    startedBy: integer().references(() => users.id, { onDelete: 'set null' }),
+    startedAt: timestamp({ withTimezone: true }).notNull().defaultNow(),
+    pausedAt: timestamp({ withTimezone: true }),
+    endedAt: timestamp({ withTimezone: true }),
 });
 
 export const reviewTries = pgTable(

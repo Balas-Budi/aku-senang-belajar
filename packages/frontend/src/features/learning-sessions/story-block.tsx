@@ -1,4 +1,3 @@
-import { Button } from '../../components/ui/button';
 import {
     NarrationControls,
     Spoken,
@@ -7,7 +6,7 @@ import {
 import { useLead } from './adaptation';
 import type { BlockOf } from './queries';
 import { ScreenPicture } from './screen-picture';
-import { ScreenCard, ScreenHeading } from './session-ui';
+import { NextButton, ScreenCard, ScreenHeading } from './session-ui';
 
 type Fraction = NonNullable<BlockOf<'story'>['content']['fraction']>;
 
@@ -82,9 +81,9 @@ export function StoryBlock({
             </p>
             {lead === 'text' && picture}
             {content.fraction && <FractionNote fraction={content.fraction} />}
-            <Button feel="chunky" className="w-full sm:w-auto" onClick={onNext}>
+            <NextButton className="w-full sm:w-auto" onClick={onNext}>
                 Lanjut
-            </Button>
+            </NextButton>
         </ScreenCard>
     );
 }

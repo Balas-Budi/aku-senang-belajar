@@ -1,9 +1,11 @@
 import type { FastifyPluginAsyncZod } from 'fastify-type-provider-zod';
 import { requireRole } from '../../auth/guards.ts';
+import { studentLiveResponse } from '../live/schema.ts';
 import {
     answerBlock,
     askForHelp,
     assignmentDetail,
+    myLive,
     joinClass,
     leaveClass,
     moveCheckpoint,
@@ -151,6 +153,16 @@ export const studentRoutes: FastifyPluginAsyncZod = async (fastify) => {
             },
         },
         assignmentDetail,
+    );
+    fastify.get(
+        '/assignments/:assignmentId/live',
+        {
+            schema: {
+                params: assignmentParams,
+                response: { 200: studentLiveResponse },
+            },
+        },
+        myLive,
     );
     fastify.post(
         '/assignments/:assignmentId/attempt',

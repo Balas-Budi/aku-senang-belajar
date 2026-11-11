@@ -1,7 +1,5 @@
 import { useContext, useId, useState } from 'react';
-import { requestErrorMessage } from '../../components/request-error';
 import { Button } from '../../components/ui/button';
-import { useErrorToast } from '../../components/ui/toast';
 import { cn } from '../../lib/cn';
 import {
     NarrationControls,
@@ -21,11 +19,13 @@ import { Illustration } from './illustration';
 import { answersFor, useHelp, type Earned, type Picture } from './queries';
 import { ScreenPicture } from './screen-picture';
 import {
+    NextButton,
     OfflineNote,
     ReactingJalak,
     ReasonField,
     ScreenCard,
     ScreenHeading,
+    useActionError,
     type BlockProps,
 } from './session-ui';
 import { useAnswerSender } from './use-answer-sender';
@@ -159,7 +159,7 @@ export function CheckBlock({
     const [reactions, setReactions] = useState({ cheers: 0, chirps: 0 });
     const sender = useAnswerSender(assignmentId);
     const help = useHelp(assignmentId);
-    const showError = useErrorToast();
+    const showError = useActionError();
     const { content, earned } = block;
     const closed = earned.praise !== null || earned.reveal !== null;
     const reasonMissing = Boolean(content.reason) && !reason.trim();
@@ -214,7 +214,7 @@ export function CheckBlock({
                 onSuccess: () => {
                     if (kind === 'ask_teacher') setAsked(true);
                 },
-                onError: (error) => showError(requestErrorMessage(error)),
+                onError: showError,
             },
         );
     }
@@ -329,14 +329,13 @@ export function CheckBlock({
             )}
             {sender.offline && <OfflineNote onRetry={sender.retry} />}
             {closed ? (
-                <Button
-                    feel="chunky"
+                <NextButton
                     className="w-full sm:w-auto"
                     autoFocus
                     onClick={onNext}
                 >
                     Lanjut
-                </Button>
+                </NextButton>
             ) : (
                 <div className="space-y-2">
                     <div className="flex flex-col gap-3 sm:flex-row">
@@ -350,13 +349,9 @@ export function CheckBlock({
                             {tries.length ? 'Periksa lagi' : 'Periksa'}
                         </Button>
                         {asked && (
-                            <Button
-                                feel="chunky"
-                                variant="outline"
-                                onClick={onNext}
-                            >
+                            <NextButton variant="outline" onClick={onNext}>
                                 Lanjut dulu
-                            </Button>
+                            </NextButton>
                         )}
                     </div>
                     {(!choice || reasonMissing) && (

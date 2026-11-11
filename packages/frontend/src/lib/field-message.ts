@@ -25,6 +25,7 @@ export function fieldLabel(field: string) {
         note: 'Yang perlu diubah',
         classIds: 'Kelas',
         themes: 'Tema cerita',
+        minutes: 'Batas waktu',
     };
     const parts = field.split('/');
     const label = labels[parts.at(-1) ?? ''] ?? 'Isian';

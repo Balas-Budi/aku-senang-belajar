@@ -1,11 +1,26 @@
-import { useEffect, useRef, type ComponentProps } from 'react';
+import {
+    createContext,
+    useCallback,
+    useContext,
+    useEffect,
+    useRef,
+    type ComponentProps,
+} from 'react';
 import { CheckIcon } from '../../components/icons/check-icon';
 import { JalakBali, useJalakMotion } from '../../components/jalak-bali';
+import { requestErrorMessage } from '../../components/request-error';
 import { Button } from '../../components/ui/button';
 import { inputVariants } from '../../components/ui/input';
+import { useErrorToast } from '../../components/ui/toast';
 import { cn } from '../../lib/cn';
 import { Illustration } from './illustration';
-import type { Attempt, Block, BlockOf, Option } from './queries';
+import {
+    liveRefusal,
+    type Attempt,
+    type Block,
+    type BlockOf,
+    type Option,
+} from './queries';
 
 export type BlockProps<Kind extends Block['kind']> = {
     assignmentId: number;
@@ -14,6 +29,47 @@ export type BlockProps<Kind extends Block['kind']> = {
     teacher: string;
     onNext: () => void;
 };
+
+export function useActionError() {
+    const showError = useErrorToast();
+    return useCallback(
+        (error: unknown) => {
+            if (!liveRefusal(error)) showError(requestErrorMessage(error));
+        },
+        [showError],
+    );
+}
+
+export const WaitContext = createContext(false);
+
+export function NextButton(props: ComponentProps<typeof Button>) {
+    const waiting = useContext(WaitContext);
+    const note = useRef<HTMLParagraphElement>(null);
+    const button = useRef<HTMLButtonElement>(null);
+    const waited = useRef(false);
+
+    useEffect(() => {
+        if (
+            (waiting || waited.current) &&
+            document.activeElement === document.body
+        )
+            (waiting ? note : button).current?.focus({ preventScroll: true });
+        waited.current = waiting;
+    }, [waiting]);
+
+    return waiting ? (
+        <p
+            ref={note}
+            role="status"
+            tabIndex={-1}
+            className="bg-student-surface text-primary-deep focus-visible:outline-ring rounded-2xl px-4 py-3 font-semibold focus-visible:outline-3 focus-visible:outline-offset-2"
+        >
+            Tunggu gurumu membuka langkah berikutnya, ya.
+        </p>
+    ) : (
+        <Button ref={button} feel="chunky" {...props} />
+    );
+}
 
 export function ScreenCard({ className, ...props }: ComponentProps<'section'>) {
     return (

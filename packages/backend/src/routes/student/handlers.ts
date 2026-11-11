@@ -16,7 +16,8 @@ import {
     type Adaptation,
 } from '../../db/schema.ts';
 import { adaptationPair, followedPair } from '../../learning/adaptation.ts';
-import { stepOfKind } from '../../learning/blocks.ts';
+import { isMissionKind, stepOfKind } from '../../learning/blocks.ts';
+import { liveOf, stepIndex } from '../../learning/live.ts';
 import { AppError, notFound } from '../../lib/errors.ts';
 import { fieldError } from '../../lib/field-error.ts';
 import { isUniqueViolation } from '../../lib/unique-violation.ts';
@@ -303,6 +304,19 @@ export async function moveCheckpoint(
             request.body.blockId,
             attempt.theme,
         );
+        const { live } = attempt;
+
+        if (
+            live?.state === 'open' &&
+            live.mode === 'together' &&
+            isMissionKind(block.kind) &&
+            stepIndex(stepOfKind[block.kind]) > stepIndex(live.openStep)
+        ) {
+            throw new AppError(409, {
+                message: 'The teacher has not opened this step yet',
+                code: 'LIVE_WAIT',
+            });
+        }
 
         await tx
             .update(attempts)
@@ -311,6 +325,30 @@ export async function moveCheckpoint(
     });
 
     return reply.code(204).send();
+}
+
+export async function myLive(
+    request: FastifyRequest<{ Params: AssignmentParams }>,
+) {
+    const { db } = request.server;
+    const studentId = currentUser(request).id;
+    const assignment = await assignmentFor(
+        db,
+        studentId,
+        request.params.assignmentId,
+    );
+
+    await db
+        .update(attempts)
+        .set({ lastSeenAt: new Date() })
+        .where(
+            and(
+                eq(attempts.assignmentId, assignment.id),
+                eq(attempts.studentId, studentId),
+            ),
+        );
+
+    return { live: await liveOf(db, assignment.id) };
 }
 
 export async function answerBlock(

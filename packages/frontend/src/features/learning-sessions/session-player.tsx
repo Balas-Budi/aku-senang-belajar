@@ -1,13 +1,12 @@
-import { useSuspenseQuery } from '@tanstack/react-query';
-import { useState } from 'react';
+import { useQuery, useSuspenseQuery } from '@tanstack/react-query';
+import { useEffect, useRef, useState } from 'react';
 import { Link } from 'react-router';
 import { HelpIcon } from '../../components/icons/help-icon';
 import { PauseIcon } from '../../components/icons/pause-icon';
-import { requestErrorMessage } from '../../components/request-error';
 import { Button, buttonVariants } from '../../components/ui/button';
 import { Dialog } from '../../components/ui/dialog';
-import { useErrorToast } from '../../components/ui/toast';
 import { cn } from '../../lib/cn';
+import { useMinutesLeft } from '../../lib/use-minutes-left';
 import { studentClassQuery } from '../classes/queries';
 import { LearningSettingsForm } from '../settings/learning-settings';
 import { TextScale } from '../settings/text-scale';
@@ -18,38 +17,37 @@ import { HookBlock } from './hook-block';
 import { MemoryGame } from './memory-game';
 import {
     sessionQuery,
+    studentLiveQuery,
     useHelp,
     useMoveCheckpoint,
     type Attempt,
     type Block,
     type LearningSession,
+    type LiveSession,
 } from './queries';
 import { ReflectionBlock } from './reflection-block';
 import { SessionDone, SessionIntro, SessionPreparing } from './session-screens';
+import { useActionError, WaitContext } from './session-ui';
 import { stepLabels, stepOrder } from './steps';
 import { StoryBlock } from './story-block';
 
 const tool =
     'text-primary-deep min-h-12 rounded-xl border-2 px-3 font-semibold';
 
-function CurrentBlock({
-    session,
-    attempt,
-    block,
-    teacher,
-}: {
+type BlockScreen = {
     session: LearningSession;
     attempt: Attempt;
     block: Block;
     teacher: string;
-}) {
-    const move = useMoveCheckpoint(session.id);
-    const next = session.blocks.find(
-        (candidate) => candidate.position > block.position,
-    );
-    const onNext = () => {
-        if (next) move.mutate({ attemptId: attempt.id, blockId: next.id });
-    };
+};
+
+function Screen({
+    session,
+    attempt,
+    block,
+    teacher,
+    onNext,
+}: BlockScreen & { onNext: () => void }) {
     const shared = { assignmentId: session.id, attempt, teacher, onNext };
 
     switch (block.kind) {
@@ -79,17 +77,61 @@ function CurrentBlock({
     }
 }
 
+function CurrentBlock({
+    live,
+    ...screen
+}: BlockScreen & { live: LiveSession | null }) {
+    const { session, attempt, block } = screen;
+    const move = useMoveCheckpoint(session.id);
+    const next = session.blocks.find(
+        (candidate) => candidate.position > block.position,
+    );
+    const waiting =
+        live?.state === 'open' &&
+        live.mode === 'together' &&
+        next !== undefined &&
+        stepOrder.indexOf(next.step) > stepOrder.indexOf(live.openStep);
+    const onNext = () => {
+        if (next && !waiting)
+            move.mutate({ attemptId: attempt.id, blockId: next.id });
+    };
+
+    return (
+        <WaitContext value={waiting}>
+            <Screen {...screen} onNext={onNext} />
+        </WaitContext>
+    );
+}
+
+function TimeLeft({ endsAt }: { endsAt: string }) {
+    const minutes = useMinutesLeft(endsAt);
+
+    return (
+        minutes !== null && (
+            <p className="text-primary-deep font-semibold tabular-nums">
+                Sisa {minutes} menit
+            </p>
+        )
+    );
+}
+
 export function SessionPlayer({ assignmentId }: { assignmentId: number }) {
     const { data: session } = useSuspenseQuery(sessionQuery(assignmentId));
     const { data: mine } = useSuspenseQuery(studentClassQuery());
+    const { attempt } = session;
+    const { data: watched } = useQuery({
+        ...studentLiveQuery(assignmentId),
+        enabled: attempt?.status === 'in_progress',
+    });
     const teacher = mine.classroom?.teacherName ?? 'gurumu';
     const [adjusting, setAdjusting] = useState(false);
     const [pausing, setPausing] = useState(false);
     const [helping, setHelping] = useState(false);
     const [askedAt, setAskedAt] = useState<number | null>(null);
+    const [timeUpAt, setTimeUpAt] = useState<number | null>(null);
+    const ran = useRef(false);
     const help = useHelp(assignmentId);
-    const showError = useErrorToast();
-    const { attempt } = session;
+    const showError = useActionError();
     const chapterLink = `/student/chapters/${session.moduleId}`;
     const block =
         attempt?.status === 'in_progress'
@@ -97,16 +139,31 @@ export function SessionPlayer({ assignmentId }: { assignmentId: number }) {
               session.blocks.at(0))
             : undefined;
     const step = block ? stepOrder.indexOf(block.step) : -1;
+    const blockId = block?.id;
+    const live = block ? (watched?.live ?? null) : null;
+    const paused = live?.state === 'paused';
+
+    useEffect(() => {
+        if (!live || blockId === undefined) return;
+        if (live.state !== 'ended') {
+            ran.current = true;
+            return;
+        }
+        // shortcut: the device clock, a minute of slack, guesses a time-out; use the API's end reason once it sends one
+        if (
+            ran.current &&
+            live.endsAt &&
+            Date.parse(live.endsAt) - Date.now() < 60_000
+        )
+            setTimeUpAt(blockId);
+        ran.current = false;
+    }, [live, blockId]);
 
     function askTeacher() {
-        if (!attempt || !block) return;
-        const blockId = block.id;
+        if (!attempt || blockId === undefined) return;
         help.mutate(
             { attemptId: attempt.id, blockId, kind: 'ask_teacher' },
-            {
-                onSuccess: () => setAskedAt(blockId),
-                onError: (error) => showError(requestErrorMessage(error)),
-            },
+            { onSuccess: () => setAskedAt(blockId), onError: showError },
         );
     }
 
@@ -159,10 +216,15 @@ export function SessionPlayer({ assignmentId }: { assignmentId: number }) {
                     </div>
                     {block && (
                         <div className="mx-auto max-w-2xl px-4 pb-3">
-                            <p className="font-display text-primary-deep font-semibold">
-                                Langkah {step + 1} dari {stepOrder.length} ·{' '}
-                                {stepLabels[block.step]}
-                            </p>
+                            <div className="flex flex-wrap items-baseline justify-between gap-x-4">
+                                <p className="font-display text-primary-deep font-semibold">
+                                    Langkah {step + 1} dari {stepOrder.length} ·{' '}
+                                    {stepLabels[block.step]}
+                                </p>
+                                {live?.state === 'open' && live.endsAt && (
+                                    <TimeLeft endsAt={live.endsAt} />
+                                )}
+                            </div>
                             <div
                                 aria-hidden="true"
                                 className="mt-2 grid grid-cols-4 gap-1.5"
@@ -178,6 +240,14 @@ export function SessionPlayer({ assignmentId }: { assignmentId: number }) {
                                         )}
                                     />
                                 ))}
+                            </div>
+                            <div role="status">
+                                {timeUpAt === block.id && (
+                                    <p className="bg-student-accent-soft text-student-accent-ink mt-3 rounded-xl px-3 py-2 font-semibold">
+                                        Waktu sesi habis. Kamu masih bisa
+                                        melanjutkan.
+                                    </p>
+                                )}
                             </div>
                         </div>
                     )}
@@ -208,6 +278,7 @@ export function SessionPlayer({ assignmentId }: { assignmentId: number }) {
                             attempt={attempt}
                             block={block}
                             teacher={teacher}
+                            live={live}
                         />
                     )}
                 </main>
@@ -311,6 +382,27 @@ export function SessionPlayer({ assignmentId }: { assignmentId: number }) {
                     >
                         Selesai
                     </Button>
+                </Dialog>
+                <Dialog
+                    open={paused}
+                    onClose={(dialog) => {
+                        if (paused && !dialog.open) dialog.showModal();
+                    }}
+                    onCancel={(event) => event.preventDefault()}
+                    aria-labelledby="live-paused-title"
+                    aria-describedby="live-paused-note"
+                    className="font-rounded text-center"
+                >
+                    <PauseIcon className="text-primary mx-auto size-10" />
+                    <h2
+                        id="live-paused-title"
+                        className="font-display text-primary-deep mt-3 text-[1.4em] font-semibold"
+                    >
+                        Gurumu menjeda misi sebentar.
+                    </h2>
+                    <p id="live-paused-note" className="mt-2 leading-relaxed">
+                        Tunggu, ya. Jawabanmu aman.
+                    </p>
                 </Dialog>
             </div>
         </AdaptationContext>

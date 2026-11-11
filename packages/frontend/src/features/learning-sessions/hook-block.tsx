@@ -10,6 +10,7 @@ import { DiagramPicture } from './diagram';
 import { Illustration } from './illustration';
 import { answersFor } from './queries';
 import {
+    NextButton,
     OfflineNote,
     OptionPicker,
     ScreenCard,
@@ -37,7 +38,6 @@ export function HookBlock({
     );
 
     function choose() {
-        if (saved) return onNext();
         if (!choice) return;
         sender.send(
             {
@@ -84,14 +84,20 @@ export function HookBlock({
                 Ini pemanasan. Semua jawaban boleh.
             </p>
             {sender.offline && <OfflineNote onRetry={sender.retry} />}
-            <Button
-                feel="chunky"
-                className="w-full sm:w-auto"
-                disabled={!choice || sender.sending}
-                onClick={choose}
-            >
-                {saved ? 'Lanjut' : 'Pilih ini'}
-            </Button>
+            {saved ? (
+                <NextButton className="w-full sm:w-auto" onClick={onNext}>
+                    Lanjut
+                </NextButton>
+            ) : (
+                <Button
+                    feel="chunky"
+                    className="w-full sm:w-auto"
+                    disabled={!choice || sender.sending}
+                    onClick={choose}
+                >
+                    Pilih ini
+                </Button>
+            )}
         </ScreenCard>
     );
 }
