@@ -69,19 +69,24 @@ export function VoiceAnswer({
         const heard = new Constructor();
         heard.lang = 'id-ID';
         heard.interimResults = false;
-        heard.continuous = false;
+        heard.continuous = true;
+        let wrote = false;
         heard.onresult = (event) => {
             const text = Array.from(event.results)
+                .slice(event.resultIndex)
+                .filter((result) => result.isFinal)
                 .map((result) => result[0]?.transcript ?? '')
                 .join(' ')
                 .trim();
             if (!text) return;
             const before = latest.current.trimEnd();
-            onChange((before ? `${before} ${text}` : text).slice(0, maxLength));
-            setNote(
-                'Periksa tulisannya. Kalau ada yang salah, perbaiki dulu sebelum mengirim.',
+            const next = (before ? `${before} ${text}` : text).slice(
+                0,
+                maxLength,
             );
-            document.getElementById(fieldId)?.focus();
+            latest.current = next;
+            onChange(next);
+            wrote = true;
         };
         heard.onerror = (event) => {
             if (event.error !== 'aborted')
@@ -93,6 +98,11 @@ export function VoiceAnswer({
         heard.onend = () => {
             recognition.current = null;
             setListening(false);
+            if (!wrote) return;
+            setNote(
+                'Periksa tulisannya. Kalau ada yang salah, perbaiki dulu sebelum mengirim.',
+            );
+            document.getElementById(fieldId)?.focus();
         };
         recognition.current = heard;
         setNote(null);
@@ -121,7 +131,9 @@ export function VoiceAnswer({
                 {listening ? 'Selesai bicara' : 'Jawab dengan suara'}
             </button>
             <p role="status" className="text-muted-foreground text-[0.9em]">
-                {listening ? 'Aku mendengarkan. Bicaralah sekarang.' : note}
+                {listening
+                    ? 'Aku mendengarkan. Tekan “Selesai bicara” kalau sudah.'
+                    : note}
             </p>
         </div>
     );
