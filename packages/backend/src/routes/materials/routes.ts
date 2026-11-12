@@ -4,8 +4,11 @@ import { requireRole } from '../../auth/guards.ts';
 import {
     draftCompetencies,
     getMaterial,
+    deleteModule,
     getPage,
     listMaterials,
+    readAgain,
+    renameModule,
     saveModule,
     updateMaterial,
     uploadMaterial,
@@ -19,10 +22,13 @@ import {
     materialParams,
     materialSummary,
     moduleBody,
+    moduleParams,
+    moduleTitle,
     pageParams,
     pageQuery,
     pageRange,
     pageText,
+    readingStarted,
     savedModule,
     uploadQuery,
 } from './schema.ts';
@@ -113,5 +119,31 @@ export const materialRoutes: FastifyPluginAsyncZod = async (fastify) => {
             },
         },
         saveModule,
+    );
+    fastify.post(
+        '/:materialId/reading',
+        {
+            schema: {
+                params: materialParams,
+                response: { 202: readingStarted },
+            },
+        },
+        readAgain,
+    );
+    fastify.patch(
+        '/:materialId/modules/:moduleId',
+        {
+            schema: {
+                params: moduleParams,
+                body: moduleTitle,
+                response: { 200: materialDetail },
+            },
+        },
+        renameModule,
+    );
+    fastify.delete(
+        '/:materialId/modules/:moduleId',
+        { schema: { params: moduleParams } },
+        deleteModule,
     );
 };

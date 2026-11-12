@@ -100,14 +100,14 @@ test('without an AI provider the proposal answers 503, so the teacher writes the
     assert.equal(response.json().name, 'AI_NOT_CONFIGURED');
 });
 
-test('a range lies inside the material and holds 1 to 20 readable pages', async (t) => {
+test('a range lies inside the material, holds a readable page, and spans at most 60 pages', async (t) => {
     const app = await testApp(t);
     const { token, material } = await teacherWithMaterial(app);
     const long = await teacherWithMaterial(
         app,
         pdfOf(
             Array.from(
-                { length: 21 },
+                { length: 61 },
                 (_, index) =>
                     `Halaman ${index + 1} berisi teks materi yang cukup panjang.`,
             ),
@@ -121,7 +121,7 @@ test('a range lies inside the material and holds 1 to 20 readable pages', async 
         [
             long.token,
             long.material.id,
-            { firstPage: 1, lastPage: 21 },
+            { firstPage: 1, lastPage: 61 },
             'lastPage',
         ],
     ] as const) {

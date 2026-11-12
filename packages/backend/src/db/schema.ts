@@ -2,6 +2,7 @@ import { sql } from 'drizzle-orm';
 import {
     boolean,
     check,
+    customType,
     index,
     integer,
     jsonb,
@@ -60,6 +61,14 @@ export const materialLicence = pgEnum('material_licence', [
     'open',
     'permission',
 ]);
+export const materialReading = pgEnum('material_reading', [
+    'reading_pages',
+    'outlining',
+    'done',
+    'failed',
+]);
+export const moduleOrigin = pgEnum('module_origin', ['teacher', 'ai']);
+const bytea = customType<{ data: Buffer }>({ dataType: () => 'bytea' });
 export const membershipAction = pgEnum('membership_action', [
     'joined',
     'left',
@@ -276,6 +285,9 @@ export const materialPages = pgTable(
         version: integer().notNull().default(1),
         number: integer().notNull(),
         text: text(),
+        visual: text(),
+        pictured: boolean().notNull().default(false),
+        visualTries: integer().notNull().default(0),
     },
     (table) => [
         primaryKey({
@@ -293,6 +305,12 @@ export const materialVersions = pgTable(
             .references(() => materials.id, { onDelete: 'cascade' }),
         version: integer().notNull(),
         createdAt: timestamp({ withTimezone: true }).notNull().defaultNow(),
+        file: bytea(),
+        reading: materialReading().notNull().default('done'),
+        readingError: text(),
+        readingTries: integer().notNull().default(0),
+        readAfter: timestamp({ withTimezone: true }).notNull().defaultNow(),
+        outline: jsonb(),
     },
     (table) => [primaryKey({ columns: [table.materialId, table.version] })],
 );
@@ -337,6 +355,7 @@ export const modules = pgTable(
         firstPage: integer(),
         lastPage: integer(),
         materialVersion: integer().notNull().default(1),
+        madeBy: moduleOrigin().notNull().default('teacher'),
     },
     (table) => [index('modules_material_id_idx').on(table.materialId)],
 );

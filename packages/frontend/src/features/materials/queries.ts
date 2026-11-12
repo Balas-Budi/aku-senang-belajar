@@ -38,9 +38,21 @@ export type SavedModule = {
     }[];
 };
 
+export type Reading = {
+    state: 'reading_pages' | 'outlining' | 'done' | 'failed';
+    error: string | null;
+    pictured: number;
+    described: number;
+    chapters: number | null;
+};
+
+export const readingActive = (reading: Reading) =>
+    reading.state === 'reading_pages' || reading.state === 'outlining';
+
 export type MaterialDetail = Material &
     LicenceData & {
         version: number;
+        reading: Reading;
         versions: {
             version: number;
             createdAt: string;
@@ -51,6 +63,7 @@ export type MaterialDetail = Material &
         pages: { number: number; readable: boolean; snippet: string | null }[];
         modules: (SavedModule & {
             version: number;
+            madeBy: 'teacher' | 'ai';
             sessions: {
                 id: number;
                 title: string;
@@ -114,6 +127,10 @@ export const materialQuery = (id: number, cookie?: string | null) =>
             api<MaterialDetail>(`/api/materials/${id}`, {
                 headers: headersOf(cookie),
             }),
+        refetchInterval: (query) =>
+            query.state.data && readingActive(query.state.data.reading)
+                ? 4_000
+                : false,
     });
 
 export const pageTextQuery = (
@@ -124,7 +141,7 @@ export const pageTextQuery = (
     queryOptions({
         queryKey: ['materials', materialId, 'pages', version, number],
         queryFn: () =>
-            api<{ number: number; text: string | null }>(
+            api<{ number: number; text: string | null; visual: string | null }>(
                 `/api/materials/${materialId}/pages/${number}?version=${version}`,
             ),
         staleTime: Infinity,
@@ -200,5 +217,42 @@ export function useUpdateMaterial(materialId: number) {
                 body: JSON.stringify(change),
             }),
         onSuccess: keep,
+    });
+}
+
+export function useReadAgain(materialId: number) {
+    const client = useQueryClient();
+    return useMutation({
+        mutationFn: () =>
+            api<{ reading: 'reading_pages' }>(
+                `/api/materials/${materialId}/reading`,
+                { method: 'POST' },
+            ),
+        onSuccess: () =>
+            client.invalidateQueries({ queryKey: ['materials', materialId] }),
+    });
+}
+
+export function useRenameModule(materialId: number, moduleId: number) {
+    const keep = useKeepMaterial();
+    return useMutation({
+        mutationFn: (title: string) =>
+            api<MaterialDetail>(
+                `/api/materials/${materialId}/modules/${moduleId}`,
+                { method: 'PATCH', body: JSON.stringify({ title }) },
+            ),
+        onSuccess: keep,
+    });
+}
+
+export function useDeleteModule(materialId: number, moduleId: number) {
+    const client = useQueryClient();
+    return useMutation({
+        mutationFn: () =>
+            api<void>(`/api/materials/${materialId}/modules/${moduleId}`, {
+                method: 'DELETE',
+            }),
+        onSuccess: () =>
+            client.invalidateQueries({ queryKey: ['materials', materialId] }),
     });
 }

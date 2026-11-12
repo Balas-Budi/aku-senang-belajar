@@ -168,11 +168,12 @@ export function ModuleForm({
                         id="module-form-title"
                         className="text-lg font-semibold"
                     >
-                        Buat modul
+                        Bab dari halaman pilihan Anda
                     </h2>
                     <p className="text-muted-foreground mt-1">
-                        Pilih bab atau subbab dari halaman materi ini. AI
-                        mengusulkan kompetensinya, lalu Anda periksa dan simpan.
+                        Untuk bab yang terlewat atau terpotong keliru. Pilih
+                        halamannya, AI mengusulkan kompetensinya, lalu Anda
+                        periksa dan simpan.
                     </p>
                 </div>
                 <form
@@ -189,7 +190,7 @@ export function ModuleForm({
                 >
                     <FormField
                         name="title"
-                        label="Judul modul"
+                        label="Judul bab"
                         required
                         maxLength={120}
                         value={title}
@@ -227,8 +228,8 @@ export function ModuleForm({
                         />
                     </div>
                     <p className="text-muted-foreground text-sm">
-                        Paling banyak 20 halaman yang terbaca. Halaman yang
-                        tidak terbaca dilewati.
+                        Paling banyak 60 halaman. Halaman yang tidak terbaca
+                        dilewati.
                     </p>
                     <div className="flex flex-wrap gap-3">
                         <Button type="submit" disabled={propose.isPending}>
@@ -288,7 +289,7 @@ export function ModuleForm({
                                         setDrafts(null);
                                         setTitle('');
                                         setMessage(
-                                            `Modul ${module.title} tersimpan.`,
+                                            `Bab ${module.title} tersimpan.`,
                                         );
                                     },
                                 },
@@ -329,8 +330,8 @@ export function ModuleForm({
                         <div>
                             <Button type="submit" disabled={save.isPending}>
                                 {save.isPending
-                                    ? 'Menyimpan modul…'
-                                    : 'Simpan modul'}
+                                    ? 'Menyimpan bab…'
+                                    : 'Simpan bab'}
                             </Button>
                         </div>
                     </form>

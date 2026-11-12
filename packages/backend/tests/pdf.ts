@@ -12,7 +12,10 @@ function pageStream(text: string) {
     return `BT /F1 12 Tf 72 720 Td ${lines} ET`;
 }
 
-export function pdfOf(pages: string[]): Buffer {
+const picture =
+    'q 300 0 0 300 150 300 cm BI /W 2 /H 2 /CS /G /BPC 8 ID \x00\xff\xff\x00 EI Q';
+
+export function pdfOf(pages: string[], pictured: number[] = []): Buffer {
     const objects: string[] = [];
     const pageIds = pages.map((_, index) => 3 + index * 2);
     const fontId = 3 + pages.length * 2;
@@ -20,7 +23,12 @@ export function pdfOf(pages: string[]): Buffer {
     objects[2] = `<< /Type /Pages /Kids [${pageIds.map((id) => `${id} 0 R`).join(' ')}] /Count ${pages.length} >>`;
     pages.forEach((text, index) => {
         const id = pageIds[index];
-        const stream = pageStream(text);
+        const stream = [
+            pageStream(text),
+            pictured.includes(index + 1) ? picture : '',
+        ]
+            .filter(Boolean)
+            .join('\n');
         objects[id] =
             `<< /Type /Page /Parent 2 0 R /MediaBox [0 0 595 842] ` +
             `/Resources << /Font << /F1 ${fontId} 0 R >> >> /Contents ${id + 1} 0 R >>`;

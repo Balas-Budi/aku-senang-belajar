@@ -8,6 +8,7 @@ import {
     type SessionBlock,
 } from '../learning/blocks.ts';
 import { competencyRubric } from '../learning/rubric.ts';
+import { pageContent } from '../materials/page-content.ts';
 import { blocksWithCodes, sessionCompetencyIds } from './drafting.ts';
 import { themeStates } from './theming.ts';
 
@@ -120,7 +121,7 @@ async function unreadablePages(db: Queryable, moduleId: number) {
                 eq(materialPages.version, module.version),
                 gte(materialPages.number, module.firstPage),
                 lte(materialPages.number, module.lastPage),
-                isNull(materialPages.text),
+                isNull(pageContent),
             ),
         )
         .orderBy(asc(materialPages.number));

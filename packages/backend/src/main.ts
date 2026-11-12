@@ -3,6 +3,7 @@ import { startAnalysisRunner } from './analysis/runner.ts';
 import { buildApp } from './app.ts';
 import { loadEnv } from './env.ts';
 import { startEmbeddingRunner } from './materials/chunks.ts';
+import { startReadingRunner } from './materials/reading.ts';
 import { failInterruptedReports } from './memory/reports.ts';
 import { failInterruptedDrafts } from './studio/drafting.ts';
 
@@ -15,6 +16,7 @@ await failInterruptedDrafts(app.db);
 await failInterruptedReports(app.db);
 startAnalysisRunner(app);
 startEmbeddingRunner(app);
+startReadingRunner(app);
 
 for (const signal of ['SIGINT', 'SIGTERM'] as const) {
     process.once(signal, async () => {

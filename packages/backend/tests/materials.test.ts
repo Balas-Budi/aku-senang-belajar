@@ -118,7 +118,7 @@ test('an upload needs the rights confirmed, a known subject, and a grade from 1 
     }
 });
 
-test('a file that is not a PDF, a PDF without any text, or one over 300 pages is refused', async (t) => {
+test('a file that is not a PDF or one over 300 pages is refused; a PDF without text waits for its pages to be read', async (t) => {
     const app = await testApp(t);
     const token = await teacher(app);
     const long = Array.from(
@@ -126,16 +126,23 @@ test('a file that is not a PDF, a PDF without any text, or one over 300 pages is
         () => 'Halaman ini berisi teks yang cukup panjang untuk dibaca.',
     );
 
-    for (const file of [
-        Buffer.from('not a pdf at all'),
-        pdfOf(['', '']),
-        pdfOf(long),
-    ]) {
+    for (const file of [Buffer.from('not a pdf at all'), pdfOf(long)]) {
         const response = await upload(app, token, file);
 
         assert.equal(response.statusCode, 400);
         assert.equal(response.json().details[0].field, 'pdf');
     }
+
+    const scanned = await upload(app, token, pdfOf(['', ''], [1]));
+
+    assert.equal(scanned.statusCode, 201);
+    assert.deepEqual(scanned.json().reading, {
+        state: 'reading_pages',
+        error: null,
+        pictured: 2,
+        described: 0,
+        chapters: null,
+    });
 
     const json = await app.inject({
         method: 'POST',

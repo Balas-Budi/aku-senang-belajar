@@ -262,6 +262,7 @@ export async function searchMaterial(
     materialId: number,
     query: string,
     limit = 5,
+    within?: { version: number; firstPage: number; lastPage: number },
 ) {
     const [vector] = await embedTexts(config, [query]);
     const distance =
@@ -280,13 +281,19 @@ export async function searchMaterial(
         .where(
             and(
                 eq(materialChunks.materialId, materialId),
-                eq(
-                    materialChunks.version,
-                    db
-                        .select({ version: materials.version })
-                        .from(materials)
-                        .where(eq(materials.id, materialId)),
-                ),
+                within
+                    ? and(
+                          eq(materialChunks.version, within.version),
+                          gte(materialChunks.pageNumber, within.firstPage),
+                          lte(materialChunks.pageNumber, within.lastPage),
+                      )
+                    : eq(
+                          materialChunks.version,
+                          db
+                              .select({ version: materials.version })
+                              .from(materials)
+                              .where(eq(materials.id, materialId)),
+                      ),
                 isNotNull(materialChunks.embedding),
             ),
         )

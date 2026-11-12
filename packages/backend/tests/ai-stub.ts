@@ -6,7 +6,24 @@ import { EMBEDDING_DIMENSIONS } from '../src/db/schema.ts';
 
 const requestBody = z.object({
     model: z.string(),
-    messages: z.array(z.object({ role: z.string(), content: z.string() })),
+    messages: z.array(
+        z.object({
+            role: z.string(),
+            content: z
+                .union([z.string(), z.array(z.record(z.string(), z.unknown()))])
+                .transform((content) =>
+                    typeof content === 'string'
+                        ? content
+                        : content
+                              .map((part) =>
+                                  typeof part.text === 'string'
+                                      ? part.text
+                                      : '',
+                              )
+                              .join(''),
+                ),
+        }),
+    ),
     response_format: z.object({ type: z.string() }),
 });
 

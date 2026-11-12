@@ -13,7 +13,7 @@ import {
     sql,
 } from 'drizzle-orm';
 import type { FastifyReply, FastifyRequest } from 'fastify';
-import { AiError, aiConfig, chatJson } from '../../ai/chat.ts';
+import { AiError, aiConfig } from '../../ai/chat.ts';
 import { currentUser } from '../../auth/guards.ts';
 import type { Queryable } from '../../db/index.ts';
 import {
@@ -29,19 +29,26 @@ import {
 import { AppError, notFound } from '../../lib/errors.ts';
 import { fieldError } from '../../lib/field-error.ts';
 import { chunkPages } from '../../materials/chunks.ts';
+import { pageContent } from '../../materials/page-content.ts';
 import {
-    checkProposal,
-    competencyMessage,
-    competencyProposal,
+    bookOutline,
+    MAX_CHAPTER_PAGES,
+    readingCounts,
+    restartReading,
+} from '../../materials/reading.ts';
+import { storeModule } from '../../materials/store-module.ts';
+import {
     COMPETENCY_PROMPT_VERSION,
-    COMPETENCY_SYSTEM_PROMPT,
+    proposeCompetencies,
 } from '../../studio/competencies.ts';
 import { visibleTo as sessionVisibleTo } from '../studio/handlers.ts';
-import { readPdfPages } from './pdf.ts';
+import { type PdfPage, readPdfPages } from './pdf.ts';
 import type {
     MaterialBody,
     MaterialParams,
     ModuleBody,
+    ModuleParams,
+    ModuleTitle,
     PageParams,
     PageQuery,
     PageRange,
@@ -49,8 +56,6 @@ import type {
 } from './schema.ts';
 
 const SNIPPET_LENGTH = 160;
-const MAX_MODULE_PAGES = 20;
-const AI_TIMEOUT_MS = 90_000;
 
 export const visibleTo = (userId: number) =>
     or(isNull(materials.ownerId), eq(materials.ownerId, userId));
@@ -67,7 +72,7 @@ const summary = {
     licence: materials.licence,
     licenceNote: materials.licenceNote,
     pageCount: count(materialPages.number),
-    readablePages: count(materialPages.text),
+    readablePages: count(pageContent),
 };
 
 const activePages = and(
@@ -112,7 +117,7 @@ async function materialDetail(
             number: materialPages.number,
             snippet: sql<
                 string | null
-            >`left(${materialPages.text}, ${SNIPPET_LENGTH})`,
+            >`left(coalesce(${materialPages.text}, ${materialPages.visual}), ${SNIPPET_LENGTH})`,
         })
         .from(materialPages)
         .where(
@@ -127,7 +132,7 @@ async function materialDetail(
             version: materialVersions.version,
             createdAt: materialVersions.createdAt,
             pageCount: count(materialPages.number),
-            readablePages: count(materialPages.text),
+            readablePages: count(pageContent),
         })
         .from(materialVersions)
         .leftJoin(
@@ -147,6 +152,7 @@ async function materialDetail(
             firstPage: modules.firstPage,
             lastPage: modules.lastPage,
             version: modules.materialVersion,
+            madeBy: modules.madeBy,
         })
         .from(modules)
         .where(eq(modules.materialId, materialId))
@@ -166,6 +172,28 @@ async function materialDetail(
                   .from(competencies)
                   .where(inArray(competencies.moduleId, moduleIds))
                   .orderBy(asc(competencies.id));
+    const [reading] = await db
+        .select({
+            state: materialVersions.reading,
+            error: materialVersions.readingError,
+            outline: materialVersions.outline,
+            ...readingCounts,
+        })
+        .from(materialVersions)
+        .leftJoin(
+            materialPages,
+            and(
+                eq(materialPages.materialId, materialVersions.materialId),
+                eq(materialPages.version, materialVersions.version),
+            ),
+        )
+        .where(
+            and(
+                eq(materialVersions.materialId, materialId),
+                eq(materialVersions.version, material.version),
+            ),
+        )
+        .groupBy(materialVersions.materialId, materialVersions.version);
     const sessionRows =
         moduleIds.length === 0
             ? []
@@ -206,8 +234,17 @@ async function materialDetail(
                   )
                   .orderBy(asc(competencies.id));
 
+    const outline = bookOutline.safeParse(reading?.outline);
+
     return {
         ...withPrepared(material),
+        reading: {
+            state: reading?.state ?? 'done',
+            error: reading?.error ?? null,
+            pictured: reading?.pictured ?? 0,
+            described: reading?.described ?? 0,
+            chapters: outline.success ? outline.data.chapters.length : null,
+        },
         pages: pages.map(({ number, snippet }) => ({
             number,
             readable: snippet !== null,
@@ -273,7 +310,7 @@ async function ownRange(
     }
 
     const rows = await db
-        .select({ number: materialPages.number, text: materialPages.text })
+        .select({ number: materialPages.number, text: pageContent })
         .from(materialPages)
         .where(
             and(
@@ -292,10 +329,10 @@ async function ownRange(
         throw fieldError('firstPage', 'The range holds no readable page');
     }
 
-    if (readable.length > MAX_MODULE_PAGES) {
+    if (lastPage - firstPage + 1 > MAX_CHAPTER_PAGES) {
         throw fieldError(
             'lastPage',
-            `A module holds at most ${MAX_MODULE_PAGES} readable pages`,
+            `A module spans at most ${MAX_CHAPTER_PAGES} pages`,
         );
     }
 
@@ -321,21 +358,11 @@ export async function draftCompetencies(
     }
 
     try {
-        const { value } = await chatJson(
+        return await proposeCompetencies(
             config,
-            {
-                system: COMPETENCY_SYSTEM_PROMPT,
-                user: competencyMessage(
-                    { ...material, title: request.body.title },
-                    readable,
-                ),
-                schema: competencyProposal,
-                check: checkProposal(readable.map(({ number }) => number)),
-            },
-            AI_TIMEOUT_MS,
+            { ...material, title: request.body.title },
+            readable,
         );
-
-        return value;
     } catch (error) {
         if (error instanceof AiError) {
             throw new AppError(502, {
@@ -387,42 +414,17 @@ export async function saveModule(
         }
     }
 
-    const saved = await request.server.db.transaction(async (tx) => {
-        const [module] = await tx
-            .insert(modules)
-            .values({
-                materialId,
-                title,
-                firstPage,
-                lastPage,
-                materialVersion: material.version,
-            })
-            .returning({
-                id: modules.id,
-                title: modules.title,
-                firstPage: modules.firstPage,
-                lastPage: modules.lastPage,
-            });
-        const stored = await tx
-            .insert(competencies)
-            .values(
-                list.map((item) => ({
-                    moduleId: module.id,
-                    code: item.code,
-                    description: item.description,
-                    pages: [...new Set(item.pages)].sort((a, b) => a - b),
-                    rubric: item.rubric,
-                })),
-            )
-            .returning({
-                id: competencies.id,
-                code: competencies.code,
-                description: competencies.description,
-                pages: competencies.pages,
-            });
-
-        return { ...module, competencies: stored };
-    });
+    const saved = await request.server.db.transaction((tx) =>
+        storeModule(tx, {
+            materialId,
+            version: material.version,
+            title,
+            firstPage,
+            lastPage,
+            madeBy: 'teacher',
+            competencies: list,
+        }),
+    );
 
     return reply.code(201).send(saved);
 }
@@ -450,7 +452,8 @@ export async function uploadMaterial(
     reply: FastifyReply,
 ) {
     const user = currentUser(request);
-    const pages = await readablePdf(request.body);
+    const file = pdfBody(request.body);
+    const pages = await readablePdf(file);
 
     const { title, subject, grade, source, licence, licenceNote } =
         request.query;
@@ -469,7 +472,7 @@ export async function uploadMaterial(
             })
             .returning({ id: materials.id });
 
-        await storeVersion(tx, material.id, 1, pages);
+        await storeVersion(tx, material.id, 1, pages, file);
 
         return material.id;
     });
@@ -479,14 +482,18 @@ export async function uploadMaterial(
         .send(await materialDetail(request.server.db, materialId, user.id));
 }
 
-async function readablePdf(body: unknown) {
+function pdfBody(body: unknown) {
     if (!Buffer.isBuffer(body)) {
         throw fieldError('pdf', 'Send the material as application/pdf');
     }
 
-    const pages = await readPdfPages(body);
+    return body;
+}
 
-    if (pages.every((text) => text === null)) {
+async function readablePdf(file: Buffer) {
+    const pages = await readPdfPages(file);
+
+    if (pages.every(({ text, pictured }) => text === null && !pictured)) {
         throw fieldError('pdf', 'None of the pages has text that can be read');
     }
 
@@ -497,17 +504,24 @@ async function storeVersion(
     tx: Queryable,
     materialId: number,
     version: number,
-    pages: (string | null)[],
+    pages: PdfPage[],
+    file: Buffer,
 ) {
-    const chunks = await chunkPages(pages);
+    const chunks = await chunkPages(pages.map(({ text }) => text));
 
-    await tx.insert(materialVersions).values({ materialId, version });
+    await tx.insert(materialVersions).values({
+        materialId,
+        version,
+        file,
+        reading: 'reading_pages',
+    });
     await tx.insert(materialPages).values(
-        pages.map((text, index) => ({
+        pages.map(({ text, pictured }, index) => ({
             materialId,
             version,
             number: index + 1,
             text,
+            pictured,
         })),
     );
 
@@ -539,7 +553,8 @@ export async function uploadVersion(
     const { db } = request.server;
     const userId = currentUser(request).id;
     const { materialId } = request.params;
-    const pages = await readablePdf(request.body);
+    const file = pdfBody(request.body);
+    const pages = await readablePdf(file);
 
     await db.transaction(async (tx) => {
         const material = await ownMaterial(tx, materialId, userId);
@@ -558,7 +573,7 @@ export async function uploadVersion(
                 .values({ materialId, version: 1 });
         }
 
-        await storeVersion(tx, materialId, version, pages);
+        await storeVersion(tx, materialId, version, pages, file);
         await tx
             .update(materials)
             .set({ version })
@@ -626,7 +641,11 @@ export async function getPage(
     const { materialId, number } = request.params;
     const { version } = request.query;
     const [page] = await request.server.db
-        .select({ number: materialPages.number, text: materialPages.text })
+        .select({
+            number: materialPages.number,
+            text: materialPages.text,
+            visual: materialPages.visual,
+        })
         .from(materialPages)
         .innerJoin(materials, eq(materials.id, materialPages.materialId))
         .where(
@@ -645,4 +664,99 @@ export async function getPage(
     }
 
     return page;
+}
+
+export async function readAgain(
+    request: FastifyRequest<{ Params: MaterialParams }>,
+    reply: FastifyReply,
+) {
+    const { db } = request.server;
+    const { materialId } = request.params;
+
+    await db.transaction(async (tx) => {
+        await ownMaterial(tx, materialId, currentUser(request).id);
+
+        const [material] = await tx
+            .select({ version: materials.version })
+            .from(materials)
+            .where(eq(materials.id, materialId));
+        const restarted = await restartReading(tx, {
+            materialId,
+            version: material.version,
+        });
+
+        if (restarted.length === 0) {
+            throw new AppError(409, {
+                message: 'The reading has not failed',
+                code: 'READING_NOT_FAILED',
+            });
+        }
+    });
+
+    return reply.code(202).send({ reading: 'reading_pages' as const });
+}
+
+async function ownModule(
+    db: Queryable,
+    { materialId, moduleId }: ModuleParams,
+    userId: number,
+) {
+    await ownMaterial(db, materialId, userId);
+
+    const [module] = await db
+        .select({ id: modules.id })
+        .from(modules)
+        .where(
+            and(eq(modules.id, moduleId), eq(modules.materialId, materialId)),
+        );
+
+    if (!module) {
+        throw notFound('Module not found');
+    }
+}
+
+export async function renameModule(
+    request: FastifyRequest<{ Params: ModuleParams; Body: ModuleTitle }>,
+) {
+    const { db } = request.server;
+    const userId = currentUser(request).id;
+
+    await db.transaction(async (tx) => {
+        await ownModule(tx, request.params, userId);
+        await tx
+            .update(modules)
+            .set({ title: request.body.title })
+            .where(eq(modules.id, request.params.moduleId));
+    });
+
+    return materialDetail(db, request.params.materialId, userId);
+}
+
+export async function deleteModule(
+    request: FastifyRequest<{ Params: ModuleParams }>,
+    reply: FastifyReply,
+) {
+    const { db } = request.server;
+    const { moduleId } = request.params;
+
+    await db.transaction(async (tx) => {
+        await ownModule(tx, request.params, currentUser(request).id);
+
+        const [session] = await tx
+            .select({ id: learningSessions.id })
+            .from(learningSessions)
+            .where(eq(learningSessions.moduleId, moduleId))
+            .limit(1);
+
+        if (session) {
+            throw new AppError(409, {
+                message: 'The module has missions',
+                code: 'MODULE_HAS_SESSIONS',
+            });
+        }
+
+        await tx.delete(modules).where(eq(modules.id, moduleId));
+    });
+
+    return reply.code(204).send();
 }

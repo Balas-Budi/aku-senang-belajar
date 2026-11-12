@@ -2,6 +2,8 @@ import { z } from 'zod';
 import {
     learningSessionStatus,
     materialLicence,
+    materialReading,
+    moduleOrigin,
     sessionDrafting,
     subject,
 } from '../../db/schema.ts';
@@ -60,6 +62,20 @@ export const pageParams = materialParams.extend({
 
 export type PageParams = z.infer<typeof pageParams>;
 
+export const moduleParams = materialParams.extend({
+    moduleId: z.coerce.number().int().positive(),
+});
+
+export type ModuleParams = z.infer<typeof moduleParams>;
+
+export const moduleTitle = z.object({
+    title: z.string().trim().min(1).max(120),
+});
+
+export type ModuleTitle = z.infer<typeof moduleTitle>;
+
+export const readingStarted = z.object({ reading: z.literal('reading_pages') });
+
 export const materialSummary = z.object({
     id: z.number(),
     title: z.string(),
@@ -105,6 +121,13 @@ export const materialDetail = materialSummary.extend({
     source: z.string().nullable(),
     licence: z.enum(materialLicence.enumValues).nullable(),
     licenceNote: z.string().nullable(),
+    reading: z.object({
+        state: z.enum(materialReading.enumValues),
+        error: z.string().nullable(),
+        pictured: z.number(),
+        described: z.number(),
+        chapters: z.number().nullable(),
+    }),
     versions: z.array(
         z.object({
             version: z.number(),
@@ -124,6 +147,7 @@ export const materialDetail = materialSummary.extend({
     modules: z.array(
         savedModule.extend({
             version: z.number(),
+            madeBy: z.enum(moduleOrigin.enumValues),
             sessions: z.array(
                 z.object({
                     id: z.number(),
@@ -140,4 +164,5 @@ export const materialDetail = materialSummary.extend({
 export const pageText = z.object({
     number: z.number(),
     text: z.string().nullable(),
+    visual: z.string().nullable(),
 });

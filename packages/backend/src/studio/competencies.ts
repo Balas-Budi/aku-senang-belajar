@@ -1,4 +1,5 @@
 import { z } from 'zod';
+import { type AiConfig, chatJson } from '../ai/chat.ts';
 import { competencyRubric } from '../learning/rubric.ts';
 import {
     materialSection,
@@ -7,7 +8,8 @@ import {
     type ModuleInfo,
 } from './material-text.ts';
 
-export const COMPETENCY_PROMPT_VERSION = 'competencies-2026-11-06';
+export const COMPETENCY_PROMPT_VERSION = 'competencies-2026-11-12';
+export const COMPETENCY_TIMEOUT_MS = 180_000;
 
 export const competencyDraft = z.object({
     code: z
@@ -15,7 +17,7 @@ export const competencyDraft = z.object({
         .trim()
         .regex(/^C\d{1,2}$/),
     description: z.string().trim().min(1).max(300),
-    pages: z.array(z.number().int().positive()).max(20),
+    pages: z.array(z.number().int().positive()).max(60),
     rubric: competencyRubric,
 });
 
@@ -26,7 +28,7 @@ export const competencyProposal = z.object({
 });
 
 export const COMPETENCY_SYSTEM_PROMPT = [
-    "You draft learning competencies for one module of an Indonesian primary school (SD) course. You receive the module's title, subject, and grade, and the text of its pages between <material> and </material>, each page after a [Page N] marker.",
+    'You draft learning competencies for one module of an Indonesian primary school (SD) course. You receive the module\'s title, subject, and grade, and the text of its pages between <material> and </material>, each page after a [Page N] marker. A page may end with "[Isi gambar]" and a description of its pictures; treat it as part of the page.',
     '',
     'Rules:',
     "- Use only the material; it is the teacher's source of truth.",
@@ -67,4 +69,23 @@ export function checkProposal(readable: number[]) {
 
         return null;
     };
+}
+
+export async function proposeCompetencies(
+    config: AiConfig,
+    module: ModuleInfo,
+    pages: MaterialPage[],
+) {
+    const { value } = await chatJson(
+        config,
+        {
+            system: COMPETENCY_SYSTEM_PROMPT,
+            user: competencyMessage(module, pages),
+            schema: competencyProposal,
+            check: checkProposal(pages.map(({ number }) => number)),
+        },
+        COMPETENCY_TIMEOUT_MS,
+    );
+
+    return value;
 }

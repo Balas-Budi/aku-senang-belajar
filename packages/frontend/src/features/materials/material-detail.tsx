@@ -1,13 +1,16 @@
 import { useQuery } from '@tanstack/react-query';
-import { useRef, useState } from 'react';
+import { useRef, useState, type RefObject } from 'react';
 import { Link, useNavigate } from 'react-router';
 import { materialMeta } from './library';
+import { ChapterActions } from './chapter-actions';
 import { LicenceCard } from './licence-card';
 import { MaterialChangeDialog } from './material-change-dialog';
 import { ModuleForm } from './module-form';
 import {
     materialQuery,
     pageTextQuery,
+    readingActive,
+    useReadAgain,
     useUpdateMaterial,
     type MaterialDetail,
 } from './queries';
@@ -177,9 +180,11 @@ function NewSession({
 function ModuleItem({
     module,
     material,
+    onChange,
 }: {
     module: Module;
     material: MaterialDetail;
+    onChange: (text: string, removed?: boolean) => void;
 }) {
     const own = !material.prepared;
     const covered = new Set(
@@ -189,6 +194,7 @@ function ModuleItem({
         .map(({ code }) => code)
         .filter((code) => !covered.has(code));
     const origin = [
+        ...(module.madeBy === 'ai' ? ['Disusun AI dari buku'] : []),
         ...(module.firstPage !== null
             ? [`Halaman ${module.firstPage} sampai ${module.lastPage}`]
             : []),
@@ -253,6 +259,13 @@ function ModuleItem({
                 </p>
             )}
             {own && !material.archived && (
+                <ChapterActions
+                    materialId={material.id}
+                    module={module}
+                    onDone={onChange}
+                />
+            )}
+            {own && !material.archived && (
                 <NewSession module={module} uncovered={uncovered} />
             )}
         </li>
@@ -276,7 +289,75 @@ function PageText({
     const page = useQuery(pageTextQuery(materialId, number, version));
     if (page.isPending) return <p role="status">Memuat teks halaman…</p>;
     if (page.isError) return <RequestError error={page.error} />;
-    return <p className="whitespace-pre-line">{page.data.text}</p>;
+    return (
+        <div className="space-y-3">
+            {page.data.text && (
+                <p className="whitespace-pre-line">{page.data.text}</p>
+            )}
+            {page.data.visual && (
+                <div className="bg-muted rounded-lg px-3 py-2">
+                    <p className="text-sm font-semibold">Isi gambar</p>
+                    <p className="mt-1 whitespace-pre-line">
+                        {page.data.visual}
+                    </p>
+                </div>
+            )}
+        </div>
+    );
+}
+
+function ReadingNotice({
+    material,
+    focusAfter,
+}: {
+    material: MaterialDetail;
+    focusAfter: RefObject<HTMLHeadingElement | null>;
+}) {
+    const again = useReadAgain(material.id);
+    const { reading } = material;
+    if (reading.state === 'failed')
+        return (
+            <Alert tone="attention" className="space-y-3">
+                <p className="font-semibold">
+                    AI belum selesai membaca buku ini
+                </p>
+                <p>
+                    Bab yang sudah tersusun tetap ada. Coba baca ulang, atau
+                    tambahkan bab sendiri dari halaman buku.
+                </p>
+                <RequestError error={again.error} />
+                <Button
+                    variant="outline"
+                    aria-disabled={again.isPending}
+                    className="aria-disabled:opacity-60"
+                    onClick={() => {
+                        if (again.isPending) return;
+                        again.mutate(undefined, {
+                            onSuccess: () => focusAfter.current?.focus(),
+                        });
+                    }}
+                >
+                    {again.isPending ? 'Memulai…' : 'Baca ulang'}
+                </Button>
+            </Alert>
+        );
+    if (!readingActive(reading)) return null;
+    const total = reading.pictured + reading.described;
+    return (
+        <Alert role="status">
+            <p className="font-semibold">AI sedang membaca buku ini</p>
+            <p className="mt-1 tabular-nums">
+                {reading.state === 'reading_pages'
+                    ? total > 0
+                        ? `Membaca gambar: ${reading.described} dari ${total} halaman bergambar.`
+                        : 'Membaca halaman buku.'
+                    : reading.chapters === null
+                      ? 'Menyusun daftar bab dari isi buku.'
+                      : `Menyusun kompetensi: ${material.modules.filter(({ madeBy, version }) => madeBy === 'ai' && version === material.version).length} dari ${reading.chapters} bab.`}{' '}
+                Halaman ini diperbarui sendiri. Anda boleh meninggalkannya.
+            </p>
+        </Alert>
+    );
 }
 
 function PageRow({
@@ -293,7 +374,9 @@ function PageRow({
         return (
             <li className="py-3">
                 <p className="font-semibold">Halaman {page.number}</p>
-                <p className="text-muted-foreground text-sm">Tidak terbaca</p>
+                <p className="text-muted-foreground text-sm">
+                    Tidak ada teks atau gambar yang terbaca
+                </p>
             </li>
         );
     return (
@@ -328,6 +411,7 @@ export function MaterialDetailView({ id }: { id: number }) {
     const [asking, setAsking] = useState(false);
     const [message, setMessage] = useState({ text: '', count: 0 });
     const heading = useRef<HTMLHeadingElement>(null);
+    const chaptersHeading = useRef<HTMLHeadingElement>(null);
     const say = (text: string) =>
         setMessage((previous) => ({ text, count: previous.count + 1 }));
     if (query.isPending) return <p role="status">Memuat materi…</p>;
@@ -346,9 +430,17 @@ export function MaterialDetailView({ id }: { id: number }) {
         );
     const material = query.data;
     const own = !material.prepared;
-    const unreadable = material.pages
-        .filter((page) => !page.readable)
-        .map((page) => page.number);
+    const reading = readingActive(material.reading);
+    const unreadable = reading
+        ? []
+        : material.pages
+              .filter((page) => !page.readable)
+              .map((page) => page.number);
+    const changed = (text: string, removed?: boolean) => {
+        say(text);
+        if (removed)
+            requestAnimationFrame(() => chaptersHeading.current?.focus());
+    };
     return (
         <div className="space-y-6">
             {own && (
@@ -432,16 +524,17 @@ export function MaterialDetailView({ id }: { id: number }) {
                     )}
                 </Alert>
             )}
+            {own && <ReadingNotice material={material} focusAfter={heading} />}
             {unreadable.length > 0 && (
                 <Alert tone="attention">
                     <p className="font-semibold">
                         {unreadable.length} halaman tidak terbaca
                     </p>
                     <p className="mt-1">
-                        Halaman {listOf(unreadable)} tidak punya teks yang bisa
-                        dibaca, mungkin hasil pindai. Halaman itu tidak dipakai
-                        untuk menyusun sesi. Bila isinya penting, unggah PDF
-                        yang teksnya bisa dipilih.
+                        Halaman {listOf(unreadable)} tidak punya teks atau
+                        gambar yang bisa dibaca AI, jadi tidak dipakai untuk
+                        menyusun bab dan sesi. Bila isinya penting, unggah versi
+                        PDF yang lebih jelas.
                     </p>
                 </Alert>
             )}
@@ -452,17 +545,26 @@ export function MaterialDetailView({ id }: { id: number }) {
                         className="space-y-3"
                     >
                         <h2
+                            ref={chaptersHeading}
                             id="modules-title"
-                            className="text-lg font-semibold"
+                            tabIndex={-1}
+                            className={`text-lg font-semibold ${focusHeading}`}
                         >
-                            Modul
+                            Bab
                         </h2>
+                        {own && (
+                            <p className="text-muted-foreground">
+                                Pilih bab yang akan diajarkan, lalu susun
+                                sesinya. Bab yang tidak dipakai boleh dibiarkan.
+                            </p>
+                        )}
                         <ul className="divide-paper-edge divide-y">
                             {material.modules.map((module) => (
                                 <ModuleItem
                                     key={module.id}
                                     module={module}
                                     material={material}
+                                    onChange={changed}
                                 />
                             ))}
                         </ul>
@@ -470,11 +572,20 @@ export function MaterialDetailView({ id }: { id: number }) {
                 </Card>
             )}
             {own && !material.archived && material.readablePages > 0 && (
-                <ModuleForm
-                    key={material.version}
-                    materialId={material.id}
-                    pageCount={material.pageCount}
-                />
+                <details className="space-y-3">
+                    <summary className="focus-visible:outline-ring w-fit cursor-pointer list-none rounded-xl focus-visible:outline-3 focus-visible:outline-offset-3 [&::-webkit-details-marker]:hidden">
+                        <span
+                            className={buttonVariants({ variant: 'outline' })}
+                        >
+                            Tambah bab sendiri
+                        </span>
+                    </summary>
+                    <ModuleForm
+                        key={material.version}
+                        materialId={material.id}
+                        pageCount={material.pageCount}
+                    />
+                </details>
             )}
             <LicenceCard material={material} />
             {own && <VersionCard material={material} />}

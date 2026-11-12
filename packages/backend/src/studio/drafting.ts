@@ -2,6 +2,7 @@ import { and, asc, eq, gte, inArray, isNotNull, lte, sql } from 'drizzle-orm';
 import type { FastifyInstance } from 'fastify';
 import { z } from 'zod';
 import { AiError, aiConfig, chatJson } from '../ai/chat.ts';
+import { embedConfig } from '../ai/embed.ts';
 import type { Queryable } from '../db/index.ts';
 import {
     blockCompetencies,
@@ -17,6 +18,8 @@ import {
 import { diagramsOf } from '../learning/blocks.ts';
 import { competencyRubric } from '../learning/rubric.ts';
 import { inBackground } from '../lib/background.ts';
+import { searchMaterial } from '../materials/chunks.ts';
+import { pageContent } from '../materials/page-content.ts';
 import {
     checkDraft,
     mendDraft,
@@ -98,6 +101,7 @@ async function draftContext(db: Queryable, sessionId: number) {
             code: competencies.code,
             description: competencies.description,
             rubric: competencies.rubric,
+            pages: competencies.pages,
         })
         .from(competencies)
         .where(inArray(competencies.id, sessionCompetencyIds(db, sessionId)))
@@ -108,7 +112,7 @@ async function draftContext(db: Queryable, sessionId: number) {
             : await db
                   .select({
                       number: materialPages.number,
-                      text: materialPages.text,
+                      text: pageContent,
                   })
                   .from(materialPages)
                   .where(
@@ -117,7 +121,7 @@ async function draftContext(db: Queryable, sessionId: number) {
                           eq(materialPages.version, session.materialVersion),
                           gte(materialPages.number, session.firstPage),
                           lte(materialPages.number, session.lastPage),
-                          isNotNull(materialPages.text),
+                          isNotNull(pageContent),
                       ),
                   )
                   .orderBy(asc(materialPages.number));
@@ -125,16 +129,19 @@ async function draftContext(db: Queryable, sessionId: number) {
 
     return {
         session,
-        competencies: missionCompetencies.map((competency) => ({
-            ...competency,
-            rubric:
-                competency.rubric === null
-                    ? null
-                    : competencyRubric.parse(competency.rubric),
-        })),
+        competencies: missionCompetencies.map(
+            ({ pages: _, ...competency }) => ({
+                ...competency,
+                rubric:
+                    competency.rubric === null
+                        ? null
+                        : competencyRubric.parse(competency.rubric),
+            }),
+        ),
         pages: pages.flatMap(({ number, text }) =>
             text === null ? [] : [{ number, text }],
         ),
+        restingOn: missionCompetencies.flatMap(({ pages: list }) => list),
         current:
             blocks.length === 0
                 ? null
@@ -217,7 +224,9 @@ async function draftSession(
         if (!config)
             throw new AiError('not_configured', 'AI is not configured');
 
-        const context = await draftContext(app.db, sessionId);
+        const context = await draftContext(app.db, sessionId).then((found) =>
+            focusPages(app, found),
+        );
         const { value, model, outputTokens } = await chatJson(
             config,
             {
@@ -285,6 +294,65 @@ async function draftSession(
             .set({ drafting: 'failed', draftError: failure })
             .where(eq(learningSessions.id, sessionId));
     }
+}
+
+export const MAX_DRAFT_PAGES = 20;
+const NEAREST_CHUNKS = 8;
+
+async function focusPages(
+    app: FastifyInstance,
+    context: Awaited<ReturnType<typeof draftContext>>,
+) {
+    const { pages, session } = context;
+
+    if (pages.length <= MAX_DRAFT_PAGES) return context;
+
+    const chosen = new Set(
+        context.restingOn.filter((page) =>
+            pages.some(({ number }) => number === page),
+        ),
+    );
+    const config = embedConfig(app.env);
+
+    if (
+        config &&
+        session.firstPage !== null &&
+        session.lastPage !== null &&
+        chosen.size < MAX_DRAFT_PAGES
+    ) {
+        try {
+            const nearest = await searchMaterial(
+                app.db,
+                config,
+                session.materialId,
+                context.competencies
+                    .map(({ description }) => description)
+                    .join('\n'),
+                NEAREST_CHUNKS,
+                {
+                    version: session.materialVersion,
+                    firstPage: session.firstPage,
+                    lastPage: session.lastPage,
+                },
+            );
+
+            for (const { pageNumber } of nearest) chosen.add(pageNumber);
+        } catch (error) {
+            app.log.warn({ err: error }, 'searching the chapter failed');
+        }
+    }
+
+    for (const { number } of pages) {
+        if (chosen.size >= MAX_DRAFT_PAGES) break;
+        chosen.add(number);
+    }
+
+    const kept = [...chosen].sort((a, b) => a - b).slice(0, MAX_DRAFT_PAGES);
+
+    return {
+        ...context,
+        pages: pages.filter(({ number }) => kept.includes(number)),
+    };
 }
 
 export function startDraft(

@@ -29,6 +29,7 @@ export class AiError extends Error {
 export type ChatJsonRequest<T> = {
     system: string;
     user: string;
+    images?: string[];
     schema: ZodType<T>;
     check?: (value: T) => string | null;
     mend?: (text: string) => string;
@@ -232,7 +233,19 @@ export async function chatJson<T>(
         final = await graph.invoke({
             messages: [
                 new SystemMessage(request.system),
-                new HumanMessage(request.user),
+                new HumanMessage(
+                    request.images?.length
+                        ? {
+                              content: [
+                                  { type: 'text', text: request.user },
+                                  ...request.images.map((url) => ({
+                                      type: 'image_url',
+                                      image_url: { url },
+                                  })),
+                              ],
+                          }
+                        : request.user,
+                ),
             ],
             problem: null,
             fix: null,
