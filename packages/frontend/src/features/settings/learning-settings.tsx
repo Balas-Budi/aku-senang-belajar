@@ -3,7 +3,7 @@ import { requestErrorMessage } from '../../components/request-error';
 import { Button } from '../../components/ui/button';
 import { useErrorToast } from '../../components/ui/toast';
 import { cn } from '../../lib/cn';
-import { useLead } from '../learning-sessions/adaptation';
+import { useLead, useMissionReadAloud } from '../learning-sessions/adaptation';
 import { useIndonesianVoice } from '../narration/narration';
 import { speak } from '../narration/speech';
 import {
@@ -36,6 +36,7 @@ export function LearningSettingsForm() {
     const showError = useErrorToast();
     const voice = useIndonesianVoice();
     const lead = useLead();
+    const missionReadAloud = useMissionReadAloud();
     const change = (next: Partial<LearningSettings>) =>
         save.mutate(
             { ...settings, ...next },
@@ -87,7 +88,8 @@ export function LearningSettingsForm() {
                     role="switch"
                     checked={
                         settings.readAloud ||
-                        (lead === 'audio' && !settings.readAloudChosen)
+                        ((lead === 'audio' || missionReadAloud) &&
+                            !settings.readAloudChosen)
                     }
                     onChange={(event) =>
                         change({

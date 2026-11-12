@@ -1,6 +1,7 @@
 import { useQuery } from '@tanstack/react-query';
 import { useEffect, useRef, useState } from 'react';
 import { Link } from 'react-router';
+import { AddStoryForm } from './add-story-form';
 import { BlockEditor } from './block-editor';
 import type { DiagramField } from './block-fields';
 import { BlockView } from './block-view';
@@ -9,13 +10,16 @@ import {
     useApproveSession,
     useAssignSession,
     useEditBlock,
+    useMoveBlock,
     useReviseSession,
+    useSetReadAloud,
     type Issue,
     type StudioBlock,
     type StudioSession,
     type Warning,
 } from './queries';
 import { RemoveDiagramDialog } from './remove-diagram-dialog';
+import { RemoveScreenDialog } from './remove-screen-dialog';
 import { StudioError } from './studio-error';
 import {
     choiceBox,
@@ -23,6 +27,7 @@ import {
     failures,
     joined,
     kindLabels,
+    lengthLabels,
     stepOfKind,
     themeLabels,
 } from './studio-labels';
@@ -158,28 +163,66 @@ function DraftAlert({ session }: { session: StudioSession }) {
     );
 }
 
+type Report = (text: string, focus: string[], version: number) => void;
+
+const compact = 'min-h-11 px-3 aria-disabled:opacity-60';
+
+const inMiddle = (block?: StudioBlock) =>
+    block?.kind === 'story' || block?.kind === 'check';
+
 function ScreenItem({
-    sessionId,
+    session,
     block,
     editable,
+    onAskRemove,
+    onReport,
 }: {
-    sessionId: number;
+    session: StudioSession;
     block: StudioBlock;
     editable: boolean;
+    onAskRemove: (block: StudioBlock) => void;
+    onReport: Report;
 }) {
-    const edit = useEditBlock(sessionId);
+    const edit = useEditBlock(session.id);
+    const move = useMoveBlock(session.id);
     const [editing, setEditing] = useState(false);
+    const [adding, setAdding] = useState(false);
     const [removing, setRemoving] = useState<DiagramField | null>(null);
     const [confirming, setConfirming] = useState(false);
     const [notice, setNotice] = useState<{ text: string } | null>(null);
     const toggle = useRef<HTMLButtonElement>(null);
+    const addToggle = useRef<HTMLButtonElement>(null);
     const heading = useRef<HTMLHeadingElement>(null);
     useEffect(() => {
         if (notice) heading.current?.focus();
     }, [notice]);
+    const index = session.blocks.indexOf(block);
+    const movable = editable && inMiddle(block);
+    const up = movable && inMiddle(session.blocks[index - 1]);
+    const down = movable && inMiddle(session.blocks[index + 1]);
+    const addable = editable && (block.kind === 'hook' || inMiddle(block));
     const close = () => {
         setEditing(false);
         toggle.current?.focus();
+    };
+    const shift = (direction: 'up' | 'down') => {
+        if (move.isPending) return;
+        const other = direction === 'up' ? 'down' : 'up';
+        const to = block.position + (direction === 'up' ? -1 : 1);
+        move.mutate(
+            { blockId: block.id, move: direction },
+            {
+                onSuccess: (next) =>
+                    onReport(
+                        `${kindLabels[block.kind]} pindah ke layar ${to}.`,
+                        [
+                            `screen-${block.id}-${direction}`,
+                            `screen-${block.id}-${other}`,
+                        ],
+                        next.version,
+                    ),
+            },
+        );
     };
     return (
         <li className="space-y-3 py-4">
@@ -187,6 +230,7 @@ function ScreenItem({
                 <div>
                     <h3
                         ref={heading}
+                        id={`screen-${block.id}`}
                         tabIndex={-1}
                         className="focus-visible:outline-ring rounded font-semibold focus-visible:outline-3 focus-visible:outline-offset-4"
                     >
@@ -200,7 +244,7 @@ function ScreenItem({
                     </p>
                     {removing && block.kind !== 'brain_game' && (
                         <RemoveDiagramDialog
-                            sessionId={sessionId}
+                            sessionId={session.id}
                             block={block}
                             field={removing}
                             open={confirming}
@@ -215,20 +259,67 @@ function ScreenItem({
                     )}
                 </div>
                 {editable && block.kind !== 'brain_game' && (
-                    <Button
-                        ref={toggle}
-                        variant="outline"
-                        aria-expanded={editing}
-                        onClick={() => {
-                            setNotice(null);
-                            edit.reset();
-                            setEditing(!editing);
-                        }}
-                    >
-                        Ubah teks
-                    </Button>
+                    <div className="flex flex-wrap gap-2">
+                        <Button
+                            ref={toggle}
+                            variant="outline"
+                            className={compact}
+                            aria-expanded={editing}
+                            onClick={() => {
+                                setNotice(null);
+                                edit.reset();
+                                setEditing(!editing);
+                            }}
+                        >
+                            Ubah teks
+                        </Button>
+                        {up && (
+                            <Button
+                                id={`screen-${block.id}-up`}
+                                variant="outline"
+                                className={compact}
+                                aria-disabled={move.isPending}
+                                onClick={() => shift('up')}
+                            >
+                                Naik
+                                <span className="sr-only">
+                                    {' '}
+                                    layar {block.position}
+                                </span>
+                            </Button>
+                        )}
+                        {down && (
+                            <Button
+                                id={`screen-${block.id}-down`}
+                                variant="outline"
+                                className={compact}
+                                aria-disabled={move.isPending}
+                                onClick={() => shift('down')}
+                            >
+                                Turun
+                                <span className="sr-only">
+                                    {' '}
+                                    layar {block.position}
+                                </span>
+                            </Button>
+                        )}
+                        {movable && (
+                            <Button
+                                variant="outline"
+                                className={compact}
+                                onClick={() => onAskRemove(block)}
+                            >
+                                Hapus layar
+                                <span className="sr-only">
+                                    {' '}
+                                    {block.position}
+                                </span>
+                            </Button>
+                        )}
+                    </div>
                 )}
             </div>
+            <StudioError error={move.error} />
             {editable && editing && block.kind !== 'brain_game' ? (
                 <BlockEditor
                     block={block}
@@ -249,9 +340,59 @@ function ScreenItem({
                     }
                 />
             )}
+            {addable && (
+                <div className="space-y-3">
+                    <Button
+                        ref={addToggle}
+                        variant="outline"
+                        className={compact}
+                        aria-expanded={adding}
+                        onClick={() => setAdding(!adding)}
+                    >
+                        Tambah layar cerita
+                        <span className="sr-only">
+                            {' '}
+                            sesudah layar {block.position}
+                        </span>
+                    </Button>
+                    {adding && (
+                        <AddStoryForm
+                            sessionId={session.id}
+                            after={block}
+                            onClose={() => {
+                                setAdding(false);
+                                addToggle.current?.focus();
+                            }}
+                            onAdded={(next) => {
+                                setAdding(false);
+                                const added = next.blocks.find(
+                                    ({ position }) =>
+                                        position === block.position + 1,
+                                );
+                                onReport(
+                                    'Layar cerita ditambahkan.',
+                                    added ? [`screen-${added.id}`] : [],
+                                    next.version,
+                                );
+                            }}
+                        />
+                    )}
+                </div>
+            )}
         </li>
     );
 }
+
+const levels = [
+    {
+        label: 'Lebih mudah',
+        note: 'Buat misi ini lebih mudah untuk siswa yang masih berkembang: kalimat lebih pendek dan sederhana, angka lebih kecil, contoh yang lebih dekat dengan kehidupan sehari-hari, dan petunjuk yang lebih membimbing. Pertahankan kompetensi, jumlah layar cerita, dan susunan misi.',
+    },
+    {
+        label: 'Lebih menantang',
+        note: 'Buat misi ini lebih menantang untuk siswa yang sudah menguasai dasarnya: angka lebih besar atau perbandingan yang lebih rumit, cek yang meminta alasan, dan petunjuk yang menyisakan langkah berpikir untuk siswa. Pertahankan kompetensi, jumlah layar cerita, dan susunan misi.',
+    },
+];
 
 function RevisionForm({
     session,
@@ -262,6 +403,7 @@ function RevisionForm({
 }) {
     const revise = useReviseSession(session.id);
     const generating = session.drafting === 'generating' || themeDrafting;
+    const fixedNote = levels.some(({ note }) => note === revise.variables);
     return (
         <Card>
             <section aria-labelledby="revision-title" className="space-y-4">
@@ -309,12 +451,28 @@ function RevisionForm({
                         error={revise.error}
                     />
                     <StudioError error={revise.error} inline={['note']} />
-                    <Button
-                        type="submit"
-                        disabled={generating || revise.isPending}
-                    >
-                        {revise.isPending ? 'Mengirim…' : 'Minta revisi'}
-                    </Button>
+                    <div className="flex flex-wrap gap-3">
+                        <Button
+                            type="submit"
+                            disabled={generating || revise.isPending}
+                        >
+                            {revise.isPending && !fixedNote
+                                ? 'Mengirim…'
+                                : 'Minta revisi'}
+                        </Button>
+                        {levels.map(({ label, note }) => (
+                            <Button
+                                key={label}
+                                variant="outline"
+                                disabled={generating || revise.isPending}
+                                onClick={() => revise.mutate(note)}
+                            >
+                                {revise.isPending && revise.variables === note
+                                    ? 'Mengirim…'
+                                    : label}
+                            </Button>
+                        ))}
+                    </div>
                 </form>
             </section>
         </Card>
@@ -531,9 +689,69 @@ function AssignCard({
     );
 }
 
+function ReadAloudCard({ session }: { session: StudioSession }) {
+    const save = useSetReadAloud(session.id);
+    const on =
+        save.isPending && save.variables !== undefined
+            ? save.variables
+            : session.readAloud;
+    return (
+        <Card className="space-y-2">
+            <label className="flex min-h-11 cursor-pointer items-center justify-between gap-4">
+                <span className="text-lg font-semibold">
+                    Dibacakan otomatis
+                </span>
+                <input
+                    type="checkbox"
+                    role="switch"
+                    checked={on}
+                    aria-describedby="read-aloud-help"
+                    onChange={(event) => save.mutate(event.target.checked)}
+                    className="peer sr-only"
+                />
+                <span
+                    aria-hidden="true"
+                    className="bg-border peer-checked:bg-primary peer-focus-visible:outline-ring relative h-7 w-12 shrink-0 rounded-full transition-colors peer-focus-visible:outline-3 peer-focus-visible:outline-offset-2 after:absolute after:top-1 after:left-1 after:size-5 after:rounded-full after:bg-white after:transition-transform peer-checked:after:translate-x-5 motion-reduce:transition-none motion-reduce:after:transition-none"
+                />
+            </label>
+            <p
+                id="read-aloud-help"
+                className="text-muted-foreground max-w-prose"
+            >
+                Layar misi dibacakan untuk siswa yang belum mengatur Bacakan
+                otomatis sendiri.
+            </p>
+            <p role="status" className="text-status-visible font-semibold">
+                {save.isSuccess && 'Tersimpan.'}
+            </p>
+            <StudioError error={save.error} />
+        </Card>
+    );
+}
+
 export function StudioView({ id }: { id: number }) {
     const query = useQuery(studioSessionQuery(id));
     const [published, setPublished] = useState(false);
+    const [removing, setRemoving] = useState<StudioBlock | null>(null);
+    const [confirming, setConfirming] = useState(false);
+    const [message, setMessage] = useState({ text: '', count: 0 });
+    const [focus, setFocus] = useState<{
+        ids: string[];
+        version: number;
+    } | null>(null);
+    const version = query.data?.version;
+    useEffect(() => {
+        if (!focus || version === undefined || version < focus.version) return;
+        focus.ids
+            .map((target) => document.getElementById(target))
+            .find(Boolean)
+            ?.focus();
+        setFocus(null);
+    }, [focus, version]);
+    const report: Report = (text, ids, nextVersion) => {
+        setMessage((previous) => ({ text, count: previous.count + 1 }));
+        setFocus({ ids, version: nextVersion });
+    };
     if (query.isPending) return <p role="status">Memuat sesi…</p>;
     if (query.isError)
         return (
@@ -559,6 +777,19 @@ export function StudioView({ id }: { id: number }) {
         (block) => block.kind === 'extra_challenge',
     );
     const { module } = session;
+    const screen = (block: StudioBlock) => (
+        <ScreenItem
+            key={block.id}
+            session={session}
+            block={block}
+            editable={baseEditable}
+            onAskRemove={(chosen) => {
+                setRemoving(chosen);
+                setConfirming(true);
+            }}
+            onReport={report}
+        />
+    );
     return (
         <>
             <Link
@@ -575,6 +806,8 @@ export function StudioView({ id }: { id: number }) {
                         {module.firstPage !== null &&
                             `, halaman ${module.firstPage} sampai ${module.lastPage}`}{' '}
                         · {stateOf(session)}
+                        {session.length !== null &&
+                            ` · Panjang misi: ${lengthLabels[session.length]}`}
                     </p>
                     {session.summary && (
                         <p className="mt-2 max-w-prose">{session.summary}</p>
@@ -582,6 +815,9 @@ export function StudioView({ id }: { id: number }) {
                 </div>
                 <p role="status" className="sr-only">
                     {announcementOf(session)}
+                </p>
+                <p role="status" className="sr-only">
+                    <span key={message.count}>{message.text}</span>
                 </p>
                 <DraftAlert session={session} />
                 {session.prepared && (
@@ -593,6 +829,7 @@ export function StudioView({ id }: { id: number }) {
                 {session.status === 'ready' && (
                     <AssignCard session={session} takeFocus={published} />
                 )}
+                {!session.prepared && <ReadAloudCard session={session} />}
                 {session.competencies.length > 0 && (
                     <Card>
                         <section
@@ -638,14 +875,7 @@ export function StudioView({ id }: { id: number }) {
                                     </span>
                                 </h2>
                                 <ul className="divide-paper-edge divide-y">
-                                    {blocks.map((block) => (
-                                        <ScreenItem
-                                            key={block.id}
-                                            sessionId={session.id}
-                                            block={block}
-                                            editable={baseEditable}
-                                        />
-                                    ))}
+                                    {blocks.map(screen)}
                                 </ul>
                             </section>
                         </Card>
@@ -672,14 +902,7 @@ export function StudioView({ id }: { id: number }) {
                                 latihan.
                             </p>
                             <ul className="divide-paper-edge divide-y">
-                                {extras.map((block) => (
-                                    <ScreenItem
-                                        key={block.id}
-                                        sessionId={session.id}
-                                        block={block}
-                                        editable={baseEditable}
-                                    />
-                                ))}
+                                {extras.map(screen)}
                             </ul>
                         </section>
                     </Card>
@@ -702,6 +925,25 @@ export function StudioView({ id }: { id: number }) {
                     />
                 )}
             </div>
+            {removing && (
+                <RemoveScreenDialog
+                    session={session}
+                    block={removing}
+                    open={confirming}
+                    onClose={() => setConfirming(false)}
+                    onRemoved={(next) => {
+                        setConfirming(false);
+                        const successor = next.blocks.find(
+                            ({ position }) => position === removing.position,
+                        );
+                        report(
+                            `Layar ${removing.position} dihapus.`,
+                            successor ? [`screen-${successor.id}`] : [],
+                            next.version,
+                        );
+                    }}
+                />
+            )}
         </>
     );
 }

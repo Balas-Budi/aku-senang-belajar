@@ -4,6 +4,7 @@ import {
     blockKind,
     learningSessionStatus,
     sessionDrafting,
+    sessionLength,
 } from '../../db/schema.ts';
 import { warningCodes } from '../../studio/review.ts';
 
@@ -19,9 +20,25 @@ export const sessionBody = z.object({
         .min(1, 'Choose at least one competency')
         .max(50)
         .optional(),
+    length: z.enum(sessionLength.enumValues).optional(),
 });
 
 export type SessionBody = z.infer<typeof sessionBody>;
+
+export const storyBody = z.object({
+    after: z.int().positive(),
+    content: z.record(z.string(), z.unknown()),
+});
+
+export type StoryBody = z.infer<typeof storyBody>;
+
+export const moveBody = z.object({ move: z.enum(['up', 'down']) });
+
+export type MoveBody = z.infer<typeof moveBody>;
+
+export const readAloudBody = z.object({ readAloud: z.boolean() });
+
+export type ReadAloudBody = z.infer<typeof readAloudBody>;
 
 export const sessionParams = z.object({
     sessionId: z.coerce.number().int().positive(),
@@ -115,6 +132,8 @@ export const studioSession = z.object({
     version: z.number(),
     drafting: z.enum(sessionDrafting.enumValues).nullable(),
     draftError: z.string().nullable(),
+    length: z.enum(sessionLength.enumValues).nullable(),
+    readAloud: z.boolean(),
     prepared: z.boolean(),
     module: z.object({
         id: z.number(),

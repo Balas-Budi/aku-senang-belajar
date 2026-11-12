@@ -176,6 +176,13 @@
             "when": 1794448683162,
             "tag": "0024_follow_ups",
             "breakpoints": true
+        },
+        {
+            "idx": 25,
+            "version": "7",
+            "when": 1794452402603,
+            "tag": "0025_session_length",
+            "breakpoints": true
         }
     ]
 }

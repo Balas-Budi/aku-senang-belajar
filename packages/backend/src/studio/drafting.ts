@@ -75,6 +75,7 @@ async function draftContext(db: Queryable, sessionId: number) {
         .select({
             title: learningSessions.title,
             summary: learningSessions.summary,
+            length: learningSessions.length,
             moduleId: modules.id,
             moduleTitle: modules.title,
             firstPage: modules.firstPage,
@@ -228,11 +229,13 @@ async function draftSession(
                     context.competencies,
                     context.pages,
                     context.current && { draft: context.current, note },
+                    context.session.length,
                 ),
                 schema: sessionDraft,
                 check: checkDraft(
                     context.competencies.map(({ code }) => code),
                     context.pages.map(({ number }) => number),
+                    context.session.length,
                 ),
                 mend: mendDraft,
                 turns: DRAFT_TURNS,

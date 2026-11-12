@@ -2,15 +2,19 @@ import type { FastifyPluginAsyncZod } from 'fastify-type-provider-zod';
 import { requireRole } from '../../auth/guards.ts';
 import { trackBackground } from '../../lib/background.ts';
 import {
+    addStory,
     approveSession,
     assignSession,
     chooseThemes,
     createSession,
     editBlock,
     getSession,
+    moveBlock,
     redraftTheme,
+    removeBlock,
     removeTheme,
     reviseSession,
+    setReadAloud,
     updateTheme,
 } from './handlers.ts';
 import {
@@ -23,9 +27,12 @@ import {
     classList,
     editedBlock,
     moduleParams,
+    moveBody,
+    readAloudBody,
     revisionBody,
     sessionBody,
     sessionParams,
+    storyBody,
     studioSession,
     themeAccepted,
     themeBody,
@@ -53,6 +60,49 @@ export const studioRoutes: FastifyPluginAsyncZod = async (fastify) => {
         '/studio/sessions/:sessionId',
         { schema: { params: sessionParams, response: { 200: studioSession } } },
         getSession,
+    );
+    fastify.post(
+        '/studio/sessions/:sessionId/blocks',
+        {
+            schema: {
+                params: sessionParams,
+                body: storyBody,
+                response: { 201: studioSession },
+            },
+        },
+        addStory,
+    );
+    fastify.put(
+        '/studio/sessions/:sessionId/blocks/:blockId/position',
+        {
+            schema: {
+                params: blockParams,
+                body: moveBody,
+                response: { 200: studioSession },
+            },
+        },
+        moveBlock,
+    );
+    fastify.delete(
+        '/studio/sessions/:sessionId/blocks/:blockId',
+        {
+            schema: {
+                params: blockParams,
+                response: { 200: studioSession },
+            },
+        },
+        removeBlock,
+    );
+    fastify.put(
+        '/studio/sessions/:sessionId/read-aloud',
+        {
+            schema: {
+                params: sessionParams,
+                body: readAloudBody,
+                response: { 200: studioSession },
+            },
+        },
+        setReadAloud,
     );
     fastify.put(
         '/studio/sessions/:sessionId/blocks/:blockId',

@@ -231,7 +231,10 @@ export async function startAttempt(
                     assignmentId: assignment.id,
                     studentId,
                     currentBlockId: base[0].id,
-                    readAloud: settings.readAloud || followed?.lead === 'audio',
+                    readAloud:
+                        settings.readAloud ||
+                        followed?.lead === 'audio' ||
+                        (assignment.readAloud && !settings.readAloudChosen),
                     theme: await themeFor(tx, studentId, assignment.sessionId),
                     adaptation: followed,
                 })

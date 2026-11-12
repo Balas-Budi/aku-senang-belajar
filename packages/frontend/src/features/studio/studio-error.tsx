@@ -15,6 +15,8 @@ const conflicts: Record<string, string> = {
     THEME_DRAFTING: 'AI sedang menulis tema ini. Tunggu sampai selesai.',
     THEME_NOT_READY: 'Tema ini belum lengkap. Tulis ulang temanya dulu.',
     SESSION_NOT_DRAFTED: 'Susun misi dasarnya dulu sebelum memilih tema.',
+    KEEP_STRUCTURE:
+        'Urutan layar sudah berubah sejak halaman ini dibuka. Halaman dimuat ulang; periksa urutannya, lalu coba lagi.',
 };
 
 export function StudioError({
@@ -36,6 +38,12 @@ export function StudioError({
         return (
             <Alert tone="attention" role="alert">
                 Tema ini sudah dihapus. Halaman dimuat ulang.
+            </Alert>
+        );
+    if (error.status === 404 && error.body.message === 'Block not found')
+        return (
+            <Alert tone="attention" role="alert">
+                Layar ini sudah dihapus. Halaman dimuat ulang.
             </Alert>
         );
     if (error.status === 409)

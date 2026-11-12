@@ -10,11 +10,19 @@ import { Alert } from '../../components/ui/alert';
 import { Button, buttonVariants } from '../../components/ui/button';
 import { Card } from '../../components/ui/card';
 import { textLink } from '../../components/ui/text-link';
-import { useCreateSession } from '../studio/queries';
-import { choiceBox, choiceCard } from '../studio/studio-labels';
+import { useCreateSession, type SessionLength } from '../studio/queries';
+import { choiceBox, choiceCard, lengthLabels } from '../studio/studio-labels';
 import { StudioError } from '../studio/studio-error';
 
 type Module = MaterialDetail['modules'][number];
+
+const lengths = ['short', 'medium', 'long'] as const;
+
+const lengthHints: Record<SessionLength, string> = {
+    short: '4 sampai 5 layar cerita',
+    medium: '6 sampai 7 layar cerita',
+    long: '8 sampai 10 layar cerita',
+};
 
 function sessionState(session: Module['sessions'][number]) {
     if (session.drafting === 'generating') return 'Sedang disusun AI';
@@ -51,10 +59,17 @@ function NewSession({
                 className="space-y-3"
                 onSubmit={(event) => {
                     event.preventDefault();
+                    const form = new FormData(event.currentTarget);
                     create.mutate(
-                        new FormData(event.currentTarget)
-                            .getAll('competencyIds')
-                            .map(Number),
+                        {
+                            competencyIds: form
+                                .getAll('competencyIds')
+                                .map(Number),
+                            length:
+                                lengths.find(
+                                    (length) => length === form.get('length'),
+                                ) ?? 'medium',
+                        },
                         {
                             onSuccess: ({ id }) =>
                                 void navigate(`/teacher/studio/${id}`),
@@ -101,7 +116,7 @@ function NewSession({
                         </label>
                     ))}
                 </fieldset>
-                {pickError ? (
+                {pickError && (
                     <p
                         id={`${formId}-error`}
                         role="alert"
@@ -109,7 +124,30 @@ function NewSession({
                     >
                         {pickError}
                     </p>
-                ) : (
+                )}
+                <fieldset className="space-y-2">
+                    <legend className="mb-2 font-medium">Panjang misi</legend>
+                    {lengths.map((length) => (
+                        <label key={length} className={choiceCard}>
+                            <input
+                                type="radio"
+                                name="length"
+                                value={length}
+                                defaultChecked={length === 'medium'}
+                                className={choiceBox}
+                            />
+                            <span>
+                                <span className="block font-semibold">
+                                    {lengthLabels[length]}
+                                </span>
+                                <span className="text-muted-foreground block text-sm">
+                                    {lengthHints[length]}
+                                </span>
+                            </span>
+                        </label>
+                    ))}
+                </fieldset>
+                {!pickError && (
                     <StudioError
                         error={create.error}
                         inline={['competencyIds']}

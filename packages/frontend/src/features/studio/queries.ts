@@ -113,6 +113,7 @@ export type Warning = {
     pages?: number[];
 };
 export type ClassRef = { id: number; name: string };
+export type SessionLength = 'short' | 'medium' | 'long';
 
 export type StudioSession = {
     id: number;
@@ -122,6 +123,8 @@ export type StudioSession = {
     version: number;
     drafting: 'generating' | 'failed' | null;
     draftError: string | null;
+    length: SessionLength | null;
+    readAloud: boolean;
     prepared: boolean;
     module: {
         id: number;
@@ -238,10 +241,13 @@ export function useRemoveTheme(id: number) {
 export function useCreateSession(moduleId: number) {
     const client = useQueryClient();
     return useMutation({
-        mutationFn: (competencyIds: number[]) =>
+        mutationFn: (input: {
+            competencyIds: number[];
+            length: SessionLength;
+        }) =>
             api<{ id: number }>(`/api/modules/${moduleId}/sessions`, {
                 method: 'POST',
-                body: JSON.stringify({ competencyIds }),
+                body: JSON.stringify(input),
             }),
         onSuccess: () => client.invalidateQueries({ queryKey: ['materials'] }),
     });
@@ -299,7 +305,7 @@ export function useAssignSession(id: number) {
 }
 
 export function useEditBlock(sessionId: number) {
-    const sync = useStudioSync(sessionId);
+    const sync = useStudioSync(sessionId, [404, 409]);
     return useMutation({
         mutationFn: ({
             blockId,
@@ -315,4 +321,63 @@ export function useEditBlock(sessionId: number) {
         onSuccess: sync.refresh,
         onError: sync.refreshIfStale,
     });
+}
+
+function useSessionChange<T>(
+    id: number,
+    scope: 'structure' | 'read-aloud',
+    send: (input: T) => Promise<StudioSession>,
+) {
+    const client = useQueryClient();
+    const sync = useStudioSync(id, [404, 409]);
+    return useMutation({
+        mutationFn: send,
+        scope: { id: `studio-${id}-${scope}` },
+        onSuccess: (session) =>
+            client.setQueryData(studioSessionQuery(id).queryKey, session),
+        onError: sync.refreshIfStale,
+    });
+}
+
+const blocksPath = (id: number) => `/api/studio/sessions/${id}/blocks`;
+
+export function useAddStory(id: number) {
+    return useSessionChange(
+        id,
+        'structure',
+        ({ after, text }: { after: number; text: string }) =>
+            api<StudioSession>(blocksPath(id), {
+                method: 'POST',
+                body: JSON.stringify({ after, content: { text } }),
+            }),
+    );
+}
+
+export function useMoveBlock(id: number) {
+    return useSessionChange(
+        id,
+        'structure',
+        ({ blockId, move }: { blockId: number; move: 'up' | 'down' }) =>
+            api<StudioSession>(`${blocksPath(id)}/${blockId}/position`, {
+                method: 'PUT',
+                body: JSON.stringify({ move }),
+            }),
+    );
+}
+
+export function useRemoveBlock(id: number) {
+    return useSessionChange(id, 'structure', (blockId: number) =>
+        api<StudioSession>(`${blocksPath(id)}/${blockId}`, {
+            method: 'DELETE',
+        }),
+    );
+}
+
+export function useSetReadAloud(id: number) {
+    return useSessionChange(id, 'read-aloud', (readAloud: boolean) =>
+        api<StudioSession>(`/api/studio/sessions/${id}/read-aloud`, {
+            method: 'PUT',
+            body: JSON.stringify({ readAloud }),
+        }),
+    );
 }

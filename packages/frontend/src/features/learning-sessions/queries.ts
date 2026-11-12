@@ -123,6 +123,7 @@ export type LearningSession = {
     subject: Subject;
     moduleId: number;
     moduleTitle: string;
+    readAloud: boolean;
     blocks: Block[];
     attempt: Attempt | null;
 };

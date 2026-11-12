@@ -3,6 +3,7 @@ import {
     and,
     asc,
     eq,
+    gte,
     inArray,
     isNull,
     ne,
@@ -16,6 +17,7 @@ import { currentUser } from '../../auth/guards.ts';
 import type { Queryable } from '../../db/index.ts';
 import {
     assignments,
+    blockCompetencies,
     classes,
     classMembers,
     competencies,
@@ -53,9 +55,12 @@ import type {
     BlockBody,
     BlockParams,
     ModuleParams,
+    MoveBody,
+    ReadAloudBody,
     RevisionBody,
     SessionBody,
     SessionParams,
+    StoryBody,
     ThemeBody,
     ThemeParams,
     ThemesBody,
@@ -246,6 +251,7 @@ export async function createSession(
                 createdBy: user.id,
                 version: 0,
                 drafting: 'generating',
+                length: request.body.length ?? null,
             })
             .returning({ id: learningSessions.id });
 
@@ -290,6 +296,8 @@ async function studioSession(db: Queryable, sessionId: number, userId: number) {
             version: learningSessions.version,
             drafting: learningSessions.drafting,
             draftError: learningSessions.draftError,
+            length: learningSessions.length,
+            readAloud: learningSessions.readAloud,
             createdBy: learningSessions.createdBy,
             module: {
                 id: modules.id,
@@ -1001,4 +1009,239 @@ export async function removeTheme(
     });
 
     return reply.code(204).send();
+}
+
+const MIDDLE = new Set(['story', 'check']);
+const STRUCTURE_SHIFT = 10_000;
+
+const keepStructure = (message: string) =>
+    new AppError(409, { message, code: 'KEEP_STRUCTURE' });
+
+function layoutOf(db: Queryable, sessionId: number) {
+    return db
+        .select({
+            id: sessionBlocks.id,
+            position: sessionBlocks.position,
+            kind: sessionBlocks.kind,
+        })
+        .from(sessionBlocks)
+        .where(eq(sessionBlocks.learningSessionId, sessionId))
+        .orderBy(asc(sessionBlocks.position));
+}
+
+async function claimStructure(tx: Queryable, sessionId: number) {
+    await claimSession(tx, sessionId);
+
+    if (await hasGeneratingTheme(tx, sessionId)) throw themeDrafting();
+
+    await tx
+        .update(sessionThemes)
+        .set({ readBy: null, readAt: null })
+        .where(eq(sessionThemes.learningSessionId, sessionId));
+}
+
+async function shiftFrom(
+    tx: Queryable,
+    sessionId: number,
+    from: number,
+    by: 1 | -1,
+) {
+    const ofSession = eq(sessionBlocks.learningSessionId, sessionId);
+
+    await tx
+        .update(sessionBlocks)
+        .set({ position: sql`${sessionBlocks.position} + ${STRUCTURE_SHIFT}` })
+        .where(and(ofSession, gte(sessionBlocks.position, from)));
+    await tx
+        .update(sessionBlocks)
+        .set({
+            position: sql`${sessionBlocks.position} - ${STRUCTURE_SHIFT - by}`,
+        })
+        .where(
+            and(ofSession, gte(sessionBlocks.position, from + STRUCTURE_SHIFT)),
+        );
+}
+
+async function untestedCodes(
+    db: Queryable,
+    sessionId: number,
+    without?: number,
+) {
+    const tested = await db
+        .selectDistinct({ id: blockCompetencies.competencyId })
+        .from(blockCompetencies)
+        .innerJoin(
+            sessionBlocks,
+            eq(sessionBlocks.id, blockCompetencies.blockId),
+        )
+        .where(
+            and(
+                eq(sessionBlocks.learningSessionId, sessionId),
+                inArray(sessionBlocks.kind, ['check', 'challenge']),
+                without === undefined
+                    ? undefined
+                    : ne(sessionBlocks.id, without),
+            ),
+        );
+    const taught = await db
+        .select({ id: competencies.id, code: competencies.code })
+        .from(competencies)
+        .where(inArray(competencies.id, sessionCompetencyIds(db, sessionId)));
+
+    return taught
+        .filter(({ id }) => !tested.some((row) => row.id === id))
+        .map(({ code }) => code);
+}
+
+export async function addStory(
+    request: FastifyRequest<{ Params: SessionParams; Body: StoryBody }>,
+    reply: FastifyReply,
+) {
+    const { db } = request.server;
+    const userId = currentUser(request).id;
+    const session = await editableSession(db, request.params.sessionId, userId);
+    const story = sessionBlock.safeParse({
+        kind: 'story',
+        content: { text: request.body.content.text },
+    });
+
+    if (!story.success) {
+        throw validationError(
+            story.error.issues.map((issue) => ({
+                field: issue.path.join('/'),
+                message: issue.message,
+            })),
+        );
+    }
+
+    await db.transaction(async (tx) => {
+        await claimStructure(tx, session.id);
+
+        const anchor = (await layoutOf(tx, session.id)).find(
+            ({ id }) => id === request.body.after,
+        );
+
+        if (!anchor) throw notFound('Block not found');
+
+        if (anchor.kind !== 'hook' && !MIDDLE.has(anchor.kind)) {
+            throw keepStructure(
+                'A story goes after the hook, a story, or a check',
+            );
+        }
+
+        await shiftFrom(tx, session.id, anchor.position + 1, 1);
+        await tx.insert(sessionBlocks).values({
+            learningSessionId: session.id,
+            position: anchor.position + 1,
+            kind: 'story',
+            content: story.data.content,
+            sourcePages: [],
+        });
+    });
+
+    return reply.code(201).send(await studioSession(db, session.id, userId));
+}
+
+export async function moveBlock(
+    request: FastifyRequest<{ Params: BlockParams; Body: MoveBody }>,
+) {
+    const { db } = request.server;
+    const userId = currentUser(request).id;
+    const session = await editableSession(db, request.params.sessionId, userId);
+
+    await db.transaction(async (tx) => {
+        await claimStructure(tx, session.id);
+
+        const layout = await layoutOf(tx, session.id);
+        const index = layout.findIndex(
+            ({ id }) => id === request.params.blockId,
+        );
+
+        if (index === -1) throw notFound('Block not found');
+
+        const block = layout[index];
+        const other = layout[index + (request.body.move === 'up' ? -1 : 1)];
+
+        if (!MIDDLE.has(block.kind) || !other || !MIDDLE.has(other.kind)) {
+            throw keepStructure(
+                'Stories and checks move only between the hook and the challenge',
+            );
+        }
+
+        await tx
+            .update(sessionBlocks)
+            .set({ position: -1 })
+            .where(eq(sessionBlocks.id, block.id));
+        await tx
+            .update(sessionBlocks)
+            .set({ position: block.position })
+            .where(eq(sessionBlocks.id, other.id));
+        await tx
+            .update(sessionBlocks)
+            .set({ position: other.position })
+            .where(eq(sessionBlocks.id, block.id));
+    });
+
+    return studioSession(db, session.id, userId);
+}
+
+export async function removeBlock(
+    request: FastifyRequest<{ Params: BlockParams }>,
+) {
+    const { db } = request.server;
+    const userId = currentUser(request).id;
+    const session = await editableSession(db, request.params.sessionId, userId);
+
+    await db.transaction(async (tx) => {
+        await claimStructure(tx, session.id);
+
+        const layout = await layoutOf(tx, session.id);
+        const block = layout.find(({ id }) => id === request.params.blockId);
+
+        if (!block) throw notFound('Block not found');
+
+        const left = layout.filter(({ id }) => id !== block.id);
+
+        if (
+            !MIDDLE.has(block.kind) ||
+            left.filter(({ kind }) => kind === 'story').length < 2 ||
+            !left.some(({ kind }) => kind === 'check')
+        ) {
+            throw keepStructure(
+                'A misi keeps at least two stories and one check; only those can be removed',
+            );
+        }
+
+        const before = await untestedCodes(tx, session.id);
+        const lost = (await untestedCodes(tx, session.id, block.id)).filter(
+            (code) => !before.includes(code),
+        );
+
+        if (lost.length > 0) {
+            throw new AppError(409, {
+                message: `Removing it leaves ${lost.join(', ')} untested`,
+                code: 'COMPETENCY_UNTESTED',
+            });
+        }
+
+        await tx.delete(sessionBlocks).where(eq(sessionBlocks.id, block.id));
+        await shiftFrom(tx, session.id, block.position + 1, -1);
+    });
+
+    return studioSession(db, session.id, userId);
+}
+
+export async function setReadAloud(
+    request: FastifyRequest<{ Params: SessionParams; Body: ReadAloudBody }>,
+) {
+    const { db } = request.server;
+    const userId = currentUser(request).id;
+    const session = await ownSession(db, request.params.sessionId, userId);
+
+    await db
+        .update(learningSessions)
+        .set({ readAloud: request.body.readAloud })
+        .where(eq(learningSessions.id, session.id));
+
+    return studioSession(db, session.id, userId);
 }

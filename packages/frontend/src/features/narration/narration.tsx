@@ -11,7 +11,7 @@ import { ReplayIcon } from '../../components/icons/replay-icon';
 import { SpeakerIcon } from '../../components/icons/speaker-icon';
 import { Button } from '../../components/ui/button';
 import { cn } from '../../lib/cn';
-import { useLead } from '../learning-sessions/adaptation';
+import { useLead, useMissionReadAloud } from '../learning-sessions/adaptation';
 import { useLearningSettings } from '../settings/queries';
 import {
     indonesianVoice,
@@ -54,7 +54,10 @@ export function useIndonesianVoice() {
 export function useNarration(id: string, parts: string[], auto = false) {
     const { readAloud, readAloudChosen, speechRate } = useLearningSettings();
     const lead = useLead();
-    const autoRead = readAloud || (lead === 'audio' && !readAloudChosen);
+    const missionReadAloud = useMissionReadAloud();
+    const autoRead =
+        readAloud ||
+        ((lead === 'audio' || missionReadAloud) && !readAloudChosen);
     const voice = useIndonesianVoice();
     const now = useSyncExternalStore(subscribe, speaking, notSpeaking);
     const key = parts.join(separator);

@@ -35,6 +35,7 @@ const assignmentFields = {
     subject: z.enum(subject.enumValues),
     moduleId: z.number(),
     moduleTitle: z.string(),
+    readAloud: z.boolean(),
 };
 
 const stage = z.object({

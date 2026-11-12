@@ -64,6 +64,7 @@ export async function assignmentFor(
             moduleId: modules.id,
             moduleTitle: modules.title,
             classId: assignments.classId,
+            readAloud: learningSessions.readAloud,
         })
         .from(assignments)
         .innerJoin(classMembers, eq(classMembers.classId, assignments.classId))

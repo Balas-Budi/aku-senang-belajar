@@ -12,7 +12,29 @@ import {
     type ModuleInfo,
 } from './material-text.ts';
 
-export const SESSION_PROMPT_VERSION = 'session-2026-11-11d';
+export const SESSION_PROMPT_VERSION = 'session-2026-11-12';
+
+export const STORY_RANGE = {
+    short: [4, 5],
+    medium: [6, 7],
+    long: [8, 10],
+} as const;
+
+export type SessionLength = keyof typeof STORY_RANGE;
+
+const words = [
+    '',
+    'one',
+    'two',
+    'three',
+    'four',
+    'five',
+    'six',
+    'seven',
+    'eight',
+    'nine',
+    'ten',
+];
 
 export const SESSION_SYSTEM_PROMPT = [
     'You draft one interactive learning session, a "misi", for Indonesian primary school (SD) students, in Indonesian. You receive the module\'s title, subject, and grade, the competencies this misi teaches with their rubrics, and the text of the module\'s pages between <material> and </material>, each page after a [Page N] marker.',
@@ -98,9 +120,17 @@ export function sessionMessage(
     competencies: DraftCompetency[],
     pages: MaterialPage[],
     revision: { draft: unknown; note: string | null } | null,
+    length: SessionLength | null = null,
 ) {
+    const range = length && STORY_RANGE[length];
+
     return [
         ...moduleHeader(module),
+        ...(range
+            ? [
+                  `Length: the teacher asked for a ${length} misi, so write ${words[range[0]]} to ${words[range[1]]} "story" screens, no fewer and no more.`,
+              ]
+            : []),
         'Competencies:',
         ...competencies.map(({ code, description, rubric }) =>
             [
@@ -305,13 +335,23 @@ function repeatProblems(blocks: (SessionBlock | null)[]) {
     });
 }
 
-export function checkDraft(codes: string[], pages: number[]) {
+export function checkDraft(
+    codes: string[],
+    pages: number[],
+    length: SessionLength | null = null,
+) {
     return (draft: SessionDraft) => {
-        const structure = structureProblem(
-            draft.blocks.map(({ kind }) => kind),
-        );
+        const kinds = draft.blocks.map(({ kind }) => kind);
+        const structure = structureProblem(kinds);
 
         if (structure) return structure;
+
+        const range = length && STORY_RANGE[length];
+        const stories = count(kinds, 'story');
+
+        if (range && (stories < range[0] || stories > range[1])) {
+            return `The teacher asked for a ${length} misi: write ${range[0]} to ${range[1]} "story" screens, not ${stories}. Keep a "check" after every one to three of them`;
+        }
 
         const problems: string[] = [];
         const read: (SessionBlock | null)[] = [];

@@ -10,7 +10,7 @@ import { useMinutesLeft } from '../../lib/use-minutes-left';
 import { studentClassQuery } from '../classes/queries';
 import { LearningSettingsForm } from '../settings/learning-settings';
 import { TextScale } from '../settings/text-scale';
-import { AdaptationContext } from './adaptation';
+import { AdaptationContext, MissionReadAloudContext } from './adaptation';
 import { ChallengeBlock } from './challenge-block';
 import { CheckBlock } from './check-block';
 import { HookBlock } from './hook-block';
@@ -169,242 +169,251 @@ export function SessionPlayer({ assignmentId }: { assignmentId: number }) {
 
     return (
         <AdaptationContext value={attempt?.adaptation ?? null}>
-            <div className="bg-student-surface font-rounded min-h-svh text-lg">
-                <TextScale />
-                <header className="border-paper-edge border-b-2 bg-white">
-                    <div className="mx-auto flex max-w-2xl flex-wrap items-center justify-between gap-2 px-4 py-2">
-                        {block ? (
-                            <Button
-                                variant="outline"
-                                className={tool}
-                                onClick={() => setPausing(true)}
-                            >
-                                <PauseIcon />
-                                Rehat
-                            </Button>
-                        ) : (
-                            <Link
-                                to={chapterLink}
-                                className={cn(
-                                    buttonVariants({ variant: 'outline' }),
-                                    tool,
-                                )}
-                            >
-                                Kembali ke bab
-                            </Link>
-                        )}
-                        <div className="flex gap-2">
-                            <Button
-                                variant="outline"
-                                aria-label="Pengaturan belajar"
-                                className={cn(tool, 'font-display min-w-12')}
-                                onClick={() => setAdjusting(true)}
-                            >
-                                Aa
-                            </Button>
-                            {block && (
+            <MissionReadAloudContext value={session.readAloud}>
+                <div className="bg-student-surface font-rounded min-h-svh text-lg">
+                    <TextScale />
+                    <header className="border-paper-edge border-b-2 bg-white">
+                        <div className="mx-auto flex max-w-2xl flex-wrap items-center justify-between gap-2 px-4 py-2">
+                            {block ? (
                                 <Button
                                     variant="outline"
                                     className={tool}
-                                    onClick={() => setHelping(true)}
+                                    onClick={() => setPausing(true)}
                                 >
-                                    <HelpIcon />
-                                    Bantuan
+                                    <PauseIcon />
+                                    Rehat
                                 </Button>
+                            ) : (
+                                <Link
+                                    to={chapterLink}
+                                    className={cn(
+                                        buttonVariants({ variant: 'outline' }),
+                                        tool,
+                                    )}
+                                >
+                                    Kembali ke bab
+                                </Link>
                             )}
-                        </div>
-                    </div>
-                    {block && (
-                        <div className="mx-auto max-w-2xl px-4 pb-3">
-                            <div className="flex flex-wrap items-baseline justify-between gap-x-4">
-                                <p className="font-display text-primary-deep font-semibold">
-                                    Langkah {step + 1} dari {stepOrder.length} ·{' '}
-                                    {stepLabels[block.step]}
-                                </p>
-                                {live?.state === 'open' && live.endsAt && (
-                                    <TimeLeft endsAt={live.endsAt} />
+                            <div className="flex gap-2">
+                                <Button
+                                    variant="outline"
+                                    aria-label="Pengaturan belajar"
+                                    className={cn(
+                                        tool,
+                                        'font-display min-w-12',
+                                    )}
+                                    onClick={() => setAdjusting(true)}
+                                >
+                                    Aa
+                                </Button>
+                                {block && (
+                                    <Button
+                                        variant="outline"
+                                        className={tool}
+                                        onClick={() => setHelping(true)}
+                                    >
+                                        <HelpIcon />
+                                        Bantuan
+                                    </Button>
                                 )}
                             </div>
-                            <div
-                                aria-hidden="true"
-                                className="mt-2 grid grid-cols-4 gap-1.5"
-                            >
-                                {stepOrder.map((item, index) => (
-                                    <span
-                                        key={item}
-                                        className={cn(
-                                            'h-2 rounded-full',
-                                            index <= step
-                                                ? 'bg-primary'
-                                                : 'bg-secondary',
-                                        )}
-                                    />
-                                ))}
-                            </div>
-                            <div role="status">
-                                {timeUpAt === block.id && (
-                                    <p className="bg-student-accent-soft text-student-accent-ink mt-3 rounded-xl px-3 py-2 font-semibold">
-                                        Waktu sesi habis. Kamu masih bisa
-                                        melanjutkan.
+                        </div>
+                        {block && (
+                            <div className="mx-auto max-w-2xl px-4 pb-3">
+                                <div className="flex flex-wrap items-baseline justify-between gap-x-4">
+                                    <p className="font-display text-primary-deep font-semibold">
+                                        Langkah {step + 1} dari{' '}
+                                        {stepOrder.length} ·{' '}
+                                        {stepLabels[block.step]}
                                     </p>
-                                )}
+                                    {live?.state === 'open' && live.endsAt && (
+                                        <TimeLeft endsAt={live.endsAt} />
+                                    )}
+                                </div>
+                                <div
+                                    aria-hidden="true"
+                                    className="mt-2 grid grid-cols-4 gap-1.5"
+                                >
+                                    {stepOrder.map((item, index) => (
+                                        <span
+                                            key={item}
+                                            className={cn(
+                                                'h-2 rounded-full',
+                                                index <= step
+                                                    ? 'bg-primary'
+                                                    : 'bg-secondary',
+                                            )}
+                                        />
+                                    ))}
+                                </div>
+                                <div role="status">
+                                    {timeUpAt === block.id && (
+                                        <p className="bg-student-accent-soft text-student-accent-ink mt-3 rounded-xl px-3 py-2 font-semibold">
+                                            Waktu sesi habis. Kamu masih bisa
+                                            melanjutkan.
+                                        </p>
+                                    )}
+                                </div>
                             </div>
-                        </div>
-                    )}
-                </header>
-                <main
-                    id="main"
-                    className="mx-auto w-full max-w-2xl px-4 py-5 sm:py-8"
-                >
-                    {session.blocks.length === 0 ? (
-                        <SessionPreparing />
-                    ) : !attempt ? (
-                        <SessionIntro session={session} teacher={teacher} />
-                    ) : !block ? (
-                        <SessionDone
-                            session={session}
-                            done={
-                                attempt.done ?? {
-                                    takeaways: [],
-                                    toPractise: [],
+                        )}
+                    </header>
+                    <main
+                        id="main"
+                        className="mx-auto w-full max-w-2xl px-4 py-5 sm:py-8"
+                    >
+                        {session.blocks.length === 0 ? (
+                            <SessionPreparing />
+                        ) : !attempt ? (
+                            <SessionIntro session={session} teacher={teacher} />
+                        ) : !block ? (
+                            <SessionDone
+                                session={session}
+                                done={
+                                    attempt.done ?? {
+                                        takeaways: [],
+                                        toPractise: [],
+                                    }
                                 }
-                            }
-                            teacher={teacher}
-                        />
-                    ) : (
-                        <CurrentBlock
-                            key={block.id}
-                            session={session}
-                            attempt={attempt}
-                            block={block}
-                            teacher={teacher}
-                            live={live}
-                        />
-                    )}
-                </main>
-                <Dialog
-                    open={pausing}
-                    onClose={() => setPausing(false)}
-                    aria-labelledby="pause-title"
-                    className="font-rounded"
-                >
-                    <h2
-                        id="pause-title"
-                        className="font-display text-primary-deep text-[1.4em] font-semibold"
+                                teacher={teacher}
+                            />
+                        ) : (
+                            <CurrentBlock
+                                key={block.id}
+                                session={session}
+                                attempt={attempt}
+                                block={block}
+                                teacher={teacher}
+                                live={live}
+                            />
+                        )}
+                    </main>
+                    <Dialog
+                        open={pausing}
+                        onClose={() => setPausing(false)}
+                        aria-labelledby="pause-title"
+                        className="font-rounded"
                     >
-                        Istirahat dulu?
-                    </h2>
-                    <p className="mt-2 leading-relaxed">
-                        Jawaban yang sudah terkirim aman. Nanti kamu lanjut dari
-                        langkah ini.
-                    </p>
-                    <div className="mt-5 flex flex-col gap-3">
-                        <Button
-                            feel="chunky"
-                            autoFocus
-                            onClick={() => setPausing(false)}
+                        <h2
+                            id="pause-title"
+                            className="font-display text-primary-deep text-[1.4em] font-semibold"
                         >
-                            Lanjut belajar
-                        </Button>
-                        <Link
-                            to={chapterLink}
-                            className={buttonVariants({
-                                variant: 'outline',
-                                feel: 'chunky',
-                            })}
-                        >
-                            Kembali ke bab
-                        </Link>
-                    </div>
-                </Dialog>
-                <Dialog
-                    open={helping}
-                    onClose={() => setHelping(false)}
-                    aria-labelledby="help-title"
-                    className="font-rounded"
-                >
-                    <h2
-                        id="help-title"
-                        className="font-display text-primary-deep text-[1.4em] font-semibold"
-                    >
-                        Butuh bantuan?
-                    </h2>
-                    <p className="mt-2 leading-relaxed">
-                        Kamu bisa minta bantuan {teacher}. Permintaanmu dicatat,
-                        lalu kamu tetap bisa lanjut belajar.
-                    </p>
-                    {askedAt === block?.id && (
-                        <p
-                            role="status"
-                            className="text-primary-deep mt-3 font-semibold"
-                        >
-                            Permintaanmu sudah dicatat untuk {teacher}.
+                            Istirahat dulu?
+                        </h2>
+                        <p className="mt-2 leading-relaxed">
+                            Jawaban yang sudah terkirim aman. Nanti kamu lanjut
+                            dari langkah ini.
                         </p>
-                    )}
-                    <div className="mt-5 flex flex-col gap-3">
-                        {askedAt !== block?.id && (
+                        <div className="mt-5 flex flex-col gap-3">
                             <Button
                                 feel="chunky"
-                                disabled={help.isPending}
-                                onClick={askTeacher}
+                                autoFocus
+                                onClick={() => setPausing(false)}
                             >
-                                Tanya {teacher}
+                                Lanjut belajar
                             </Button>
+                            <Link
+                                to={chapterLink}
+                                className={buttonVariants({
+                                    variant: 'outline',
+                                    feel: 'chunky',
+                                })}
+                            >
+                                Kembali ke bab
+                            </Link>
+                        </div>
+                    </Dialog>
+                    <Dialog
+                        open={helping}
+                        onClose={() => setHelping(false)}
+                        aria-labelledby="help-title"
+                        className="font-rounded"
+                    >
+                        <h2
+                            id="help-title"
+                            className="font-display text-primary-deep text-[1.4em] font-semibold"
+                        >
+                            Butuh bantuan?
+                        </h2>
+                        <p className="mt-2 leading-relaxed">
+                            Kamu bisa minta bantuan {teacher}. Permintaanmu
+                            dicatat, lalu kamu tetap bisa lanjut belajar.
+                        </p>
+                        {askedAt === block?.id && (
+                            <p
+                                role="status"
+                                className="text-primary-deep mt-3 font-semibold"
+                            >
+                                Permintaanmu sudah dicatat untuk {teacher}.
+                            </p>
                         )}
+                        <div className="mt-5 flex flex-col gap-3">
+                            {askedAt !== block?.id && (
+                                <Button
+                                    feel="chunky"
+                                    disabled={help.isPending}
+                                    onClick={askTeacher}
+                                >
+                                    Tanya {teacher}
+                                </Button>
+                            )}
+                            <Button
+                                feel="chunky"
+                                variant="outline"
+                                onClick={() => setHelping(false)}
+                            >
+                                {askedAt === block?.id
+                                    ? 'Kembali belajar'
+                                    : 'Tutup'}
+                            </Button>
+                        </div>
+                    </Dialog>
+                    <Dialog
+                        open={adjusting}
+                        onClose={() => setAdjusting(false)}
+                        aria-labelledby="settings-title"
+                        className="font-rounded max-h-[calc(100svh-2rem)] max-w-lg overflow-y-auto"
+                    >
+                        <h2
+                            id="settings-title"
+                            className="font-display text-primary-deep mb-5 text-[1.4em] font-semibold"
+                        >
+                            Pengaturan belajar
+                        </h2>
+                        <LearningSettingsForm />
                         <Button
                             feel="chunky"
-                            variant="outline"
-                            onClick={() => setHelping(false)}
+                            className="mt-6 w-full"
+                            onClick={() => setAdjusting(false)}
                         >
-                            {askedAt === block?.id
-                                ? 'Kembali belajar'
-                                : 'Tutup'}
+                            Selesai
                         </Button>
-                    </div>
-                </Dialog>
-                <Dialog
-                    open={adjusting}
-                    onClose={() => setAdjusting(false)}
-                    aria-labelledby="settings-title"
-                    className="font-rounded max-h-[calc(100svh-2rem)] max-w-lg overflow-y-auto"
-                >
-                    <h2
-                        id="settings-title"
-                        className="font-display text-primary-deep mb-5 text-[1.4em] font-semibold"
+                    </Dialog>
+                    <Dialog
+                        open={paused}
+                        onClose={(dialog) => {
+                            if (paused && !dialog.open) dialog.showModal();
+                        }}
+                        onCancel={(event) => event.preventDefault()}
+                        aria-labelledby="live-paused-title"
+                        aria-describedby="live-paused-note"
+                        className="font-rounded text-center"
                     >
-                        Pengaturan belajar
-                    </h2>
-                    <LearningSettingsForm />
-                    <Button
-                        feel="chunky"
-                        className="mt-6 w-full"
-                        onClick={() => setAdjusting(false)}
-                    >
-                        Selesai
-                    </Button>
-                </Dialog>
-                <Dialog
-                    open={paused}
-                    onClose={(dialog) => {
-                        if (paused && !dialog.open) dialog.showModal();
-                    }}
-                    onCancel={(event) => event.preventDefault()}
-                    aria-labelledby="live-paused-title"
-                    aria-describedby="live-paused-note"
-                    className="font-rounded text-center"
-                >
-                    <PauseIcon className="text-primary mx-auto size-10" />
-                    <h2
-                        id="live-paused-title"
-                        className="font-display text-primary-deep mt-3 text-[1.4em] font-semibold"
-                    >
-                        Gurumu menjeda misi sebentar.
-                    </h2>
-                    <p id="live-paused-note" className="mt-2 leading-relaxed">
-                        Tunggu, ya. Jawabanmu aman.
-                    </p>
-                </Dialog>
-            </div>
+                        <PauseIcon className="text-primary mx-auto size-10" />
+                        <h2
+                            id="live-paused-title"
+                            className="font-display text-primary-deep mt-3 text-[1.4em] font-semibold"
+                        >
+                            Gurumu menjeda misi sebentar.
+                        </h2>
+                        <p
+                            id="live-paused-note"
+                            className="mt-2 leading-relaxed"
+                        >
+                            Tunggu, ya. Jawabanmu aman.
+                        </p>
+                    </Dialog>
+                </div>
+            </MissionReadAloudContext>
         </AdaptationContext>
     );
 }

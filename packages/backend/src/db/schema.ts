@@ -54,6 +54,11 @@ export const challengeState = pgEnum('challenge_state', [
     'revealed',
     'closed',
 ]);
+export const sessionLength = pgEnum('session_length', [
+    'short',
+    'medium',
+    'long',
+]);
 export const followUpKind = pgEnum('follow_up_kind', [
     'reinforce',
     'enrich',
@@ -300,6 +305,8 @@ export const learningSessions = pgTable(
         }),
         approvedAt: timestamp({ withTimezone: true }),
         acknowledgedWarnings: jsonb(),
+        length: sessionLength(),
+        readAloud: boolean().notNull().default(false),
     },
     (table) => [
         index('learning_sessions_module_id_idx').on(table.moduleId),

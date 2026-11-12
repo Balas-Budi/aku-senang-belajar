@@ -1,6 +1,12 @@
 import { interests, type Interest } from '../profile/interests';
 import type { Step } from '../learning-sessions/queries';
-import type { StudioBlock } from './queries';
+import type { SessionLength, StudioBlock } from './queries';
+
+export const lengthLabels: Record<SessionLength, string> = {
+    short: 'Singkat',
+    medium: 'Sedang',
+    long: 'Panjang',
+};
 
 export const kindLabels: Record<StudioBlock['kind'], string> = {
     brain_game: 'Permainan memori',
