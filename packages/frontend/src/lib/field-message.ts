@@ -102,8 +102,6 @@ export function fieldMessage(message: string, field = '') {
         return 'Isian ini belum diisi.';
     if (/not a PDF/u.test(message))
         return 'File ini bukan PDF yang bisa dibaca. Simpan ulang sebagai PDF, lalu unggah lagi.';
-    if (/None of the pages/u.test(message))
-        return 'Tidak ada halaman yang teksnya terbaca. PDF ini mungkin hasil pindai; unggah PDF yang teksnya bisa dipilih.';
     if (/at most \d+ pages/u.test(message))
         return 'PDF ini lebih dari 300 halaman. Unggah bagian yang Anda perlukan saja.';
     if (/application\/pdf/u.test(message)) return 'Pilih file PDF.';

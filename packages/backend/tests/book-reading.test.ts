@@ -283,6 +283,69 @@ test('a reading that fails three times stops, and the owner starts it again', as
     assert.equal(twice.json().name, 'READING_NOT_FAILED');
 });
 
+test('an upload answers before the book is opened; opening needs no AI provider, and a failed opening starts again from the file', async (t) => {
+    const app = await testApp(t);
+    const token = await loginAs(app, (await createUser(app)).username);
+    const uploaded = await app.inject({
+        method: 'POST',
+        url: '/api/materials?title=Pecahan&subject=mathematics&grade=4&rights=1',
+        headers: { origin: TEST_ORIGIN, 'content-type': 'application/pdf' },
+        cookies: { session: token },
+        payload: pdfOf(book),
+    });
+    assert.equal(uploaded.statusCode, 201);
+    assert.equal(uploaded.json().reading.state, 'opening');
+
+    const materialId: number = uploaded.json().id;
+    const version = eq(materialVersions.materialId, materialId);
+    const [{ file }] = await app.db
+        .select({ file: materialVersions.file })
+        .from(materialVersions)
+        .where(version);
+
+    await app.db
+        .update(materialVersions)
+        .set({ file: Buffer.from('broken') })
+        .where(version);
+
+    for (let round = 0; round < 3; round++) {
+        await app.db
+            .update(materialVersions)
+            .set({ readAfter: new Date(0) })
+            .where(version);
+        assert.equal(await readNext(app, null, { materialId }), true);
+    }
+
+    const failed = (
+        await get(app, token, `/api/materials/${materialId}`)
+    ).json();
+    assert.deepEqual(
+        { state: failed.reading.state, error: failed.reading.error },
+        { state: 'failed', error: 'internal' },
+    );
+    assert.equal(failed.pageCount, 0);
+
+    await app.db.update(materialVersions).set({ file }).where(version);
+
+    const again = await send(
+        app,
+        'POST',
+        token,
+        `/api/materials/${materialId}/reading`,
+    );
+    assert.equal(again.statusCode, 202);
+    assert.deepEqual(again.json(), { reading: 'opening' });
+
+    assert.equal(await readNext(app, null, { materialId }), true);
+    assert.equal(await readNext(app, null, { materialId }), false);
+
+    const opened = (
+        await get(app, token, `/api/materials/${materialId}`)
+    ).json();
+    assert.equal(opened.reading.state, 'reading_pages');
+    assert.equal(opened.pageCount, book.length);
+});
+
 test('the owner renames a chapter and removes one without missions', async (t) => {
     const provider = await stubProvider(t, [{ status: 500 }]);
     const app = await testApp(t, provider.config);

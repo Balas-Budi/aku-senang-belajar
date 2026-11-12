@@ -19,7 +19,6 @@ import type { Queryable } from '../../db/index.ts';
 import {
     competencies,
     learningSessions,
-    materialChunks,
     materialPages,
     materials,
     materialVersions,
@@ -28,7 +27,6 @@ import {
 } from '../../db/schema.ts';
 import { AppError, notFound } from '../../lib/errors.ts';
 import { fieldError } from '../../lib/field-error.ts';
-import { chunkPages } from '../../materials/chunks.ts';
 import { pageContent } from '../../materials/page-content.ts';
 import {
     bookOutline,
@@ -42,7 +40,7 @@ import {
     proposeCompetencies,
 } from '../../studio/competencies.ts';
 import { visibleTo as sessionVisibleTo } from '../studio/handlers.ts';
-import { type PdfPage, readPdfPages } from './pdf.ts';
+import { checkPdf } from './pdf.ts';
 import type {
     MaterialBody,
     MaterialParams,
@@ -452,8 +450,7 @@ export async function uploadMaterial(
     reply: FastifyReply,
 ) {
     const user = currentUser(request);
-    const file = pdfBody(request.body);
-    const pages = await readablePdf(file);
+    const file = await pdfBody(request.body);
 
     const { title, subject, grade, source, licence, licenceNote } =
         request.query;
@@ -472,7 +469,7 @@ export async function uploadMaterial(
             })
             .returning({ id: materials.id });
 
-        await storeVersion(tx, material.id, 1, pages, file);
+        await storeVersion(tx, material.id, 1, file);
 
         return material.id;
     });
@@ -482,54 +479,25 @@ export async function uploadMaterial(
         .send(await materialDetail(request.server.db, materialId, user.id));
 }
 
-function pdfBody(body: unknown) {
+async function pdfBody(body: unknown) {
     if (!Buffer.isBuffer(body)) {
         throw fieldError('pdf', 'Send the material as application/pdf');
     }
 
+    await checkPdf(body);
+
     return body;
 }
 
-async function readablePdf(file: Buffer) {
-    const pages = await readPdfPages(file);
-
-    if (pages.every(({ text, pictured }) => text === null && !pictured)) {
-        throw fieldError('pdf', 'None of the pages has text that can be read');
-    }
-
-    return pages;
-}
-
-async function storeVersion(
+function storeVersion(
     tx: Queryable,
     materialId: number,
     version: number,
-    pages: PdfPage[],
     file: Buffer,
 ) {
-    const chunks = await chunkPages(pages.map(({ text }) => text));
-
-    await tx.insert(materialVersions).values({
-        materialId,
-        version,
-        file,
-        reading: 'reading_pages',
-    });
-    await tx.insert(materialPages).values(
-        pages.map(({ text, pictured }, index) => ({
-            materialId,
-            version,
-            number: index + 1,
-            text,
-            pictured,
-        })),
-    );
-
-    if (chunks.length > 0) {
-        await tx
-            .insert(materialChunks)
-            .values(chunks.map((chunk) => ({ ...chunk, materialId, version })));
-    }
+    return tx
+        .insert(materialVersions)
+        .values({ materialId, version, file, reading: 'opening' });
 }
 
 async function ownMaterial(db: Queryable, materialId: number, userId: number) {
@@ -553,8 +521,7 @@ export async function uploadVersion(
     const { db } = request.server;
     const userId = currentUser(request).id;
     const { materialId } = request.params;
-    const file = pdfBody(request.body);
-    const pages = await readablePdf(file);
+    const file = await pdfBody(request.body);
 
     await db.transaction(async (tx) => {
         const material = await ownMaterial(tx, materialId, userId);
@@ -573,7 +540,7 @@ export async function uploadVersion(
                 .values({ materialId, version: 1 });
         }
 
-        await storeVersion(tx, materialId, version, pages, file);
+        await storeVersion(tx, materialId, version, file);
         await tx
             .update(materials)
             .set({ version })
@@ -673,27 +640,29 @@ export async function readAgain(
     const { db } = request.server;
     const { materialId } = request.params;
 
-    await db.transaction(async (tx) => {
+    const reading = await db.transaction(async (tx) => {
         await ownMaterial(tx, materialId, currentUser(request).id);
 
         const [material] = await tx
             .select({ version: materials.version })
             .from(materials)
             .where(eq(materials.id, materialId));
-        const restarted = await restartReading(tx, {
+        const [restarted] = await restartReading(tx, {
             materialId,
             version: material.version,
         });
 
-        if (restarted.length === 0) {
+        if (!restarted) {
             throw new AppError(409, {
                 message: 'The reading has not failed',
                 code: 'READING_NOT_FAILED',
             });
         }
+
+        return restarted.reading;
     });
 
-    return reply.code(202).send({ reading: 'reading_pages' as const });
+    return reply.code(202).send({ reading });
 }
 
 async function ownModule(

@@ -62,6 +62,7 @@ export const materialLicence = pgEnum('material_licence', [
     'permission',
 ]);
 export const materialReading = pgEnum('material_reading', [
+    'opening',
     'reading_pages',
     'outlining',
     'done',

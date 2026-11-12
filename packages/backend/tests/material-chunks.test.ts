@@ -12,7 +12,13 @@ import {
     searchMaterial,
 } from '../src/materials/chunks.ts';
 import { basis, stubEmbedder } from './ai-stub.ts';
-import { createUser, loginAs, TEST_ORIGIN, testApp } from './helpers.ts';
+import {
+    createUser,
+    loginAs,
+    openBooks,
+    TEST_ORIGIN,
+    testApp,
+} from './helpers.ts';
 import { pdfOf } from './pdf.ts';
 
 const longPage = 'A fraction names equal parts of one whole.\n'.repeat(40);
@@ -90,6 +96,9 @@ test('an upload splits its readable pages into chunks that keep their page numbe
     });
 
     assert.equal(response.statusCode, 201);
+    assert.deepEqual(await chunksOf(app, response.json().id), []);
+
+    await openBooks(app);
 
     const chunks = await chunksOf(app, response.json().id);
     const firstPage = chunks.filter((chunk) => chunk.pageNumber === 1);

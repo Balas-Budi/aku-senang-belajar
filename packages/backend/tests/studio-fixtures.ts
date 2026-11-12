@@ -2,7 +2,7 @@ import type { FastifyInstance } from 'fastify';
 import type { Interest } from '../src/db/schema.ts';
 import { interestNames } from '../src/studio/theme-draft.ts';
 import { completion, type Reply } from './ai-stub.ts';
-import { createUser, loginAs, TEST_ORIGIN } from './helpers.ts';
+import { createUser, loginAs, openBooks, TEST_ORIGIN } from './helpers.ts';
 import { pdfOf } from './pdf.ts';
 
 export const injection =
@@ -66,7 +66,7 @@ export async function teacherWithMaterial(
         grade: '4',
         rights: '1',
     });
-    const material = (
+    const { id } = (
         await app.inject({
             method: 'POST',
             url: `/api/materials?${params}`,
@@ -75,6 +75,10 @@ export async function teacherWithMaterial(
             payload: file,
         })
     ).json();
+
+    await openBooks(app);
+
+    const material = (await get(app, token, `/api/materials/${id}`)).json();
 
     return { token, material };
 }

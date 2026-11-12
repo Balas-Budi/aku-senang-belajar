@@ -39,7 +39,7 @@ export type SavedModule = {
 };
 
 export type Reading = {
-    state: 'reading_pages' | 'outlining' | 'done' | 'failed';
+    state: 'opening' | 'reading_pages' | 'outlining' | 'done' | 'failed';
     error: string | null;
     pictured: number;
     described: number;
@@ -47,7 +47,20 @@ export type Reading = {
 };
 
 export const readingActive = (reading: Reading) =>
-    reading.state === 'reading_pages' || reading.state === 'outlining';
+    reading.state === 'opening' ||
+    reading.state === 'reading_pages' ||
+    reading.state === 'outlining';
+
+export const pagesRead = ({
+    readablePages,
+    pageCount,
+}: {
+    readablePages: number;
+    pageCount: number;
+}) =>
+    pageCount === 0
+        ? 'Halaman belum terbaca'
+        : `${readablePages} dari ${pageCount} halaman terbaca`;
 
 export type MaterialDetail = Material &
     LicenceData & {
@@ -224,7 +237,7 @@ export function useReadAgain(materialId: number) {
     const client = useQueryClient();
     return useMutation({
         mutationFn: () =>
-            api<{ reading: 'reading_pages' }>(
+            api<{ reading: 'opening' | 'reading_pages' }>(
                 `/api/materials/${materialId}/reading`,
                 { method: 'POST' },
             ),

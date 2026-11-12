@@ -9,6 +9,7 @@ import {
     randomUsername,
     TEST_ORIGIN,
     TEST_STUDENT_PASSWORD,
+    openBooks,
     testApp,
 } from './helpers.ts';
 import { pdfOf } from './pdf.ts';
@@ -62,7 +63,15 @@ test('a teacher uploads a PDF; each page is read, and a page without text is mar
     const response = await upload(app, token, pdfOf(fractions));
 
     assert.equal(response.statusCode, 201);
-    const material = response.json();
+    assert.equal(response.json().reading.state, 'opening');
+    assert.equal(response.json().pageCount, 0);
+
+    await openBooks(app);
+
+    const material = (
+        await get(app, token, `/api/materials/${response.json().id}`)
+    ).json();
+    assert.equal(material.reading.state, 'reading_pages');
     assert.equal(material.prepared, false);
     assert.equal(material.grade, 4);
     assert.equal(material.pageCount, 3);
@@ -136,13 +145,18 @@ test('a file that is not a PDF or one over 300 pages is refused; a PDF without t
     const scanned = await upload(app, token, pdfOf(['', ''], [1]));
 
     assert.equal(scanned.statusCode, 201);
-    assert.deepEqual(scanned.json().reading, {
-        state: 'reading_pages',
-        error: null,
-        pictured: 2,
-        described: 0,
-        chapters: null,
-    });
+    await openBooks(app);
+    assert.deepEqual(
+        (await get(app, token, `/api/materials/${scanned.json().id}`)).json()
+            .reading,
+        {
+            state: 'reading_pages',
+            error: null,
+            pictured: 2,
+            described: 0,
+            chapters: null,
+        },
+    );
 
     const json = await app.inject({
         method: 'POST',
@@ -155,14 +169,14 @@ test('a file that is not a PDF or one over 300 pages is refused; a PDF without t
     assert.equal(json.json().details[0].field, 'pdf');
 });
 
-test('a file over 20 MB is refused before it is read', async (t) => {
+test('a file over 200 MB is refused before it is read', async (t) => {
     const app = await testApp(t);
     const token = await teacher(app);
 
     const response = await upload(
         app,
         token,
-        Buffer.alloc(20 * 1024 * 1024 + 1, 32),
+        Buffer.alloc(200 * 1024 * 1024 + 1, 32),
     );
 
     assert.equal(response.statusCode, 413);

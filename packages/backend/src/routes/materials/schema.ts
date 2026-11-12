@@ -74,7 +74,9 @@ export const moduleTitle = z.object({
 
 export type ModuleTitle = z.infer<typeof moduleTitle>;
 
-export const readingStarted = z.object({ reading: z.literal('reading_pages') });
+export const readingStarted = z.object({
+    reading: z.enum(['opening', 'reading_pages']),
+});
 
 export const materialSummary = z.object({
     id: z.number(),

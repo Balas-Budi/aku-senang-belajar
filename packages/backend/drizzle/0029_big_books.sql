@@ -1,0 +1,1 @@
+ALTER TYPE "public"."material_reading" ADD VALUE 'opening' BEFORE 'reading_pages';

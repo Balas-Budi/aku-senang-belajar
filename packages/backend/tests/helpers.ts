@@ -6,6 +6,7 @@ import { buildApp } from '../src/app.ts';
 import type { Role } from '../src/auth/guards.ts';
 import { users } from '../src/db/schema.ts';
 import { loadEnv, type Env } from '../src/env.ts';
+import { readNext } from '../src/materials/reading.ts';
 import { hashPassword } from '../src/auth/password.ts';
 
 export const TEST_ORIGIN = 'http://127.0.0.1:4200';
@@ -129,4 +130,8 @@ export async function createClass(app: FastifyInstance, teacherToken: string) {
     const body: { id: number; inviteCode: string } = response.json();
 
     return body;
+}
+
+export async function openBooks(app: FastifyInstance) {
+    while (await readNext(app, null));
 }

@@ -9,6 +9,7 @@ import { ModuleForm } from './module-form';
 import {
     materialQuery,
     pageTextQuery,
+    pagesRead,
     readingActive,
     useReadAgain,
     useUpdateMaterial,
@@ -347,13 +348,15 @@ function ReadingNotice({
         <Alert role="status">
             <p className="font-semibold">AI sedang membaca buku ini</p>
             <p className="mt-1 tabular-nums">
-                {reading.state === 'reading_pages'
-                    ? total > 0
-                        ? `Membaca gambar: ${reading.described} dari ${total} halaman bergambar.`
-                        : 'Membaca halaman buku.'
-                    : reading.chapters === null
-                      ? 'Menyusun daftar bab dari isi buku.'
-                      : `Menyusun kompetensi: ${material.modules.filter(({ madeBy, version }) => madeBy === 'ai' && version === material.version).length} dari ${reading.chapters} bab.`}{' '}
+                {reading.state === 'opening'
+                    ? 'Membuka buku dan mengambil teks tiap halaman. Buku tebal bisa perlu beberapa menit.'
+                    : reading.state === 'reading_pages'
+                      ? total > 0
+                          ? `Membaca gambar: ${reading.described} dari ${total} halaman bergambar.`
+                          : 'Membaca halaman buku.'
+                      : reading.chapters === null
+                        ? 'Menyusun daftar bab dari isi buku.'
+                        : `Menyusun kompetensi: ${material.modules.filter(({ madeBy, version }) => madeBy === 'ai' && version === material.version).length} dari ${reading.chapters} bab.`}{' '}
                 Halaman ini diperbarui sendiri. Anda boleh meninggalkannya.
             </p>
         </Alert>
@@ -472,7 +475,7 @@ export function MaterialDetailView({ id }: { id: number }) {
                     <p className="text-muted-foreground mt-2 tabular-nums">
                         {materialMeta(material)} ·{' '}
                         {own
-                            ? `${material.readablePages} dari ${material.pageCount} halaman terbaca`
+                            ? pagesRead(material)
                             : 'Disiapkan tim Aku Senang Belajar'}
                     </p>
                     <p

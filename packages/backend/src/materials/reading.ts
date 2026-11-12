@@ -1,4 +1,4 @@
-import { and, asc, eq, inArray, lte, lt, sql } from 'drizzle-orm';
+import { and, asc, eq, exists, inArray, lte, lt, sql } from 'drizzle-orm';
 import type { FastifyInstance } from 'fastify';
 import { z } from 'zod';
 import { type AiConfig, AiError, aiConfig, chatJson } from '../ai/chat.ts';
@@ -10,7 +10,7 @@ import {
     materialVersions,
     modules,
 } from '../db/schema.ts';
-import { renderPages } from '../routes/materials/pdf.ts';
+import { readPdfPages, renderPages } from '../routes/materials/pdf.ts';
 import { proposeCompetencies } from '../studio/competencies.ts';
 import {
     materialSection,
@@ -133,18 +133,24 @@ export function outlineMessage(
     ].join('\n');
 }
 
+const WORKING = ['opening', 'reading_pages', 'outlining'] as const;
+
 type Claimed = {
     materialId: number;
     version: number;
-    reading: 'reading_pages' | 'outlining';
+    reading: (typeof WORKING)[number];
     file: Buffer | null;
     outline: unknown;
     readingTries: number;
     book: ModuleInfo;
 };
 
+const working = (reading: string): reading is Claimed['reading'] =>
+    WORKING.some((state) => state === reading);
+
 async function claimNext(
     db: Database,
+    withAi: boolean,
     materialId?: number,
 ): Promise<Claimed | null> {
     return db.transaction(async (tx) => {
@@ -164,10 +170,10 @@ async function claimNext(
             .innerJoin(materials, eq(materials.id, materialVersions.materialId))
             .where(
                 and(
-                    inArray(materialVersions.reading, [
-                        'reading_pages',
-                        'outlining',
-                    ]),
+                    inArray(
+                        materialVersions.reading,
+                        withAi ? [...WORKING] : ['opening'],
+                    ),
                     lte(materialVersions.readAfter, new Date()),
                     materialId === undefined
                         ? undefined
@@ -178,21 +184,20 @@ async function claimNext(
             .limit(1)
             .for('update', { of: materialVersions, skipLocked: true });
 
-        if (
-            !row ||
-            (row.reading !== 'reading_pages' && row.reading !== 'outlining')
-        ) {
-            return null;
-        }
+        if (!row || !working(row.reading)) return null;
 
         await tx
             .update(materialVersions)
             .set({ readAfter: new Date(Date.now() + LEASE_MS) })
             .where(versionIs(row));
 
-        const { title, subject, grade, reading, ...rest } = row;
+        const { title, subject, grade, ...rest } = row;
 
-        return { ...rest, reading, book: { title, subject, grade } };
+        return {
+            ...rest,
+            reading: row.reading,
+            book: { title, subject, grade },
+        };
     });
 }
 
@@ -242,6 +247,50 @@ async function describePage(
     );
 
     return value.description || null;
+}
+
+async function openBook(db: Database, claimed: Claimed) {
+    if (claimed.file === null) throw new Error('The version keeps no file');
+
+    const pages = await readPdfPages(claimed.file);
+
+    if (pages.every(({ text, pictured }) => text === null && !pictured)) {
+        await db
+            .update(materialVersions)
+            .set({
+                reading: 'failed',
+                readingError: 'no_text',
+                readAfter: new Date(),
+            })
+            .where(versionIs(claimed));
+        return;
+    }
+
+    const chunks = await chunkPages(pages.map(({ text }) => text));
+
+    await db.transaction(async (tx) => {
+        await tx.insert(materialPages).values(
+            pages.map(({ text, pictured }, index) => ({
+                ...pagesKey(claimed),
+                number: index + 1,
+                text,
+                pictured,
+            })),
+        );
+
+        if (chunks.length > 0) {
+            await tx
+                .insert(materialChunks)
+                .values(
+                    chunks.map((chunk) => ({ ...chunk, ...pagesKey(claimed) })),
+                );
+        }
+
+        await tx
+            .update(materialVersions)
+            .set({ reading: 'reading_pages', readAfter: new Date() })
+            .where(versionIs(claimed));
+    });
 }
 
 async function readPictures(
@@ -489,15 +538,19 @@ async function outlineBook(
 
 export async function readNext(
     app: FastifyInstance,
-    config: AiConfig,
+    config: AiConfig | null,
     { materialId }: { materialId?: number } = {},
 ) {
-    const claimed = await claimNext(app.db, materialId);
+    const claimed = await claimNext(app.db, config !== null, materialId);
 
     if (!claimed) return false;
 
     try {
-        if (claimed.reading === 'reading_pages') {
+        if (claimed.reading === 'opening') {
+            await openBook(app.db, claimed);
+        } else if (config === null) {
+            throw new Error('Reading pictures needs an AI provider');
+        } else if (claimed.reading === 'reading_pages') {
             await readPictures(app, config, claimed);
         } else {
             await outlineBook(app, config, claimed);
@@ -544,13 +597,18 @@ export async function restartReading(
     return db
         .update(materialVersions)
         .set({
-            reading: 'reading_pages',
+            reading: sql`case when ${exists(
+                db
+                    .select({ number: materialPages.number })
+                    .from(materialPages)
+                    .where(pagesOf(key)),
+            )} then 'reading_pages'::material_reading else 'opening'::material_reading end`,
             readingError: null,
             readingTries: 0,
             readAfter: new Date(),
         })
         .where(and(versionIs(key), eq(materialVersions.reading, 'failed')))
-        .returning({ version: materialVersions.version });
+        .returning({ reading: materialVersions.reading });
 }
 
 export function startReadingRunner(
@@ -563,8 +621,6 @@ export function startReadingRunner(
 
     async function drain() {
         const config = aiConfig(app.env);
-
-        if (!config) return;
 
         try {
             for (let more = true; more && !closing;) {

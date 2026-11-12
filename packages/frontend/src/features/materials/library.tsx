@@ -1,6 +1,6 @@
 import { useQuery } from '@tanstack/react-query';
 import { Link } from 'react-router';
-import { materialsQuery, type Material } from './queries';
+import { materialsQuery, pagesRead, type Material } from './queries';
 import { UploadForm } from './upload-form';
 import { subjects } from '../assignments/subject-art';
 import { RequestError } from '../../components/request-error';
@@ -49,7 +49,7 @@ function MaterialList({
                                     <p className="text-sm tabular-nums">
                                         {material.prepared
                                             ? 'Disiapkan tim Aku Senang Belajar'
-                                            : `${material.readablePages} dari ${material.pageCount} halaman terbaca`}
+                                            : pagesRead(material)}
                                     </p>
                                     {material.archived && (
                                         <p className="pt-1">

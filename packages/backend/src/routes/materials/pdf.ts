@@ -7,7 +7,7 @@ import {
 import { fieldError } from '../../lib/field-error.ts';
 
 export const PDF_CONTENT_TYPE = 'application/pdf';
-export const MAX_PDF_BYTES = 20 * 1024 * 1024;
+export const MAX_PDF_BYTES = 200 * 1024 * 1024;
 const MAX_PAGES = 300;
 const MIN_CHARACTERS = 20;
 const FEW_CHARACTERS = 400;
@@ -29,7 +29,7 @@ function readable(text: string) {
 
 const open = (file: Buffer) => getDocumentProxy(new Uint8Array(file));
 
-export async function readPdfPages(file: Buffer): Promise<PdfPage[]> {
+export async function checkPdf(file: Buffer) {
     const pdf = await open(file).catch(() => {
         throw fieldError('pdf', 'The file is not a PDF that can be read');
     });
@@ -37,7 +37,11 @@ export async function readPdfPages(file: Buffer): Promise<PdfPage[]> {
     if (pdf.numPages > MAX_PAGES) {
         throw fieldError('pdf', `A PDF holds at most ${MAX_PAGES} pages`);
     }
+}
 
+// shortcut: inspectPages holds every page at once, about 2 GB for a 160 MB book; inspect page by page and free each one if the server runs short of memory
+export async function readPdfPages(file: Buffer): Promise<PdfPage[]> {
+    const pdf = await open(file);
     const { text } = await extractText(pdf);
     const { pages } = await inspectPages(pdf);
     let pictured = 0;

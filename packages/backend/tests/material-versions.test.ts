@@ -8,6 +8,7 @@ import {
     createUser,
     loginAs,
     randomUsername,
+    openBooks,
     TEST_ORIGIN,
     testApp,
 } from './helpers.ts';
@@ -72,9 +73,10 @@ test('a material records where it comes from and by what right, and an archived 
     });
 
     assert.equal(created.statusCode, 201);
+    await openBooks(app);
 
-    const material = created.json();
-    const url = `/api/materials/${material.id}`;
+    const url = `/api/materials/${created.json().id}`;
+    const material = (await get(app, token, url)).json();
 
     assert.deepEqual(
         {
@@ -228,8 +230,9 @@ test('a new file becomes the next version; chapters and missions keep the versio
     );
 
     assert.equal(uploaded.statusCode, 201);
+    await openBooks(app);
 
-    const second = uploaded.json();
+    const second = (await get(app, token, url)).json();
 
     assert.equal(second.version, 2);
     assert.equal(second.pageCount, 2);
