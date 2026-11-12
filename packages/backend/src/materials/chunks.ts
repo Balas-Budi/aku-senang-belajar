@@ -17,7 +17,7 @@ import type { FastifyInstance } from 'fastify';
 import { AiError } from '../ai/chat.ts';
 import { type EmbedConfig, embedConfig, embedTexts } from '../ai/embed.ts';
 import type { Database } from '../db/index.ts';
-import { materialChunks, materialPages } from '../db/schema.ts';
+import { materialChunks, materialPages, materials } from '../db/schema.ts';
 
 export const MAX_EMBED_TRIES = 3;
 
@@ -47,7 +47,10 @@ export async function chunkStoredMaterials(
     only: { materialId?: number } = {},
 ) {
     const pending = await db
-        .selectDistinct({ materialId: materialPages.materialId })
+        .selectDistinct({
+            materialId: materialPages.materialId,
+            version: materialPages.version,
+        })
         .from(materialPages)
         .where(
             and(
@@ -60,21 +63,32 @@ export async function chunkStoredMaterials(
                         .select({ id: materialChunks.id })
                         .from(materialChunks)
                         .where(
-                            eq(
-                                materialChunks.materialId,
-                                materialPages.materialId,
+                            and(
+                                eq(
+                                    materialChunks.materialId,
+                                    materialPages.materialId,
+                                ),
+                                eq(
+                                    materialChunks.version,
+                                    materialPages.version,
+                                ),
                             ),
                         ),
                 ),
             ),
         )
-        .orderBy(asc(materialPages.materialId));
+        .orderBy(asc(materialPages.materialId), asc(materialPages.version));
 
-    for (const { materialId } of pending) {
+    for (const { materialId, version } of pending) {
         const pages = await db
             .select({ number: materialPages.number, text: materialPages.text })
             .from(materialPages)
-            .where(eq(materialPages.materialId, materialId))
+            .where(
+                and(
+                    eq(materialPages.materialId, materialId),
+                    eq(materialPages.version, version),
+                ),
+            )
             .orderBy(asc(materialPages.number));
         const byNumber = new Map(pages.map((page) => [page.number, page.text]));
         const last = Math.max(...pages.map((page) => page.number));
@@ -88,7 +102,9 @@ export async function chunkStoredMaterials(
         if (chunks.length > 0) {
             await db
                 .insert(materialChunks)
-                .values(chunks.map((chunk) => ({ ...chunk, materialId })))
+                .values(
+                    chunks.map((chunk) => ({ ...chunk, materialId, version })),
+                )
                 .onConflictDoNothing();
         }
     }
@@ -264,6 +280,13 @@ export async function searchMaterial(
         .where(
             and(
                 eq(materialChunks.materialId, materialId),
+                eq(
+                    materialChunks.version,
+                    db
+                        .select({ version: materials.version })
+                        .from(materials)
+                        .where(eq(materials.id, materialId)),
+                ),
                 isNotNull(materialChunks.embedding),
             ),
         )

@@ -12,8 +12,17 @@ export type Material = {
     subject: Subject;
     grade: number | null;
     prepared: boolean;
+    archived: boolean;
     pageCount: number;
     readablePages: number;
+};
+
+export type Licence = 'own' | 'school' | 'open' | 'permission';
+
+export type LicenceData = {
+    source: string | null;
+    licence: Licence | null;
+    licenceNote: string | null;
 };
 
 export type SavedModule = {
@@ -29,17 +38,32 @@ export type SavedModule = {
     }[];
 };
 
-export type MaterialDetail = Material & {
-    pages: { number: number; readable: boolean; snippet: string | null }[];
-    modules: (SavedModule & {
-        sessions: {
-            id: number;
-            title: string;
-            status: 'draft' | 'ready';
-            drafting: 'generating' | 'failed' | null;
-            competencies: string[];
+export type MaterialDetail = Material &
+    LicenceData & {
+        version: number;
+        versions: {
+            version: number;
+            createdAt: string;
+            pageCount: number;
+            readablePages: number;
+            chapters: number;
         }[];
-    })[];
+        pages: { number: number; readable: boolean; snippet: string | null }[];
+        modules: (SavedModule & {
+            version: number;
+            sessions: {
+                id: number;
+                title: string;
+                status: 'draft' | 'ready';
+                drafting: 'generating' | 'failed' | null;
+                competencies: string[];
+            }[];
+        })[];
+    };
+
+export type MaterialChange = Partial<LicenceData> & {
+    archived?: boolean;
+    version?: number;
 };
 
 export type CompetencyDraft = {
@@ -92,22 +116,42 @@ export const materialQuery = (id: number, cookie?: string | null) =>
             }),
     });
 
-export const pageTextQuery = (materialId: number, number: number) =>
+export const pageTextQuery = (
+    materialId: number,
+    number: number,
+    version: number,
+) =>
     queryOptions({
-        queryKey: ['materials', materialId, 'pages', number],
+        queryKey: ['materials', materialId, 'pages', version, number],
         queryFn: () =>
             api<{ number: number; text: string | null }>(
-                `/api/materials/${materialId}/pages/${number}`,
+                `/api/materials/${materialId}/pages/${number}?version=${version}`,
             ),
         staleTime: Infinity,
     });
 
-export function useUploadMaterial() {
+const pdfHeaders = { 'content-type': 'application/pdf' };
+
+function useKeepMaterial() {
     const client = useQueryClient();
+    return (material: MaterialDetail) => {
+        client.setQueryData(materialQuery(material.id).queryKey, material);
+        return client.invalidateQueries({
+            queryKey: ['materials'],
+            exact: true,
+        });
+    };
+}
+
+export function useUploadMaterial() {
+    const keep = useKeepMaterial();
     return useMutation({
         mutationFn: ({
             file,
             rights,
+            source,
+            licence,
+            licenceNote,
             ...fields
         }: {
             file: File;
@@ -115,21 +159,46 @@ export function useUploadMaterial() {
             subject: string;
             grade: string;
             rights: boolean;
+            source: string;
+            licence: string;
+            licenceNote: string;
         }) => {
             const params = new URLSearchParams(fields);
             if (rights) params.set('rights', '1');
+            if (source) params.set('source', source);
+            if (licence) params.set('licence', licence);
+            if (licenceNote) params.set('licenceNote', licenceNote);
             return api<MaterialDetail>(`/api/materials?${params}`, {
                 method: 'POST',
                 body: file,
-                headers: { 'content-type': 'application/pdf' },
+                headers: pdfHeaders,
             });
         },
-        onSuccess: (material) => {
-            client.setQueryData(['materials', material.id], material);
-            return client.invalidateQueries({
-                queryKey: ['materials'],
-                exact: true,
-            });
-        },
+        onSuccess: keep,
+    });
+}
+
+export function useUploadVersion(materialId: number) {
+    const keep = useKeepMaterial();
+    return useMutation({
+        mutationFn: (file: File) =>
+            api<MaterialDetail>(`/api/materials/${materialId}/versions`, {
+                method: 'POST',
+                body: file,
+                headers: pdfHeaders,
+            }),
+        onSuccess: keep,
+    });
+}
+
+export function useUpdateMaterial(materialId: number) {
+    const keep = useKeepMaterial();
+    return useMutation({
+        mutationFn: (change: MaterialChange) =>
+            api<MaterialDetail>(`/api/materials/${materialId}`, {
+                method: 'PUT',
+                body: JSON.stringify(change),
+            }),
+        onSuccess: keep,
     });
 }

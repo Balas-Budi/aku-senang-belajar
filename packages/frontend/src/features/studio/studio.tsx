@@ -40,6 +40,7 @@ import { Card } from '../../components/ui/card';
 import { textLink } from '../../components/ui/text-link';
 import { classesQuery } from '../classes/queries';
 import { stepLabels, stepOrder } from '../learning-sessions/steps';
+import { licenceLabels } from '../materials/licence-fields';
 
 function stateOf(session: StudioSession) {
     if (session.prepared) return 'Disiapkan tim Aku Senang Belajar';
@@ -776,7 +777,13 @@ export function StudioView({ id }: { id: number }) {
     const extras = session.blocks.filter(
         (block) => block.kind === 'extra_challenge',
     );
-    const { module } = session;
+    const { module, material } = session;
+    const rights = [
+        material.source,
+        material.licence && licenceLabels[material.licence],
+    ]
+        .filter(Boolean)
+        .join(' · ');
     const screen = (block: StudioBlock) => (
         <ScreenItem
             key={block.id}
@@ -809,6 +816,16 @@ export function StudioView({ id }: { id: number }) {
                         {session.length !== null &&
                             ` · Panjang misi: ${lengthLabels[session.length]}`}
                     </p>
+                    {rights && (
+                        <p className="text-muted-foreground mt-1 break-words">
+                            {material.source ? 'Sumber' : 'Hak pakai'}: {rights}
+                        </p>
+                    )}
+                    {material.licenceNote && (
+                        <p className="text-muted-foreground mt-1 break-words whitespace-pre-line">
+                            {material.licenceNote}
+                        </p>
+                    )}
                     {session.summary && (
                         <p className="mt-2 max-w-prose">{session.summary}</p>
                     )}

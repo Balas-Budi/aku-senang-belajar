@@ -28,6 +28,10 @@ export function fieldLabel(field: string) {
         minutes: 'Batas waktu',
         options: 'Pilihan jawaban',
         groupSize: 'Jumlah siswa per kelompok',
+        source: 'Sumber',
+        licence: 'Jenis hak',
+        licenceNote: 'Catatan hak pakai',
+        version: 'Versi',
     };
     const parts = field.split('/');
     const label = labels[parts.at(-1) ?? ''] ?? 'Isian';
@@ -76,6 +80,8 @@ export function fieldMessage(message: string, field = '') {
         return 'Pilih setidaknya satu kompetensi.';
     if (/competencies of this chapter/u.test(message))
         return 'Pilih kompetensi dari bab ini. Muat ulang halaman, lalu coba lagi.';
+    if (/no such version/u.test(message))
+        return 'Versi ini sudah tidak ada. Muat ulang halaman, lalu coba lagi.';
     const tooLong = /expected string to have <=(\d+)/u.exec(message);
     if (tooLong) return `Paling banyak ${tooLong[1]} karakter.`;
     const pageCount = /The material has (\d+) pages/u.exec(message);

@@ -51,6 +51,13 @@ function MaterialList({
                                             ? 'Disiapkan tim Aku Senang Belajar'
                                             : `${material.readablePages} dari ${material.pageCount} halaman terbaca`}
                                     </p>
+                                    {material.archived && (
+                                        <p className="pt-1">
+                                            <span className="border-border text-muted-foreground rounded-md border px-2 py-0.5 text-sm font-medium">
+                                                Diarsipkan
+                                            </span>
+                                        </p>
+                                    )}
                                 </Card>
                             </li>
                         ))}

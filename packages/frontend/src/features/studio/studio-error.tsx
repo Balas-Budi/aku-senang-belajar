@@ -15,6 +15,8 @@ const conflicts: Record<string, string> = {
     THEME_DRAFTING: 'AI sedang menulis tema ini. Tunggu sampai selesai.',
     THEME_NOT_READY: 'Tema ini belum lengkap. Tulis ulang temanya dulu.',
     SESSION_NOT_DRAFTED: 'Susun misi dasarnya dulu sebelum memilih tema.',
+    MATERIAL_ARCHIVED:
+        'Materi ini diarsipkan. Aktifkan lagi untuk membuat bab atau misi baru.',
     KEEP_STRUCTURE:
         'Urutan layar sudah berubah sejak halaman ini dibuka. Halaman dimuat ulang; periksa urutannya, lalu coba lagi.',
 };

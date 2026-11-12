@@ -211,7 +211,11 @@ export async function createSession(
     const user = currentUser(request);
     const { db, env } = request.server;
     const [module] = await db
-        .select({ id: modules.id, title: modules.title })
+        .select({
+            id: modules.id,
+            title: modules.title,
+            archivedAt: materials.archivedAt,
+        })
         .from(modules)
         .innerJoin(materials, eq(materials.id, modules.materialId))
         .where(
@@ -222,6 +226,13 @@ export async function createSession(
         );
 
     if (!module) throw notFound('Module not found');
+
+    if (module.archivedAt) {
+        throw new AppError(409, {
+            message: 'The material is archived',
+            code: 'MATERIAL_ARCHIVED',
+        });
+    }
 
     const chapter = (
         await db
@@ -304,8 +315,15 @@ async function studioSession(db: Queryable, sessionId: number, userId: number) {
                 title: modules.title,
                 firstPage: modules.firstPage,
                 lastPage: modules.lastPage,
+                materialVersion: modules.materialVersion,
             },
-            material: { id: materials.id, title: materials.title },
+            material: {
+                id: materials.id,
+                title: materials.title,
+                source: materials.source,
+                licence: materials.licence,
+                licenceNote: materials.licenceNote,
+            },
         })
         .from(learningSessions)
         .innerJoin(modules, eq(modules.id, learningSessions.moduleId))

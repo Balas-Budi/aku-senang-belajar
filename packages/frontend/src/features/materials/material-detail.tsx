@@ -1,9 +1,17 @@
 import { useQuery } from '@tanstack/react-query';
-import { useState } from 'react';
+import { useRef, useState } from 'react';
 import { Link, useNavigate } from 'react-router';
 import { materialMeta } from './library';
+import { LicenceCard } from './licence-card';
+import { MaterialChangeDialog } from './material-change-dialog';
 import { ModuleForm } from './module-form';
-import { materialQuery, pageTextQuery, type MaterialDetail } from './queries';
+import {
+    materialQuery,
+    pageTextQuery,
+    useUpdateMaterial,
+    type MaterialDetail,
+} from './queries';
+import { VersionCard } from './version-card';
 import { fieldErrorText } from '../../components/form-field';
 import { RequestError } from '../../components/request-error';
 import { Alert } from '../../components/ui/alert';
@@ -11,7 +19,12 @@ import { Button, buttonVariants } from '../../components/ui/button';
 import { Card } from '../../components/ui/card';
 import { textLink } from '../../components/ui/text-link';
 import { useCreateSession, type SessionLength } from '../studio/queries';
-import { choiceBox, choiceCard, lengthLabels } from '../studio/studio-labels';
+import {
+    choiceBox,
+    choiceCard,
+    focusHeading,
+    lengthLabels,
+} from '../studio/studio-labels';
 import { StudioError } from '../studio/studio-error';
 
 type Module = MaterialDetail['modules'][number];
@@ -161,20 +174,35 @@ function NewSession({
     );
 }
 
-function ModuleItem({ module, own }: { module: Module; own: boolean }) {
+function ModuleItem({
+    module,
+    material,
+}: {
+    module: Module;
+    material: MaterialDetail;
+}) {
+    const own = !material.prepared;
     const covered = new Set(
         module.sessions.flatMap(({ competencies }) => competencies),
     );
     const uncovered = module.competencies
         .map(({ code }) => code)
         .filter((code) => !covered.has(code));
+    const origin = [
+        ...(module.firstPage !== null
+            ? [`Halaman ${module.firstPage} sampai ${module.lastPage}`]
+            : []),
+        ...(module.version !== material.version
+            ? [`Dari versi ${module.version}`]
+            : []),
+    ];
     return (
         <li className="space-y-2 py-3">
             <div>
                 <p className="font-semibold">{module.title}</p>
-                {module.firstPage !== null && (
+                {origin.length > 0 && (
                     <p className="text-muted-foreground text-sm tabular-nums">
-                        Halaman {module.firstPage} sampai {module.lastPage}
+                        {origin.join(' · ')}
                     </p>
                 )}
             </div>
@@ -224,7 +252,9 @@ function ModuleItem({ module, own }: { module: Module; own: boolean }) {
                     Belum masuk sesi mana pun: {listOf(uncovered)}
                 </p>
             )}
-            {own && <NewSession module={module} uncovered={uncovered} />}
+            {own && !material.archived && (
+                <NewSession module={module} uncovered={uncovered} />
+            )}
         </li>
     );
 }
@@ -237,11 +267,13 @@ function listOf(items: (number | string)[]) {
 function PageText({
     materialId,
     number,
+    version,
 }: {
     materialId: number;
     number: number;
+    version: number;
 }) {
-    const page = useQuery(pageTextQuery(materialId, number));
+    const page = useQuery(pageTextQuery(materialId, number, version));
     if (page.isPending) return <p role="status">Memuat teks halaman…</p>;
     if (page.isError) return <RequestError error={page.error} />;
     return <p className="whitespace-pre-line">{page.data.text}</p>;
@@ -249,9 +281,11 @@ function PageText({
 
 function PageRow({
     materialId,
+    version,
     page,
 }: {
     materialId: number;
+    version: number;
     page: MaterialDetail['pages'][number];
 }) {
     const [open, setOpen] = useState(false);
@@ -279,6 +313,7 @@ function PageRow({
                         <PageText
                             materialId={materialId}
                             number={page.number}
+                            version={version}
                         />
                     )}
                 </div>
@@ -289,6 +324,12 @@ function PageRow({
 
 export function MaterialDetailView({ id }: { id: number }) {
     const query = useQuery(materialQuery(id));
+    const reactivate = useUpdateMaterial(id);
+    const [asking, setAsking] = useState(false);
+    const [message, setMessage] = useState({ text: '', count: 0 });
+    const heading = useRef<HTMLHeadingElement>(null);
+    const say = (text: string) =>
+        setMessage((previous) => ({ text, count: previous.count + 1 }));
     if (query.isPending) return <p role="status">Memuat materi…</p>;
     if (query.isError)
         return (
@@ -304,20 +345,93 @@ export function MaterialDetailView({ id }: { id: number }) {
             </div>
         );
     const material = query.data;
+    const own = !material.prepared;
     const unreadable = material.pages
         .filter((page) => !page.readable)
         .map((page) => page.number);
     return (
         <div className="space-y-6">
-            <div>
-                <h1 className="text-2xl font-semibold">{material.title}</h1>
-                <p className="text-muted-foreground mt-2 tabular-nums">
-                    {materialMeta(material)} ·{' '}
-                    {material.prepared
-                        ? 'Disiapkan tim Aku Senang Belajar'
-                        : `${material.readablePages} dari ${material.pageCount} halaman terbaca`}
-                </p>
+            {own && (
+                <MaterialChangeDialog
+                    materialId={material.id}
+                    title="Arsipkan materi ini?"
+                    note="Materi yang diarsipkan tidak bisa dipakai untuk bab atau misi baru. Bab dan misi yang sudah ada tetap berjalan."
+                    confirm="Arsipkan materi"
+                    pending="Mengarsipkan…"
+                    change={{ archived: true }}
+                    open={asking}
+                    focusAfter={heading}
+                    onClose={() => setAsking(false)}
+                    onChanged={() => {
+                        setAsking(false);
+                        say('Materi diarsipkan.');
+                    }}
+                />
+            )}
+            <div className="flex flex-wrap items-start justify-between gap-x-4 gap-y-3">
+                <div className="min-w-0 flex-1 basis-64">
+                    <h1
+                        ref={heading}
+                        tabIndex={-1}
+                        className={`text-2xl font-semibold break-words ${focusHeading}`}
+                    >
+                        {material.title}
+                    </h1>
+                    <p className="text-muted-foreground mt-2 tabular-nums">
+                        {materialMeta(material)} ·{' '}
+                        {own
+                            ? `${material.readablePages} dari ${material.pageCount} halaman terbaca`
+                            : 'Disiapkan tim Aku Senang Belajar'}
+                    </p>
+                    <p
+                        role="status"
+                        className="text-primary-deep mt-2 font-medium empty:mt-0"
+                    >
+                        {message.text !== '' && (
+                            <span key={message.count}>{message.text}</span>
+                        )}
+                    </p>
+                </div>
+                {own && !material.archived && (
+                    <Button variant="outline" onClick={() => setAsking(true)}>
+                        Arsipkan materi
+                    </Button>
+                )}
             </div>
+            {material.archived && (
+                <Alert className="space-y-3">
+                    <p>
+                        Materi ini diarsipkan. Bab dan misi yang sudah ada tetap
+                        berjalan.
+                    </p>
+                    {own && (
+                        <>
+                            <RequestError error={reactivate.error} />
+                            <Button
+                                variant="outline"
+                                aria-disabled={reactivate.isPending}
+                                className="aria-disabled:opacity-60"
+                                onClick={() => {
+                                    if (reactivate.isPending) return;
+                                    reactivate.mutate(
+                                        { archived: false },
+                                        {
+                                            onSuccess: () => {
+                                                say('Materi aktif lagi.');
+                                                heading.current?.focus();
+                                            },
+                                        },
+                                    );
+                                }}
+                            >
+                                {reactivate.isPending
+                                    ? 'Mengaktifkan…'
+                                    : 'Aktifkan lagi'}
+                            </Button>
+                        </>
+                    )}
+                </Alert>
+            )}
             {unreadable.length > 0 && (
                 <Alert tone="attention">
                     <p className="font-semibold">
@@ -348,19 +462,22 @@ export function MaterialDetailView({ id }: { id: number }) {
                                 <ModuleItem
                                     key={module.id}
                                     module={module}
-                                    own={!material.prepared}
+                                    material={material}
                                 />
                             ))}
                         </ul>
                     </section>
                 </Card>
             )}
-            {!material.prepared && material.readablePages > 0 && (
+            {own && !material.archived && material.readablePages > 0 && (
                 <ModuleForm
+                    key={material.version}
                     materialId={material.id}
                     pageCount={material.pageCount}
                 />
             )}
+            <LicenceCard material={material} />
+            {own && <VersionCard material={material} />}
             {material.pages.length > 0 && (
                 <Card>
                     <section
@@ -373,11 +490,15 @@ export function MaterialDetailView({ id }: { id: number }) {
                                 {material.pageCount}
                             </span>
                         </h2>
-                        <ul className="divide-paper-edge divide-y">
+                        <ul
+                            key={material.version}
+                            className="divide-paper-edge divide-y"
+                        >
                             {material.pages.map((page) => (
                                 <PageRow
                                     key={page.number}
                                     materialId={material.id}
+                                    version={material.version}
                                     page={page}
                                 />
                             ))}

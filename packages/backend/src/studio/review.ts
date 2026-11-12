@@ -100,6 +100,7 @@ async function unreadablePages(db: Queryable, moduleId: number) {
     const [module] = await db
         .select({
             materialId: modules.materialId,
+            version: modules.materialVersion,
             firstPage: modules.firstPage,
             lastPage: modules.lastPage,
         })
@@ -116,6 +117,7 @@ async function unreadablePages(db: Queryable, moduleId: number) {
         .where(
             and(
                 eq(materialPages.materialId, module.materialId),
+                eq(materialPages.version, module.version),
                 gte(materialPages.number, module.firstPage),
                 lte(materialPages.number, module.lastPage),
                 isNull(materialPages.text),

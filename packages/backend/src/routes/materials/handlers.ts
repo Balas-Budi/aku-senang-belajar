@@ -8,6 +8,7 @@ import {
     inArray,
     isNull,
     lte,
+    max,
     or,
     sql,
 } from 'drizzle-orm';
@@ -21,6 +22,7 @@ import {
     materialChunks,
     materialPages,
     materials,
+    materialVersions,
     modules,
     sessionCompetencies,
 } from '../../db/schema.ts';
@@ -37,9 +39,11 @@ import {
 import { visibleTo as sessionVisibleTo } from '../studio/handlers.ts';
 import { readPdfPages } from './pdf.ts';
 import type {
+    MaterialBody,
     MaterialParams,
     ModuleBody,
     PageParams,
+    PageQuery,
     PageRange,
     UploadQuery,
 } from './schema.ts';
@@ -57,15 +61,34 @@ const summary = {
     subject: materials.subject,
     grade: materials.grade,
     ownerId: materials.ownerId,
+    version: materials.version,
+    archivedAt: materials.archivedAt,
+    source: materials.source,
+    licence: materials.licence,
+    licenceNote: materials.licenceNote,
     pageCount: count(materialPages.number),
     readablePages: count(materialPages.text),
 };
 
-function withPrepared<T extends { ownerId: number | null }>({
-    ownerId,
-    ...row
-}: T) {
-    return { ...row, prepared: ownerId === null };
+const activePages = and(
+    eq(materialPages.materialId, materials.id),
+    eq(materialPages.version, materials.version),
+);
+
+const archived = () =>
+    new AppError(409, {
+        message: 'The material is archived',
+        code: 'MATERIAL_ARCHIVED',
+    });
+
+function withPrepared<
+    T extends { ownerId: number | null; archivedAt: Date | null },
+>({ ownerId, archivedAt, ...row }: T) {
+    return {
+        ...row,
+        prepared: ownerId === null,
+        archived: archivedAt !== null,
+    };
 }
 
 async function materialDetail(
@@ -76,7 +99,7 @@ async function materialDetail(
     const [material] = await db
         .select(summary)
         .from(materials)
-        .leftJoin(materialPages, eq(materialPages.materialId, materials.id))
+        .leftJoin(materialPages, activePages)
         .where(and(eq(materials.id, materialId), visibleTo(userId)))
         .groupBy(materials.id);
 
@@ -92,14 +115,38 @@ async function materialDetail(
             >`left(${materialPages.text}, ${SNIPPET_LENGTH})`,
         })
         .from(materialPages)
-        .where(eq(materialPages.materialId, materialId))
+        .where(
+            and(
+                eq(materialPages.materialId, materialId),
+                eq(materialPages.version, material.version),
+            ),
+        )
         .orderBy(asc(materialPages.number));
+    const versionRows = await db
+        .select({
+            version: materialVersions.version,
+            createdAt: materialVersions.createdAt,
+            pageCount: count(materialPages.number),
+            readablePages: count(materialPages.text),
+        })
+        .from(materialVersions)
+        .leftJoin(
+            materialPages,
+            and(
+                eq(materialPages.materialId, materialVersions.materialId),
+                eq(materialPages.version, materialVersions.version),
+            ),
+        )
+        .where(eq(materialVersions.materialId, materialId))
+        .groupBy(materialVersions.materialId, materialVersions.version)
+        .orderBy(asc(materialVersions.version));
     const moduleRows = await db
         .select({
             id: modules.id,
             title: modules.title,
             firstPage: modules.firstPage,
             lastPage: modules.lastPage,
+            version: modules.materialVersion,
         })
         .from(modules)
         .where(eq(modules.materialId, materialId))
@@ -166,6 +213,12 @@ async function materialDetail(
             readable: snippet !== null,
             snippet,
         })),
+        versions: versionRows.map((row) => ({
+            ...row,
+            chapters: moduleRows.filter(
+                ({ version }) => version === row.version,
+            ).length,
+        })),
         modules: moduleRows.map((module) => ({
             ...module,
             competencies: competencyRows
@@ -193,16 +246,20 @@ async function ownRange(
         .select({
             subject: materials.subject,
             grade: materials.grade,
+            version: materials.version,
+            archivedAt: materials.archivedAt,
             pageCount: count(materialPages.number),
         })
         .from(materials)
-        .leftJoin(materialPages, eq(materialPages.materialId, materials.id))
+        .leftJoin(materialPages, activePages)
         .where(and(eq(materials.id, materialId), eq(materials.ownerId, userId)))
         .groupBy(materials.id);
 
     if (!material) {
         throw notFound('Material not found');
     }
+
+    if (material.archivedAt) throw archived();
 
     if (lastPage < firstPage) {
         throw fieldError('lastPage', 'The last page comes before the first');
@@ -221,6 +278,7 @@ async function ownRange(
         .where(
             and(
                 eq(materialPages.materialId, materialId),
+                eq(materialPages.version, material.version),
                 gte(materialPages.number, firstPage),
                 lte(materialPages.number, lastPage),
             ),
@@ -302,7 +360,7 @@ export async function saveModule(
 ) {
     const { materialId } = request.params;
     const { title, firstPage, lastPage, competencies: list } = request.body;
-    const { readable } = await ownRange(
+    const { material, readable } = await ownRange(
         request.server.db,
         materialId,
         currentUser(request).id,
@@ -332,7 +390,13 @@ export async function saveModule(
     const saved = await request.server.db.transaction(async (tx) => {
         const [module] = await tx
             .insert(modules)
-            .values({ materialId, title, firstPage, lastPage })
+            .values({
+                materialId,
+                title,
+                firstPage,
+                lastPage,
+                materialVersion: material.version,
+            })
             .returning({
                 id: modules.id,
                 title: modules.title,
@@ -368,10 +432,11 @@ export async function listMaterials(request: FastifyRequest) {
     const rows = await request.server.db
         .select(summary)
         .from(materials)
-        .leftJoin(materialPages, eq(materialPages.materialId, materials.id))
+        .leftJoin(materialPages, activePages)
         .where(visibleTo(user.id))
         .groupBy(materials.id)
         .orderBy(
+            sql`${materials.archivedAt} is not null`,
             sql`${materials.ownerId} is not null`,
             desc(materials.createdAt),
             desc(materials.id),
@@ -385,19 +450,10 @@ export async function uploadMaterial(
     reply: FastifyReply,
 ) {
     const user = currentUser(request);
+    const pages = await readablePdf(request.body);
 
-    if (!Buffer.isBuffer(request.body)) {
-        throw fieldError('pdf', 'Send the material as application/pdf');
-    }
-
-    const pages = await readPdfPages(request.body);
-
-    if (pages.every((text) => text === null)) {
-        throw fieldError('pdf', 'None of the pages has text that can be read');
-    }
-
-    const { title, subject, grade } = request.query;
-    const chunks = await chunkPages(pages);
+    const { title, subject, grade, source, licence, licenceNote } =
+        request.query;
     const materialId = await request.server.db.transaction(async (tx) => {
         const [material] = await tx
             .insert(materials)
@@ -407,24 +463,13 @@ export async function uploadMaterial(
                 grade,
                 ownerId: user.id,
                 rightsConfirmedAt: new Date(),
+                source: source || null,
+                licence: licence ?? null,
+                licenceNote: licenceNote || null,
             })
             .returning({ id: materials.id });
 
-        await tx.insert(materialPages).values(
-            pages.map((text, index) => ({
-                materialId: material.id,
-                number: index + 1,
-                text,
-            })),
-        );
-        if (chunks.length > 0) {
-            await tx.insert(materialChunks).values(
-                chunks.map((chunk) => ({
-                    ...chunk,
-                    materialId: material.id,
-                })),
-            );
-        }
+        await storeVersion(tx, material.id, 1, pages);
 
         return material.id;
     });
@@ -432,6 +477,137 @@ export async function uploadMaterial(
     return reply
         .code(201)
         .send(await materialDetail(request.server.db, materialId, user.id));
+}
+
+async function readablePdf(body: unknown) {
+    if (!Buffer.isBuffer(body)) {
+        throw fieldError('pdf', 'Send the material as application/pdf');
+    }
+
+    const pages = await readPdfPages(body);
+
+    if (pages.every((text) => text === null)) {
+        throw fieldError('pdf', 'None of the pages has text that can be read');
+    }
+
+    return pages;
+}
+
+async function storeVersion(
+    tx: Queryable,
+    materialId: number,
+    version: number,
+    pages: (string | null)[],
+) {
+    const chunks = await chunkPages(pages);
+
+    await tx.insert(materialVersions).values({ materialId, version });
+    await tx.insert(materialPages).values(
+        pages.map((text, index) => ({
+            materialId,
+            version,
+            number: index + 1,
+            text,
+        })),
+    );
+
+    if (chunks.length > 0) {
+        await tx
+            .insert(materialChunks)
+            .values(chunks.map((chunk) => ({ ...chunk, materialId, version })));
+    }
+}
+
+async function ownMaterial(db: Queryable, materialId: number, userId: number) {
+    const [material] = await db
+        .select({ id: materials.id, archivedAt: materials.archivedAt })
+        .from(materials)
+        .where(and(eq(materials.id, materialId), eq(materials.ownerId, userId)))
+        .for('update');
+
+    if (!material) {
+        throw notFound('Material not found');
+    }
+
+    return material;
+}
+
+export async function uploadVersion(
+    request: FastifyRequest<{ Params: MaterialParams }>,
+    reply: FastifyReply,
+) {
+    const { db } = request.server;
+    const userId = currentUser(request).id;
+    const { materialId } = request.params;
+    const pages = await readablePdf(request.body);
+
+    await db.transaction(async (tx) => {
+        const material = await ownMaterial(tx, materialId, userId);
+
+        if (material.archivedAt) throw archived();
+
+        const [{ last }] = await tx
+            .select({ last: max(materialVersions.version) })
+            .from(materialVersions)
+            .where(eq(materialVersions.materialId, materialId));
+        const version = (last ?? 1) + 1;
+
+        if (last === null) {
+            await tx
+                .insert(materialVersions)
+                .values({ materialId, version: 1 });
+        }
+
+        await storeVersion(tx, materialId, version, pages);
+        await tx
+            .update(materials)
+            .set({ version })
+            .where(eq(materials.id, materialId));
+    });
+
+    return reply.code(201).send(await materialDetail(db, materialId, userId));
+}
+
+export async function updateMaterial(
+    request: FastifyRequest<{ Params: MaterialParams; Body: MaterialBody }>,
+) {
+    const { db } = request.server;
+    const userId = currentUser(request).id;
+    const { materialId } = request.params;
+    const { archived: archive, version, ...licence } = request.body;
+
+    await db.transaction(async (tx) => {
+        await ownMaterial(tx, materialId, userId);
+
+        if (version !== undefined) {
+            const [known] = await tx
+                .select({ version: materialVersions.version })
+                .from(materialVersions)
+                .where(
+                    and(
+                        eq(materialVersions.materialId, materialId),
+                        eq(materialVersions.version, version),
+                    ),
+                );
+
+            if (!known) {
+                throw fieldError('version', 'The material has no such version');
+            }
+        }
+
+        await tx
+            .update(materials)
+            .set({
+                ...licence,
+                ...(version === undefined ? {} : { version }),
+                ...(archive === undefined
+                    ? {}
+                    : { archivedAt: archive ? new Date() : null }),
+            })
+            .where(eq(materials.id, materialId));
+    });
+
+    return materialDetail(db, materialId, userId);
 }
 
 export async function getMaterial(
@@ -444,8 +620,11 @@ export async function getMaterial(
     );
 }
 
-export async function getPage(request: FastifyRequest<{ Params: PageParams }>) {
+export async function getPage(
+    request: FastifyRequest<{ Params: PageParams; Querystring: PageQuery }>,
+) {
     const { materialId, number } = request.params;
+    const { version } = request.query;
     const [page] = await request.server.db
         .select({ number: materialPages.number, text: materialPages.text })
         .from(materialPages)
@@ -454,6 +633,9 @@ export async function getPage(request: FastifyRequest<{ Params: PageParams }>) {
             and(
                 eq(materialPages.materialId, materialId),
                 eq(materialPages.number, number),
+                version === undefined
+                    ? eq(materialPages.version, materials.version)
+                    : eq(materialPages.version, version),
                 visibleTo(currentUser(request).id),
             ),
         );

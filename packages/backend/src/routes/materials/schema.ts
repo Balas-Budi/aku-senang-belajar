@@ -1,6 +1,7 @@
 import { z } from 'zod';
 import {
     learningSessionStatus,
+    materialLicence,
     sessionDrafting,
     subject,
 } from '../../db/schema.ts';
@@ -16,7 +17,34 @@ export const uploadQuery = z.object({
     subject: z.enum(subject.enumValues),
     grade: z.coerce.number().int().min(1).max(6),
     rights: z.literal('1', { error: 'Confirm the right to use this material' }),
+    source: z.string().trim().max(200).optional(),
+    licence: z.enum(materialLicence.enumValues).optional(),
+    licenceNote: z.string().trim().max(300).optional(),
 });
+
+const cleared = (limit: number) =>
+    z
+        .string()
+        .trim()
+        .max(limit)
+        .transform((text) => text || null)
+        .nullable();
+
+export const materialBody = z.object({
+    archived: z.boolean().optional(),
+    version: z.int().positive().optional(),
+    source: cleared(200).optional(),
+    licence: z.enum(materialLicence.enumValues).nullable().optional(),
+    licenceNote: cleared(300).optional(),
+});
+
+export type MaterialBody = z.infer<typeof materialBody>;
+
+export const pageQuery = z.object({
+    version: z.coerce.number().int().positive().optional(),
+});
+
+export type PageQuery = z.infer<typeof pageQuery>;
 
 export type UploadQuery = z.infer<typeof uploadQuery>;
 
@@ -38,6 +66,7 @@ export const materialSummary = z.object({
     subject: z.enum(subject.enumValues),
     grade: z.number().nullable(),
     prepared: z.boolean(),
+    archived: z.boolean(),
     pageCount: z.number(),
     readablePages: z.number(),
 });
@@ -72,6 +101,19 @@ export const savedModule = z.object({
 });
 
 export const materialDetail = materialSummary.extend({
+    version: z.number(),
+    source: z.string().nullable(),
+    licence: z.enum(materialLicence.enumValues).nullable(),
+    licenceNote: z.string().nullable(),
+    versions: z.array(
+        z.object({
+            version: z.number(),
+            createdAt: z.date(),
+            pageCount: z.number(),
+            readablePages: z.number(),
+            chapters: z.number(),
+        }),
+    ),
     pages: z.array(
         z.object({
             number: z.number(),
@@ -81,6 +123,7 @@ export const materialDetail = materialSummary.extend({
     ),
     modules: z.array(
         savedModule.extend({
+            version: z.number(),
             sessions: z.array(
                 z.object({
                     id: z.number(),

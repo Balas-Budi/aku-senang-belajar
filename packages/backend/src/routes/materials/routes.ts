@@ -7,16 +7,20 @@ import {
     getPage,
     listMaterials,
     saveModule,
+    updateMaterial,
     uploadMaterial,
+    uploadVersion,
 } from './handlers.ts';
 import { MAX_PDF_BYTES, PDF_CONTENT_TYPE } from './pdf.ts';
 import {
     competencyProposal,
+    materialBody,
     materialDetail,
     materialParams,
     materialSummary,
     moduleBody,
     pageParams,
+    pageQuery,
     pageRange,
     pageText,
     savedModule,
@@ -56,9 +60,36 @@ export const materialRoutes: FastifyPluginAsyncZod = async (fastify) => {
         },
         getMaterial,
     );
+    fastify.put(
+        '/:materialId',
+        {
+            schema: {
+                params: materialParams,
+                body: materialBody,
+                response: { 200: materialDetail },
+            },
+        },
+        updateMaterial,
+    );
+    fastify.post(
+        '/:materialId/versions',
+        {
+            schema: {
+                params: materialParams,
+                response: { 201: materialDetail },
+            },
+        },
+        uploadVersion,
+    );
     fastify.get(
         '/:materialId/pages/:number',
-        { schema: { params: pageParams, response: { 200: pageText } } },
+        {
+            schema: {
+                params: pageParams,
+                querystring: pageQuery,
+                response: { 200: pageText },
+            },
+        },
         getPage,
     );
     fastify.post(

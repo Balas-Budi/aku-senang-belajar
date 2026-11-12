@@ -54,6 +54,12 @@ export const challengeState = pgEnum('challenge_state', [
     'revealed',
     'closed',
 ]);
+export const materialLicence = pgEnum('material_licence', [
+    'own',
+    'school',
+    'open',
+    'permission',
+]);
 export const membershipAction = pgEnum('membership_action', [
     'joined',
     'left',
@@ -252,6 +258,11 @@ export const materials = pgTable(
         ownerId: integer().references(() => users.id, { onDelete: 'cascade' }),
         rightsConfirmedAt: timestamp({ withTimezone: true }),
         createdAt: timestamp({ withTimezone: true }).notNull().defaultNow(),
+        version: integer().notNull().default(1),
+        archivedAt: timestamp({ withTimezone: true }),
+        source: text(),
+        licence: materialLicence(),
+        licenceNote: text(),
     },
     (table) => [index('materials_owner_id_idx').on(table.ownerId)],
 );
@@ -262,15 +273,28 @@ export const materialPages = pgTable(
         materialId: integer()
             .notNull()
             .references(() => materials.id, { onDelete: 'cascade' }),
+        version: integer().notNull().default(1),
         number: integer().notNull(),
         text: text(),
     },
     (table) => [
         primaryKey({
-            name: 'material_pages_material_id_number_pk',
-            columns: [table.materialId, table.number],
+            name: 'material_pages_material_id_version_number_pk',
+            columns: [table.materialId, table.version, table.number],
         }),
     ],
+);
+
+export const materialVersions = pgTable(
+    'material_versions',
+    {
+        materialId: integer()
+            .notNull()
+            .references(() => materials.id, { onDelete: 'cascade' }),
+        version: integer().notNull(),
+        createdAt: timestamp({ withTimezone: true }).notNull().defaultNow(),
+    },
+    (table) => [primaryKey({ columns: [table.materialId, table.version] })],
 );
 
 export const EMBEDDING_DIMENSIONS = 1536;
@@ -282,6 +306,7 @@ export const materialChunks = pgTable(
         materialId: integer()
             .notNull()
             .references(() => materials.id, { onDelete: 'cascade' }),
+        version: integer().notNull().default(1),
         pageNumber: integer().notNull(),
         position: integer().notNull(),
         text: text().notNull(),
@@ -291,11 +316,9 @@ export const materialChunks = pgTable(
         embeddedAt: timestamp({ withTimezone: true }),
     },
     (table) => [
-        unique('material_chunks_material_id_page_number_position_unique').on(
-            table.materialId,
-            table.pageNumber,
-            table.position,
-        ),
+        unique(
+            'material_chunks_material_id_version_page_number_position_unique',
+        ).on(table.materialId, table.version, table.pageNumber, table.position),
         index('material_chunks_embedding_idx').using(
             'hnsw',
             table.embedding.op('vector_cosine_ops'),
@@ -313,6 +336,7 @@ export const modules = pgTable(
         title: text().notNull(),
         firstPage: integer(),
         lastPage: integer(),
+        materialVersion: integer().notNull().default(1),
     },
     (table) => [index('modules_material_id_idx').on(table.materialId)],
 );

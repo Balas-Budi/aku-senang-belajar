@@ -3,6 +3,7 @@ import {
     INTERESTS,
     blockKind,
     learningSessionStatus,
+    materialLicence,
     sessionDrafting,
     sessionLength,
 } from '../../db/schema.ts';
@@ -140,8 +141,15 @@ export const studioSession = z.object({
         title: z.string(),
         firstPage: z.number().nullable(),
         lastPage: z.number().nullable(),
+        materialVersion: z.number(),
     }),
-    material: z.object({ id: z.number(), title: z.string() }),
+    material: z.object({
+        id: z.number(),
+        title: z.string(),
+        source: z.string().nullable(),
+        licence: z.enum(materialLicence.enumValues).nullable(),
+        licenceNote: z.string().nullable(),
+    }),
     competencies: z.array(
         z.object({ code: z.string(), description: z.string() }),
     ),

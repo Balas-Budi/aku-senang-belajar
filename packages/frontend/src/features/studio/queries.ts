@@ -6,6 +6,7 @@ import {
 import { api, ApiError } from '../../lib/api';
 import type { Diagram } from '../learning-sessions/diagram';
 import type { Activity } from '../learning-sessions/queries';
+import type { LicenceData } from '../materials/queries';
 import type { Interest } from '../profile/interests';
 
 export type Option = { id: string; label: string; illustration?: string };
@@ -131,8 +132,9 @@ export type StudioSession = {
         title: string;
         firstPage: number | null;
         lastPage: number | null;
+        materialVersion: number;
     };
-    material: { id: number; title: string };
+    material: { id: number; title: string } & LicenceData;
     competencies: { code: string; description: string }[];
     blocks: StudioBlock[];
     issues: Issue[];

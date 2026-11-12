@@ -5,11 +5,11 @@ import {
     type CompetencyDraft,
 } from './queries';
 import { FormField, TextAreaField } from '../../components/form-field';
-import { RequestError } from '../../components/request-error';
 import { Alert } from '../../components/ui/alert';
 import { Button } from '../../components/ui/button';
 import { Card } from '../../components/ui/card';
 import { ApiError } from '../../lib/api';
+import { StudioError } from '../studio/studio-error';
 
 type Draft = {
     description: string;
@@ -254,7 +254,7 @@ export function ModuleForm({
                             sendiri.
                         </Alert>
                     ) : (
-                        <RequestError error={propose.error} />
+                        <StudioError error={propose.error} />
                     )}
                 </form>
                 {drafts && (
@@ -325,7 +325,7 @@ export function ModuleForm({
                                 Tambah kompetensi
                             </Button>
                         )}
-                        <RequestError error={save.error} />
+                        <StudioError error={save.error} />
                         <div>
                             <Button type="submit" disabled={save.isPending}>
                                 {save.isPending

@@ -83,6 +83,7 @@ async function draftContext(db: Queryable, sessionId: number) {
             materialId: materials.id,
             subject: materials.subject,
             grade: materials.grade,
+            materialVersion: modules.materialVersion,
         })
         .from(learningSessions)
         .innerJoin(modules, eq(modules.id, learningSessions.moduleId))
@@ -113,6 +114,7 @@ async function draftContext(db: Queryable, sessionId: number) {
                   .where(
                       and(
                           eq(materialPages.materialId, session.materialId),
+                          eq(materialPages.version, session.materialVersion),
                           gte(materialPages.number, session.firstPage),
                           lte(materialPages.number, session.lastPage),
                           isNotNull(materialPages.text),

@@ -1,5 +1,7 @@
 import { useState } from 'react';
 import { useNavigate } from 'react-router';
+import { LicenceFields } from './licence-fields';
+import { PdfField, pdfLimits } from './pdf-field';
 import { useUploadMaterial } from './queries';
 import { subjects } from '../assignments/subject-art';
 import { FormField, fieldErrorText } from '../../components/form-field';
@@ -76,6 +78,11 @@ export function UploadForm() {
                             subject: String(data.get('subject') ?? ''),
                             grade: String(data.get('grade') ?? ''),
                             rights: data.get('rights') === 'on',
+                            source: String(data.get('source') ?? '').trim(),
+                            licence: String(data.get('licence') ?? ''),
+                            licenceNote: String(
+                                data.get('licenceNote') ?? '',
+                            ).trim(),
                         },
                         {
                             onSuccess: (material) => {
@@ -90,16 +97,10 @@ export function UploadForm() {
                 <div>
                     <h2 className="text-lg font-semibold">Unggah PDF</h2>
                     <p className="text-muted-foreground mt-1 text-sm">
-                        PDF dengan teks yang bisa dipilih, paling besar 20 MB
-                        dan 300 halaman. Halaman hasil pindai tidak terbaca.
+                        {pdfLimits}
                     </p>
                 </div>
-                <FormField
-                    name="pdf"
-                    label="File PDF"
-                    type="file"
-                    accept="application/pdf,.pdf"
-                    required
+                <PdfField
                     error={upload.error}
                     onChange={(event) => {
                         const file = event.currentTarget.files?.[0];
@@ -156,6 +157,24 @@ export function UploadForm() {
                             {rightsError}
                         </p>
                     )}
+                </div>
+                <div className="border-paper-edge border-t pt-4">
+                    <fieldset
+                        className="space-y-4"
+                        aria-describedby="licence-hint"
+                    >
+                        <legend className="mb-1 font-semibold">
+                            Sumber dan hak pakai
+                        </legend>
+                        <p
+                            id="licence-hint"
+                            className="text-muted-foreground text-sm"
+                        >
+                            Tidak wajib. Bisa diisi atau diubah nanti di halaman
+                            materi.
+                        </p>
+                        <LicenceFields error={upload.error} />
+                    </fieldset>
                 </div>
                 <RequestError error={upload.error} />
                 <Button type="submit" disabled={upload.isPending}>
