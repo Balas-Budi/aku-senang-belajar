@@ -640,7 +640,7 @@ test('the chapter map as CSV labels each status as an AI estimate or a teacher d
         provider.config,
     );
 
-    await demoStudent(app, classId, '=SUM(A1)');
+    await demoStudent(app, classId, '=Ani(A1)');
     await call(
         app,
         teacherToken,
@@ -662,7 +662,7 @@ test('the chapter map as CSV labels each status as an AI estimate or a teacher d
     assert.match(response.headers['content-disposition'] ?? '', /attachment/);
     assert.deepEqual(lines, [
         'Siswa,Misi selesai,C1,C2,C3',
-        "'=SUM(A1),0 dari 1,,,",
+        "'=Ani(A1),0 dari 1,,,",
         'Bayu Putra,0 dari 1,,,',
         'Wulan Sari,1 dari 1,Terlihat (Diverifikasi guru),Terlihat (Saran AI),Terlihat (Saran AI)',
     ]);
