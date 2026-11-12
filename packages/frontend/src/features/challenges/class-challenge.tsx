@@ -17,6 +17,7 @@ import {
     ScreenCard,
     ScreenHeading,
 } from '../learning-sessions/session-ui';
+import { VoiceAnswer } from '../voice/voice-answer';
 import { ChoiceBars, optionLabel } from './choice-bars';
 import {
     errorCode,
@@ -81,6 +82,12 @@ function AnswerForm({
                         inputVariants({ feel: 'chunky' }),
                         'min-h-28 resize-y py-3 text-[1em] leading-relaxed',
                     )}
+                />
+                <VoiceAnswer
+                    fieldId="challenge-reason"
+                    value={reason}
+                    maxLength={300}
+                    onChange={setReason}
                 />
                 {reasonError && (
                     <p id="challenge-reason-error" className="text-destructive">

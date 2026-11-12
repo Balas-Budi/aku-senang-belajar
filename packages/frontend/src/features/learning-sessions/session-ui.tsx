@@ -13,6 +13,7 @@ import { Button } from '../../components/ui/button';
 import { inputVariants } from '../../components/ui/input';
 import { useErrorToast } from '../../components/ui/toast';
 import { cn } from '../../lib/cn';
+import { VoiceAnswer } from '../voice/voice-answer';
 import { Illustration } from './illustration';
 import {
     liveRefusal,
@@ -235,6 +236,14 @@ export function ReasonField({
                     'placeholder:text-muted-foreground min-h-28 resize-y py-3 text-[1em] leading-relaxed disabled:bg-white',
                 )}
             />
+            {!disabled && (
+                <VoiceAnswer
+                    fieldId={id}
+                    value={value}
+                    maxLength={500}
+                    onChange={onChange}
+                />
+            )}
         </div>
     );
 }
