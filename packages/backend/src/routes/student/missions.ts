@@ -21,6 +21,7 @@ export function missionsOf(
     return db
         .select({
             attemptId: attempts.id,
+            assignmentId: assignments.id,
             sessionId: learningSessions.id,
             moduleId: modules.id,
             title: learningSessions.title,

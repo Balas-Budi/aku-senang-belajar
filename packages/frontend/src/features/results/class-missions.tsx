@@ -4,6 +4,7 @@ import { RequestError } from '../../components/request-error';
 import { Button, buttonVariants } from '../../components/ui/button';
 import { Card } from '../../components/ui/card';
 import { subjects } from '../assignments/subject-art';
+import { FollowUpsLink } from '../follow-ups/follow-up-plan';
 import { classMissionsQuery } from './queries';
 
 export function ClassMissions({ classId }: { classId: number }) {
@@ -12,9 +13,12 @@ export function ClassMissions({ classId }: { classId: number }) {
     return (
         <Card>
             <section aria-labelledby="missions-title" className="space-y-2">
-                <h2 id="missions-title" className="text-lg font-semibold">
-                    Misi kelas
-                </h2>
+                <div className="flex flex-wrap items-center justify-between gap-x-4">
+                    <h2 id="missions-title" className="text-lg font-semibold">
+                        Misi kelas
+                    </h2>
+                    <FollowUpsLink classId={classId} />
+                </div>
                 {missions.isPending ? (
                     <p role="status">Memuat misi…</p>
                 ) : missions.isError ? (

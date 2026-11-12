@@ -60,6 +60,7 @@ export const assignmentsResponse = z.array(
 
 export const resultsResponse = z.object({
     assignment,
+    extra: z.boolean(),
     competencies: z.array(
         z.object({ id: z.number(), code: z.string(), description: z.string() }),
     ),

@@ -43,7 +43,7 @@ export type PracticeTry = {
 
 export type PracticeSend = UseMutationResult<Feedback, Error, PracticeTry>;
 
-function usePracticeTry(url: string) {
+export function usePracticeTry(url: string) {
     return useMutation({
         mutationFn: (input: PracticeTry) =>
             api<Feedback>(url, {

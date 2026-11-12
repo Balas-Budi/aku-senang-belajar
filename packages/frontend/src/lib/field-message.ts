@@ -50,6 +50,14 @@ export function fieldMessage(message: string, field = '') {
     if (field === 'themes' && /expected array to have <=3/u.test(message))
         return 'Paling banyak tiga tema per misi.';
     if (field === 'groupSize') return 'Isi 2 sampai 5 siswa per kelompok.';
+    if (field === 'studentIds' && /expected array to have >=1/u.test(message))
+        return 'Pilih setidaknya satu siswa.';
+    if (field === 'studentIds' && /expected array to have <=60/u.test(message))
+        return 'Paling banyak 60 siswa.';
+    if (/Choose students of this class/u.test(message))
+        return 'Pilih siswa dari kelas ini. Muat ulang halaman, lalu coba lagi.';
+    if (/does not teach this competency/u.test(message))
+        return 'Misi ini tidak mengajarkan kompetensi ini. Muat ulang halaman, lalu coba lagi.';
     if (field === 'options' && /expected array to have >=2/u.test(message))
         return 'Isi setidaknya dua pilihan jawaban.';
     if (/at most two sentences/u.test(message))

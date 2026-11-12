@@ -42,6 +42,7 @@ export type StudentResult = {
 
 export type SessionResults = {
     assignment: Mission;
+    extra: boolean;
     competencies: Competency[];
     students: StudentResult[];
 };

@@ -13,6 +13,7 @@ import {
 } from '../../components/ui/table';
 import { subjects } from '../assignments/subject-art';
 import { classesQuery } from '../classes/queries';
+import { FollowUpButton } from '../follow-ups/follow-up-dialog';
 import { LiveCard } from '../live/live-card';
 import { AnalyseAgain, stateLabel, waitsForTeacher } from './analysis-state';
 import { sessionResultsQuery } from './queries';
@@ -117,12 +118,20 @@ export function SessionResults({
                                     <dt className="font-semibold">
                                         {competency.code}
                                     </dt>
-                                    <dd>
-                                        {competency.description}
-                                        <span className="text-muted-foreground block text-sm tabular-nums">
-                                            {covered} dari {students.length}{' '}
-                                            siswa sudah punya bukti
+                                    <dd className="flex flex-wrap items-start justify-between gap-x-4 gap-y-2">
+                                        <span className="min-w-0">
+                                            {competency.description}
+                                            <span className="text-muted-foreground block text-sm tabular-nums">
+                                                {covered} dari {students.length}{' '}
+                                                siswa sudah punya bukti
+                                            </span>
                                         </span>
+                                        <FollowUpButton
+                                            classId={classId}
+                                            assignmentId={assignmentId}
+                                            competency={competency}
+                                            context={competency.code}
+                                        />
                                     </dd>
                                 </div>
                             );

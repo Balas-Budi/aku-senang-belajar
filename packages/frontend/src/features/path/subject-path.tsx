@@ -11,6 +11,7 @@ import { cn } from '../../lib/cn';
 import type { Subject } from '../assignments/queries';
 import { SubjectArt, subjects } from '../assignments/subject-art';
 import { studentClassQuery } from '../classes/queries';
+import { studentFollowUpsQuery } from '../follow-ups/queries';
 import { studentExtraQuery, studentReviewQuery } from '../review/queries';
 import { stepLabels } from '../learning-sessions/steps';
 import {
@@ -305,6 +306,8 @@ export function SubjectPath({ subject }: { subject: Subject }) {
     const classroom = useQuery(studentClassQuery());
     const review = useQuery(studentReviewQuery(subject));
     const extra = useQuery(studentExtraQuery(subject)).data?.extra;
+    const followUps =
+        useQuery(studentFollowUpsQuery(subject)).data?.followUps ?? [];
     const path = useRef<HTMLDivElement>(null);
     const { label, tint } = subjects[subject];
     useEffect(() => {
@@ -388,6 +391,42 @@ export function SubjectPath({ subject }: { subject: Subject }) {
                     )}
                 </div>
             </header>
+            {followUps.map((followUp) => (
+                <section
+                    key={followUp.id}
+                    aria-labelledby={`follow-up-${followUp.id}-title`}
+                    className="border-paper-edge bg-student-surface flex flex-col gap-3 rounded-2xl border-2 border-b-[5px] p-4 sm:flex-row sm:items-center sm:p-5"
+                >
+                    <div className="min-w-0 flex-1">
+                        <h2
+                            id={`follow-up-${followUp.id}-title`}
+                            className="font-display text-primary-deep text-xl font-semibold"
+                        >
+                            Dari gurumu
+                        </h2>
+                        <p
+                            id={`follow-up-${followUp.id}-what`}
+                            className="text-lg leading-relaxed break-words"
+                        >
+                            {followUp.competency === null
+                                ? `Tantangan tambahan dari misi ${followUp.mission}`
+                                : `Latihan lagi: ${followUp.competency}`}
+                        </p>
+                        {followUp.note && (
+                            <p className="text-lg leading-relaxed break-words">
+                                Pesan gurumu: {followUp.note}
+                            </p>
+                        )}
+                    </div>
+                    <Link
+                        to={`/student/follow-ups/${followUp.id}`}
+                        aria-describedby={`follow-up-${followUp.id}-what`}
+                        className={buttonVariants({ feel: 'chunky' })}
+                    >
+                        Mulai
+                    </Link>
+                </section>
+            ))}
             {reviewCount > 0 && (
                 <section
                     aria-labelledby="review-title"

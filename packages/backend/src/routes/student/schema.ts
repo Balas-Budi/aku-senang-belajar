@@ -227,7 +227,7 @@ export const helpResponse = z.object({ earned: earned.nullable() });
 
 export const reviewQuery = z.object({ subject: z.enum(subject.enumValues) });
 
-const reviewQuestion = z.object({
+export const reviewQuestion = z.object({
     id: z.number(),
     mission: z.string(),
     content: blockContent.check.omit({

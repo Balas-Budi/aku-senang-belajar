@@ -169,6 +169,13 @@
             "when": 1794386825564,
             "tag": "0023_class_challenges",
             "breakpoints": true
+        },
+        {
+            "idx": 24,
+            "version": "7",
+            "when": 1794448683162,
+            "tag": "0024_follow_ups",
+            "breakpoints": true
         }
     ]
 }

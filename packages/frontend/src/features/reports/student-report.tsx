@@ -13,6 +13,7 @@ import {
 } from '../../components/ui/table';
 import { cn } from '../../lib/cn';
 import { classesQuery } from '../classes/queries';
+import { FollowUpButton } from '../follow-ups/follow-up-dialog';
 import {
     reviewLabel,
     ShownStatus,
@@ -118,29 +119,42 @@ function ChapterHistory({
                                     return (
                                         <TableCell key={competency.id}>
                                             {entry ? (
-                                                <Link
-                                                    to={`/teacher/classes/${classId}/sessions/${mission.assignmentId}/students/${studentId}#kompetensi-${competency.code}`}
-                                                    aria-label={`${statusLabels[entry.shown.status]}, ${reviewLabel(entry.shown.decision)}: ${competency.code} ${studentName}, ${mission.title}. Lihat bukti`}
-                                                    className="focus-visible:outline-ring hover:bg-secondary -m-1 inline-block min-h-11 rounded-md p-1 focus-visible:outline-3"
-                                                >
-                                                    <ShownStatus
-                                                        shown={entry.shown}
+                                                <div className="flex flex-col items-start gap-2">
+                                                    <Link
+                                                        to={`/teacher/classes/${classId}/sessions/${mission.assignmentId}/students/${studentId}#kompetensi-${competency.code}`}
+                                                        aria-label={`${statusLabels[entry.shown.status]}, ${reviewLabel(entry.shown.decision)}: ${competency.code} ${studentName}, ${mission.title}. Lihat bukti`}
+                                                        className="focus-visible:outline-ring hover:bg-secondary -m-1 inline-block min-h-11 rounded-md p-1 focus-visible:outline-3"
+                                                    >
+                                                        <ShownStatus
+                                                            shown={entry.shown}
+                                                        />
+                                                        {entry.shown
+                                                            .decision !==
+                                                            null &&
+                                                            entry.shown
+                                                                .status !==
+                                                                entry.estimate && (
+                                                                <span className="text-muted-foreground block text-sm">
+                                                                    Saran AI:{' '}
+                                                                    {
+                                                                        statusLabels[
+                                                                            entry
+                                                                                .estimate
+                                                                        ]
+                                                                    }
+                                                                </span>
+                                                            )}
+                                                    </Link>
+                                                    <FollowUpButton
+                                                        classId={classId}
+                                                        assignmentId={
+                                                            mission.assignmentId
+                                                        }
+                                                        competency={competency}
+                                                        studentId={studentId}
+                                                        context={`${competency.code}, ${mission.title}`}
                                                     />
-                                                    {entry.shown.decision !==
-                                                        null &&
-                                                        entry.shown.status !==
-                                                            entry.estimate && (
-                                                            <span className="text-muted-foreground block text-sm">
-                                                                Saran AI:{' '}
-                                                                {
-                                                                    statusLabels[
-                                                                        entry
-                                                                            .estimate
-                                                                    ]
-                                                                }
-                                                            </span>
-                                                        )}
-                                                </Link>
+                                                </div>
                                             ) : (
                                                 <span className="text-muted-foreground">
                                                     Tidak diajarkan

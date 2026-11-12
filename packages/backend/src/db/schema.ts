@@ -54,6 +54,12 @@ export const challengeState = pgEnum('challenge_state', [
     'revealed',
     'closed',
 ]);
+export const followUpKind = pgEnum('follow_up_kind', [
+    'reinforce',
+    'enrich',
+    'discuss',
+    'reteach',
+]);
 export const liveStep = pgEnum('live_step', [
     'opening',
     'story',
@@ -665,6 +671,46 @@ export const challengeAnswers = pgTable(
             table.challengeId,
             table.unit,
         ),
+    ],
+);
+
+export const followUps = pgTable(
+    'follow_ups',
+    {
+        id: integer().primaryKey().generatedAlwaysAsIdentity(),
+        classId: integer()
+            .notNull()
+            .references(() => classes.id, { onDelete: 'cascade' }),
+        teacherId: integer().references(() => users.id, {
+            onDelete: 'set null',
+        }),
+        assignmentId: integer()
+            .notNull()
+            .references(() => assignments.id, { onDelete: 'cascade' }),
+        competencyId: integer().references(() => competencies.id, {
+            onDelete: 'cascade',
+        }),
+        kind: followUpKind().notNull(),
+        note: text(),
+        createdAt: timestamp({ withTimezone: true }).notNull().defaultNow(),
+        doneAt: timestamp({ withTimezone: true }),
+    },
+    (table) => [index('follow_ups_class_id_idx').on(table.classId)],
+);
+
+export const followUpStudents = pgTable(
+    'follow_up_students',
+    {
+        followUpId: integer()
+            .notNull()
+            .references(() => followUps.id, { onDelete: 'cascade' }),
+        studentId: integer()
+            .notNull()
+            .references(() => users.id, { onDelete: 'cascade' }),
+    },
+    (table) => [
+        primaryKey({ columns: [table.followUpId, table.studentId] }),
+        index('follow_up_students_student_id_idx').on(table.studentId),
     ],
 );
 

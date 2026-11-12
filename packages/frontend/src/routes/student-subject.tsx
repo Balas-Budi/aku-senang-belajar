@@ -4,6 +4,7 @@ import { requireUser } from '../lib/require-user.server';
 import type { Subject } from '../features/assignments/queries';
 import { subjects } from '../features/assignments/subject-art';
 import { studentClassQuery } from '../features/classes/queries';
+import { studentFollowUpsQuery } from '../features/follow-ups/queries';
 import { studentPathQuery } from '../features/path/queries';
 import {
     studentExtraQuery,
@@ -23,6 +24,9 @@ export async function loader({ request, params }: Route.LoaderArgs) {
         ),
         client.prefetchQuery(
             studentExtraQuery(params.subject as Subject, cookie),
+        ),
+        client.prefetchQuery(
+            studentFollowUpsQuery(params.subject as Subject, cookie),
         ),
     ]);
     return {

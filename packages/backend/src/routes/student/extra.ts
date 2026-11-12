@@ -27,7 +27,7 @@ import type { Answer } from './schema.ts';
 type Subject = (typeof subject.enumValues)[number];
 type ExtraBlock = Extract<SessionBlock, { kind: 'extra_challenge' }>;
 
-const asCheck = (block: ExtraBlock) => ({
+export const asCheck = (block: ExtraBlock) => ({
     ...block,
     kind: 'check' as const,
 });

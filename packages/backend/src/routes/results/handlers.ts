@@ -5,9 +5,11 @@ import { queueAnalysis } from '../../analysis/runner.ts';
 import { currentUser } from '../../auth/guards.ts';
 import {
     assessments,
+    assignments,
     classes,
     competencies,
     learnerSummaries,
+    sessionBlocks,
     verifications,
 } from '../../db/schema.ts';
 import { adaptationPair } from '../../learning/adaptation.ts';
@@ -103,6 +105,20 @@ export async function sessionResults(
             inArray(competencies.id, missionCompetencyIds(db, assignment.id)),
         )
         .orderBy(asc(competencies.code));
+    const [extra] = await db
+        .select({ id: sessionBlocks.id })
+        .from(sessionBlocks)
+        .innerJoin(
+            assignments,
+            eq(assignments.learningSessionId, sessionBlocks.learningSessionId),
+        )
+        .where(
+            and(
+                eq(assignments.id, assignment.id),
+                eq(sessionBlocks.kind, 'extra_challenge'),
+            ),
+        )
+        .limit(1);
     const members = await membersOf(db, assignment.classId);
     const taken = await attemptsOf(
         db,
@@ -135,6 +151,7 @@ export async function sessionResults(
 
     return {
         assignment,
+        extra: Boolean(extra),
         competencies: missionCompetencies,
         students: members.map((member) => {
             const attempt = taken.find(
