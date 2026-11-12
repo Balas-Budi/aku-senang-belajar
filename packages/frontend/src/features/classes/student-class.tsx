@@ -3,6 +3,7 @@ import { useRef, useState } from 'react';
 import { studentClassQuery, useJoinClass, useLeaveClass } from './queries';
 import { ClassCodeField, inviteCodeMessages } from './class-code-field';
 import { meQuery } from '../auth/queries';
+import { ChallengeInvite } from '../challenges/challenge-invite';
 import { PathOverview } from '../path/path-overview';
 import { studentPathQuery } from '../path/queries';
 import { PerchedJalak } from '../student/perched-jalak';
@@ -155,6 +156,7 @@ export function StudentClass() {
                                     Sudah bergabung
                                 </p>
                             </div>
+                            <ChallengeInvite />
                             <PathOverview teacherName={classroom.teacherName} />
                             <details className="text-base">
                                 <summary className="text-muted-foreground focus-visible:outline-ring min-h-12 cursor-pointer rounded-lg py-3 underline underline-offset-4 focus-visible:outline-3">

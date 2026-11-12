@@ -48,6 +48,12 @@ export const adaptationLead = pgEnum('adaptation_lead', [
 export const adaptationSource = pgEnum('adaptation_source', ['ai', 'teacher']);
 export const liveMode = pgEnum('live_mode', ['together', 'own_pace']);
 export const liveState = pgEnum('live_state', ['open', 'paused', 'ended']);
+export const challengeMode = pgEnum('challenge_mode', ['solo', 'group']);
+export const challengeState = pgEnum('challenge_state', [
+    'open',
+    'revealed',
+    'closed',
+]);
 export const liveStep = pgEnum('live_step', [
     'opening',
     'story',
@@ -606,6 +612,61 @@ export const liveSessions = pgTable('live_sessions', {
     pausedAt: timestamp({ withTimezone: true }),
     endedAt: timestamp({ withTimezone: true }),
 });
+
+export type ChallengeOption = { id: string; label: string };
+export type ChallengeGroup = { id: number; studentIds: number[] };
+export type ChallengeCluster = {
+    label: string;
+    note: string;
+    answerIds: number[];
+};
+
+export const classChallenges = pgTable(
+    'class_challenges',
+    {
+        id: integer().primaryKey().generatedAlwaysAsIdentity(),
+        classId: integer()
+            .notNull()
+            .references(() => classes.id, { onDelete: 'cascade' }),
+        teacherId: integer().references(() => users.id, {
+            onDelete: 'set null',
+        }),
+        prompt: text().notNull(),
+        options: jsonb().$type<ChallengeOption[]>().notNull(),
+        mode: challengeMode().notNull(),
+        groups: jsonb().$type<ChallengeGroup[]>().notNull(),
+        state: challengeState().notNull().default('open'),
+        shown: jsonb().$type<number[]>().notNull(),
+        clusters: jsonb().$type<ChallengeCluster[]>(),
+        createdAt: timestamp({ withTimezone: true }).notNull().defaultNow(),
+        revealedAt: timestamp({ withTimezone: true }),
+        closedAt: timestamp({ withTimezone: true }),
+    },
+    (table) => [index('class_challenges_class_id_idx').on(table.classId)],
+);
+
+export const challengeAnswers = pgTable(
+    'challenge_answers',
+    {
+        id: integer().primaryKey().generatedAlwaysAsIdentity(),
+        challengeId: integer()
+            .notNull()
+            .references(() => classChallenges.id, { onDelete: 'cascade' }),
+        unit: integer().notNull(),
+        studentId: integer()
+            .notNull()
+            .references(() => users.id, { onDelete: 'cascade' }),
+        choice: text().notNull(),
+        reason: text().notNull(),
+        createdAt: timestamp({ withTimezone: true }).notNull().defaultNow(),
+    },
+    (table) => [
+        unique('challenge_answers_challenge_id_unit_unique').on(
+            table.challengeId,
+            table.unit,
+        ),
+    ],
+);
 
 export const reviewTries = pgTable(
     'review_tries',

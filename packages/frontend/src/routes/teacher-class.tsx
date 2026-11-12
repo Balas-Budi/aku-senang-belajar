@@ -7,6 +7,7 @@ import {
     rosterQuery,
 } from '../features/classes/queries';
 import { ClassDetail } from '../features/classes/class-detail';
+import { classChallengeQuery } from '../features/challenges/queries';
 import { classMissionsQuery } from '../features/results/queries';
 import { ApiError } from '../lib/api';
 import { textLink } from '../components/ui/text-link';
@@ -22,6 +23,7 @@ export async function loader({ request, params }: Route.LoaderArgs) {
             client.fetchQuery(rosterQuery(id, cookie)),
             client.prefetchQuery(classMissionsQuery(id, cookie)),
             client.prefetchQuery(classChaptersQuery(id, cookie)),
+            client.prefetchQuery(classChallengeQuery(id, cookie)),
         ]);
     } catch (error) {
         if (error instanceof ApiError && error.status === 404)

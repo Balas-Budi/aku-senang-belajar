@@ -4,6 +4,7 @@ import { classesQuery, rosterQuery, useChangeCode } from './queries';
 import { Button } from '../../components/ui/button';
 import { Card } from '../../components/ui/card';
 import { RequestError } from '../../components/request-error';
+import { ChallengeCard } from '../challenges/challenge-card';
 import { ClassMissions } from '../results/class-missions';
 import { ClassChapters } from './class-chapters';
 export function ClassDetail({ id }: { id: number }) {
@@ -20,6 +21,7 @@ export function ClassDetail({ id }: { id: number }) {
             <h1 className="text-2xl font-semibold">{classroom.name}</h1>
             <ClassChapters classId={id} />
             <ClassMissions classId={id} />
+            <ChallengeCard classId={id} />
             <div className="grid items-start gap-6 lg:grid-cols-12">
                 <Card className="lg:col-span-8">
                     <section aria-labelledby="roster-title">

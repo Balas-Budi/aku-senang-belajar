@@ -26,6 +26,8 @@ export function fieldLabel(field: string) {
         classIds: 'Kelas',
         themes: 'Tema cerita',
         minutes: 'Batas waktu',
+        options: 'Pilihan jawaban',
+        groupSize: 'Jumlah siswa per kelompok',
     };
     const parts = field.split('/');
     const label = labels[parts.at(-1) ?? ''] ?? 'Isian';
@@ -47,6 +49,9 @@ export function fieldMessage(message: string, field = '') {
         return 'Pilih setidaknya satu minat.';
     if (field === 'themes' && /expected array to have <=3/u.test(message))
         return 'Paling banyak tiga tema per misi.';
+    if (field === 'groupSize') return 'Isi 2 sampai 5 siswa per kelompok.';
+    if (field === 'options' && /expected array to have >=2/u.test(message))
+        return 'Isi setidaknya dua pilihan jawaban.';
     if (/at most two sentences/u.test(message))
         return 'Satu layar siswa paling banyak dua kalimat. Pendekkan teksnya.';
     if (/answer must be one of the options/u.test(message))

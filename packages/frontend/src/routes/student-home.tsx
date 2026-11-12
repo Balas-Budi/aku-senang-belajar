@@ -1,6 +1,7 @@
 import { dehydrate, HydrationBoundary } from '@tanstack/react-query';
 import { redirect } from 'react-router';
 import { requireUser } from '../lib/require-user.server';
+import { studentChallengeQuery } from '../features/challenges/queries';
 import { studentClassQuery } from '../features/classes/queries';
 import { studentPathQuery } from '../features/path/queries';
 import { StudentClass } from '../features/classes/student-class';
@@ -12,6 +13,7 @@ export async function loader({ request }: Route.LoaderArgs) {
         client.fetchQuery(studentProfileQuery(cookie)).catch(() => undefined),
         client.prefetchQuery(studentClassQuery(cookie)),
         client.prefetchQuery(studentPathQuery(cookie)),
+        client.prefetchQuery(studentChallengeQuery(cookie)),
     ]);
     if (saved?.profile === null) throw redirect('/student/profile');
     return { dehydratedState: dehydrate(client) };
