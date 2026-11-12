@@ -66,7 +66,7 @@ test('a teacher uploads a PDF; each page is read, and a page without text is mar
     assert.equal(response.json().reading.state, 'opening');
     assert.equal(response.json().pageCount, 0);
 
-    await openBooks(app);
+    await openBooks(app, response.json().id);
 
     const material = (
         await get(app, token, `/api/materials/${response.json().id}`)
@@ -145,7 +145,7 @@ test('a file that is not a PDF or one over 300 pages is refused; a PDF without t
     const scanned = await upload(app, token, pdfOf(['', ''], [1]));
 
     assert.equal(scanned.statusCode, 201);
-    await openBooks(app);
+    await openBooks(app, scanned.json().id);
     assert.deepEqual(
         (await get(app, token, `/api/materials/${scanned.json().id}`)).json()
             .reading,

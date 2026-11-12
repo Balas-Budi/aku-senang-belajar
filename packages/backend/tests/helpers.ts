@@ -132,6 +132,6 @@ export async function createClass(app: FastifyInstance, teacherToken: string) {
     return body;
 }
 
-export async function openBooks(app: FastifyInstance) {
-    while (await readNext(app, null));
+export async function openBooks(app: FastifyInstance, materialId: number) {
+    while (await readNext(app, null, { materialId }));
 }

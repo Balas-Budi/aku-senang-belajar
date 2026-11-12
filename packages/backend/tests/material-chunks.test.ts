@@ -98,7 +98,7 @@ test('an upload splits its readable pages into chunks that keep their page numbe
     assert.equal(response.statusCode, 201);
     assert.deepEqual(await chunksOf(app, response.json().id), []);
 
-    await openBooks(app);
+    await openBooks(app, response.json().id);
 
     const chunks = await chunksOf(app, response.json().id);
     const firstPage = chunks.filter((chunk) => chunk.pageNumber === 1);

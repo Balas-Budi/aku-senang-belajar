@@ -76,7 +76,7 @@ export async function teacherWithMaterial(
         })
     ).json();
 
-    await openBooks(app);
+    await openBooks(app, id);
 
     const material = (await get(app, token, `/api/materials/${id}`)).json();
 
@@ -128,6 +128,8 @@ function checkFor(code: string, page: number) {
 export const draft = {
     title: 'Kancil berbagi roti',
     summary: 'Belajar membagi roti menjadi empat bagian yang sama besar.',
+    episode:
+        'Kamu dan si Jalak membagi roti untuk sarapan menjadi empat bagian yang sama besar.',
     blocks: [
         {
             kind: 'hook',
@@ -400,6 +402,7 @@ export function themeReply(
 export type Session = {
     id: number;
     title: string;
+    episode: string | null;
     status: string;
     version: number;
     drafting: string | null;

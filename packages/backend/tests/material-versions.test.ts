@@ -73,7 +73,7 @@ test('a material records where it comes from and by what right, and an archived 
     });
 
     assert.equal(created.statusCode, 201);
-    await openBooks(app);
+    await openBooks(app, created.json().id);
 
     const url = `/api/materials/${created.json().id}`;
     const material = (await get(app, token, url)).json();
@@ -230,7 +230,7 @@ test('a new file becomes the next version; chapters and missions keep the versio
     );
 
     assert.equal(uploaded.statusCode, 201);
-    await openBooks(app);
+    await openBooks(app, uploaded.json().id);
 
     const second = (await get(app, token, url)).json();
 
