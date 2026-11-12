@@ -67,12 +67,14 @@ export function ReportText({
     report,
     summaryCount,
     about,
+    readOnly = false,
 }: {
     classId: number;
     reportUrl: string;
     report: Report;
     summaryCount: number;
     about: string;
+    readOnly?: boolean;
 }) {
     const { draft, check } = useReportActions(classId, reportUrl);
     const drafting = report?.drafting === 'generating' || draft.isPending;
@@ -86,10 +88,27 @@ export function ReportText({
                         Ringkasan untuk guru
                     </h2>
                     <p className="text-muted-foreground text-sm print:hidden">
-                        {about} Periksa dan ubah dulu sebelum dicetak.
+                        {about}
+                        {!readOnly && ' Periksa dan ubah dulu sebelum dicetak.'}
                     </p>
                 </div>
-                {summaryCount === 0 && (
+                {readOnly && !checked && (
+                    <div className="space-y-2 print:hidden">
+                        {report?.draft != null ? (
+                            <>
+                                <p className="text-ai-suggestion font-semibold">
+                                    Saran AI, belum diperiksa
+                                </p>
+                                <p className="leading-relaxed whitespace-pre-line">
+                                    {report.draft}
+                                </p>
+                            </>
+                        ) : (
+                            <p>Belum ada ringkasan.</p>
+                        )}
+                    </div>
+                )}
+                {!readOnly && summaryCount === 0 && (
                     <p className="print:hidden">
                         Belum ada ringkasan misi yang bisa dipakai. Ringkasan
                         muncul setelah misi siswa dianalisis, dan ringkasan yang
@@ -101,38 +120,47 @@ export function ReportText({
                         Sedang disusun AI. Halaman ini memperbarui sendiri.
                     </Alert>
                 )}
-                {report?.drafting === 'failed' && !drafting && (
-                    <Alert tone="attention" className="print:hidden">
-                        Ringkasan gagal disusun. Coba susun ulang.
-                    </Alert>
+                {!readOnly && (
+                    <>
+                        {report?.drafting === 'failed' && !drafting && (
+                            <Alert tone="attention" className="print:hidden">
+                                Ringkasan gagal disusun. Coba susun ulang.
+                            </Alert>
+                        )}
+                        {report?.outdated && !drafting && (
+                            <Alert tone="attention" className="print:hidden">
+                                Ada misi baru atau ringkasan misi yang berubah
+                                sejak ringkasan ini disusun.
+                            </Alert>
+                        )}
+                        {report && written && (
+                            <Editor
+                                key={`${report.draftedAt}-${report.checkedAt}`}
+                                report={report}
+                                saving={check.isPending}
+                                onSave={(text) =>
+                                    check.mutate({ reportId: report.id, text })
+                                }
+                            />
+                        )}
+                        <div className="flex flex-wrap gap-2 print:hidden">
+                            <Button
+                                variant={written ? 'outline' : 'primary'}
+                                disabled={drafting || summaryCount === 0}
+                                onClick={() => draft.mutate()}
+                            >
+                                {written ? 'Susun ulang' : 'Susun ringkasan'}
+                            </Button>
+                        </div>
+                        <RequestError error={draft.error ?? check.error} />
+                    </>
                 )}
-                {report?.outdated && !drafting && (
-                    <Alert tone="attention" className="print:hidden">
-                        Ada misi baru atau ringkasan misi yang berubah sejak
-                        ringkasan ini disusun.
-                    </Alert>
-                )}
-                {report && written && (
-                    <Editor
-                        key={`${report.draftedAt}-${report.checkedAt}`}
-                        report={report}
-                        saving={check.isPending}
-                        onSave={(text) =>
-                            check.mutate({ reportId: report.id, text })
-                        }
-                    />
-                )}
-                <div className="flex flex-wrap gap-2 print:hidden">
-                    <Button
-                        variant={written ? 'outline' : 'primary'}
-                        disabled={drafting || summaryCount === 0}
-                        onClick={() => draft.mutate()}
-                    >
-                        {written ? 'Susun ulang' : 'Susun ringkasan'}
-                    </Button>
-                </div>
-                <RequestError error={draft.error ?? check.error} />
-                <div className="hidden space-y-2 print:block">
+                <div
+                    className={cn(
+                        'space-y-2',
+                        !(readOnly && checked) && 'hidden print:block',
+                    )}
+                >
                     {checked ? (
                         <>
                             <p className="text-sm">

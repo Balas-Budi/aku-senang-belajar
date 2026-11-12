@@ -21,6 +21,7 @@ import {
     STUDENT_REPORT_PROMPT,
     startReportDraft,
 } from '../../memory/reports.ts';
+import { pastMembersOf } from '../classes/membership.ts';
 import { membersOf, ownedClassId } from '../classes/queries.ts';
 import type { ChapterParams } from '../classes/schema.ts';
 import {
@@ -96,17 +97,35 @@ async function ownedMember(
 
 async function ownedStudent(
     request: FastifyRequest<{ Params: ClassStudentParams }>,
+    departed = false,
 ) {
     const { db } = request.server;
-    const { classId, student } = await ownedMember(
+    const { studentId } = request.params;
+    const classId = await ownedClassId(
         db,
         request.params.classId,
         currentUser(request).id,
-        request.params.studentId,
     );
+    const current = (await membersOf(db, classId)).find(
+        ({ id }) => id === studentId,
+    );
+    const past = current
+        ? undefined
+        : departed
+          ? (await pastMembersOf(db, classId)).find(
+                (member) => member.studentId === studentId,
+            )
+          : undefined;
+    const student =
+        current ?? (past && { id: past.studentId, name: past.name });
+
+    if (!student) {
+        throw notFound('Student not found');
+    }
 
     return {
         classId,
+        member: current !== undefined,
         history: await studentHistory(db, classId, student),
     };
 }
@@ -260,11 +279,12 @@ export async function chapterCsv(
 export async function studentReport(
     request: FastifyRequest<{ Params: ClassStudentParams }>,
 ) {
-    const { classId, history } = await ownedStudent(request);
+    const { classId, member, history } = await ownedStudent(request, true);
     const { summaries, ...rest } = history;
 
     return {
         ...rest,
+        member,
         summaryCount: summaries.length,
         report: await reportIn(
             request.server.db,

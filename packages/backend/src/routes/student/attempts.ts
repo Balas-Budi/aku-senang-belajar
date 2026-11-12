@@ -1,4 +1,4 @@
-import { and, asc, eq, ne } from 'drizzle-orm';
+import { and, asc, eq, isNull, ne } from 'drizzle-orm';
 import type { Queryable } from '../../db/index.ts';
 import {
     assignments,
@@ -65,6 +65,7 @@ export async function assignmentFor(
             moduleTitle: modules.title,
             classId: assignments.classId,
             readAloud: learningSessions.readAloud,
+            inactiveAt: classMembers.inactiveAt,
         })
         .from(assignments)
         .innerJoin(classMembers, eq(classMembers.classId, assignments.classId))
@@ -86,7 +87,16 @@ export async function assignmentFor(
         throw notFound('Assignment not found');
     }
 
-    return found;
+    const { inactiveAt, ...assignment } = found;
+
+    if (inactiveAt !== null) {
+        throw new AppError(403, {
+            message: 'The class membership is inactive',
+            code: 'MEMBERSHIP_INACTIVE',
+        });
+    }
+
+    return assignment;
 }
 
 export async function lockedAttempt(
@@ -110,6 +120,7 @@ export async function lockedAttempt(
             and(
                 eq(classMembers.classId, assignments.classId),
                 eq(classMembers.studentId, attempts.studentId),
+                isNull(classMembers.inactiveAt),
             ),
         )
         .innerJoin(

@@ -24,6 +24,7 @@ export const classroom = z.object({
     id: z.number(),
     name: z.string(),
     teacherName: z.string(),
+    inactive: z.boolean(),
 });
 
 export const classroomResponse = z.object({ classroom: classroom.nullable() });

@@ -157,7 +157,16 @@ export function StudentClass() {
                                 </p>
                             </div>
                             <ChallengeInvite />
-                            <PathOverview teacherName={classroom.teacherName} />
+                            {classroom.inactive ? (
+                                <p className="bg-student-accent-soft text-student-accent-ink rounded-2xl p-4 leading-relaxed font-semibold sm:p-5">
+                                    Keanggotaanmu sedang dinonaktifkan gurumu.
+                                    Tanyakan kepada gurumu, ya.
+                                </p>
+                            ) : (
+                                <PathOverview
+                                    teacherName={classroom.teacherName}
+                                />
+                            )}
                             <details className="text-base">
                                 <summary className="text-muted-foreground focus-visible:outline-ring min-h-12 cursor-pointer rounded-lg py-3 underline underline-offset-4 focus-visible:outline-3">
                                     Ingin pindah kelas?

@@ -172,6 +172,9 @@ export const liveRefusal = (error: unknown) =>
     error.status === 409 &&
     (error.body.name === 'LIVE_PAUSED' || error.body.name === 'LIVE_WAIT');
 
+export const membershipInactive = (error: unknown) =>
+    error instanceof ApiError && error.body.name === 'MEMBERSHIP_INACTIVE';
+
 export function answersFor(attempt: Attempt, blockId: number) {
     return attempt.answers.filter((saved) => saved.blockId === blockId);
 }

@@ -120,6 +120,7 @@ export const chapterReportResponse = z.object({
 
 export const studentReportResponse = z.object({
     student: z.object({ id: z.number(), name: z.string() }),
+    member: z.boolean(),
     missions: z.array(
         z.object({
             assignmentId: z.number(),

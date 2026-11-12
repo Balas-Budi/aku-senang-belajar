@@ -68,6 +68,8 @@ export function fieldMessage(message: string, field = '') {
         return 'Pilihan jawaban tidak bisa ditambah atau dihapus.';
     if (/A picture can only be kept or removed/u.test(message))
         return 'Gambar hanya bisa dibiarkan atau dihapus. Muat ulang halaman untuk melihat versi terbaru.';
+    if (/another class of your own/u.test(message))
+        return 'Pilih kelas Anda yang lain. Muat ulang halaman, lalu coba lagi.';
     if (/at least one class/u.test(message))
         return 'Pilih setidaknya satu kelas.';
     if (/at least one competency/u.test(message))

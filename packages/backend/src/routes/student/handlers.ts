@@ -21,6 +21,7 @@ import { liveOf, stepIndex } from '../../learning/live.ts';
 import { AppError, notFound } from '../../lib/errors.ts';
 import { fieldError } from '../../lib/field-error.ts';
 import { isUniqueViolation } from '../../lib/unique-violation.ts';
+import { endMembership, startMembership } from '../classes/membership.ts';
 import { classroomOf } from '../classes/queries.ts';
 import {
     alreadyAnswered,
@@ -95,8 +96,9 @@ export async function joinClass(
     }
 
     await db
-        .insert(classMembers)
-        .values({ studentId: student.id, classId: target.id })
+        .transaction((tx) =>
+            startMembership(tx, student.id, target.id, student.id),
+        )
         .catch((error: unknown) => {
             throw isUniqueViolation(error) ? alreadyInClass() : error;
         });
@@ -115,9 +117,11 @@ export async function myCards(request: FastifyRequest) {
 }
 
 export async function leaveClass(request: FastifyRequest, reply: FastifyReply) {
-    await request.server.db
-        .delete(classMembers)
-        .where(eq(classMembers.studentId, currentUser(request).id));
+    const studentId = currentUser(request).id;
+
+    await request.server.db.transaction((tx) =>
+        endMembership(tx, studentId, studentId, 'left'),
+    );
 
     return reply.code(204).send();
 }

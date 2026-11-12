@@ -75,6 +75,7 @@ export type MissionHistory = {
 
 export type StudentReport = {
     student: { id: number; name: string };
+    member: boolean;
     missions: MissionHistory[];
     summaryCount: number;
     report: Report;

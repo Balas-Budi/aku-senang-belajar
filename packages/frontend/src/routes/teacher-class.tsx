@@ -4,6 +4,7 @@ import { requireUser } from '../lib/require-user.server';
 import {
     classChaptersQuery,
     classesQuery,
+    classMembershipQuery,
     rosterQuery,
 } from '../features/classes/queries';
 import { ClassDetail } from '../features/classes/class-detail';
@@ -26,6 +27,7 @@ export async function loader({ request, params }: Route.LoaderArgs) {
             client.prefetchQuery(classChaptersQuery(id, cookie)),
             client.prefetchQuery(classChallengeQuery(id, cookie)),
             client.prefetchQuery(classFollowUpsQuery(id, cookie)),
+            client.prefetchQuery(classMembershipQuery(id, cookie)),
         ]);
     } catch (error) {
         if (error instanceof ApiError && error.status === 404)

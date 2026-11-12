@@ -12,6 +12,7 @@ export async function classroomOf(db: Queryable, studentId: number) {
             id: classes.id,
             name: classes.name,
             teacherName: teachers.name,
+            inactiveAt: classMembers.inactiveAt,
         })
         .from(classMembers)
         .innerJoin(classes, eq(classes.id, classMembers.classId))
@@ -19,7 +20,11 @@ export async function classroomOf(db: Queryable, studentId: number) {
         .where(eq(classMembers.studentId, studentId))
         .limit(1);
 
-    return classroom ?? null;
+    if (!classroom) return null;
+
+    const { inactiveAt, ...rest } = classroom;
+
+    return { ...rest, inactive: inactiveAt !== null };
 }
 
 export async function ownedClassId(
@@ -46,6 +51,7 @@ export function membersOf(db: Queryable, classId: number) {
             id: users.id,
             name: users.name,
             joinedAt: classMembers.joinedAt,
+            inactiveAt: classMembers.inactiveAt,
         })
         .from(classMembers)
         .innerJoin(users, eq(users.id, classMembers.studentId))

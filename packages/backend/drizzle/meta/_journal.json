@@ -183,6 +183,13 @@
             "when": 1794452402603,
             "tag": "0025_session_length",
             "breakpoints": true
+        },
+        {
+            "idx": 26,
+            "version": "7",
+            "when": 1794455115169,
+            "tag": "0026_membership_history",
+            "breakpoints": true
         }
     ]
 }

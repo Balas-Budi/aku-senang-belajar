@@ -9,7 +9,13 @@ import { useErrorToast } from '../../components/ui/toast';
 import { cn } from '../../lib/cn';
 import { SubjectArt, subjects } from '../assignments/subject-art';
 import { studentPathQuery, subjectStages } from '../path/queries';
-import { useStartAttempt, type Done, type LearningSession } from './queries';
+import { TextScale } from '../settings/text-scale';
+import {
+    membershipInactive,
+    useStartAttempt,
+    type Done,
+    type LearningSession,
+} from './queries';
 import { ReactingJalak, ScreenCard, ScreenHeading } from './session-ui';
 import { stepLabels, stepOrder } from './steps';
 
@@ -32,6 +38,34 @@ export function SessionPreparing() {
     );
 }
 
+function SessionInactive() {
+    return (
+        <ScreenCard aria-labelledby="inactive-title">
+            <ScreenHeading id="inactive-title">
+                Keanggotaanmu sedang dinonaktifkan gurumu.
+            </ScreenHeading>
+            <p className="leading-relaxed">Tanyakan kepada gurumu, ya.</p>
+            <Link to="/student" className={homeButton('primary')}>
+                Kembali ke beranda
+            </Link>
+        </ScreenCard>
+    );
+}
+
+export function SessionInactivePage() {
+    return (
+        <div className="bg-student-surface font-rounded min-h-svh text-lg">
+            <TextScale />
+            <main
+                id="main"
+                className="mx-auto w-full max-w-2xl px-4 py-5 sm:py-8"
+            >
+                <SessionInactive />
+            </main>
+        </div>
+    );
+}
+
 export function SessionIntro({
     session,
     teacher,
@@ -41,6 +75,7 @@ export function SessionIntro({
 }) {
     const start = useStartAttempt(session.id);
     const showError = useErrorToast();
+    if (membershipInactive(start.error)) return <SessionInactive />;
     return (
         <ScreenCard aria-labelledby="intro-title">
             <div className="flex items-center gap-4">
@@ -77,8 +112,10 @@ export function SessionIntro({
                     disabled={start.isPending}
                     onClick={() =>
                         start.mutate(undefined, {
-                            onError: (error) =>
-                                showError(requestErrorMessage(error)),
+                            onError: (error) => {
+                                if (!membershipInactive(error))
+                                    showError(requestErrorMessage(error));
+                            },
                         })
                     }
                 >

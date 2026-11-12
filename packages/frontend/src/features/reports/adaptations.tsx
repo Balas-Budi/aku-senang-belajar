@@ -141,11 +141,13 @@ function AdaptationRow({
     classId,
     studentId,
     item,
+    readOnly,
     announce,
 }: {
     classId: number;
     studentId: number;
     item: AdaptationItem;
+    readOnly: boolean;
     announce: (message: string) => void;
 }) {
     const set = useSetAdaptation(classId, studentId);
@@ -220,78 +222,80 @@ function AdaptationRow({
                 >
                     {label}
                 </h3>
-                <div className="flex flex-wrap gap-2 print:hidden">
-                    <Button
-                        ref={settle}
-                        variant="outline"
-                        className="min-h-11"
-                        aria-expanded={editing}
-                        aria-controls={formId}
-                        aria-label={`Atur yang membantu untuk ${label}`}
-                        onClick={() => setEditing(!editing)}
-                    >
-                        Atur
-                    </Button>
-                    <Button
-                        variant="outline"
-                        className="min-h-11"
-                        disabled={set.isPending}
-                        aria-label={
-                            item.off
-                                ? `Nyalakan lagi penyesuaian ${label}`
-                                : `Matikan penyesuaian ${label}`
-                        }
-                        onClick={() =>
-                            item.off
-                                ? send(
-                                      { off: false },
-                                      `Penyesuaian ${label} dinyalakan lagi.`,
-                                      'heading',
-                                  )
-                                : send(
-                                      { off: true },
-                                      `Penyesuaian ${label} dimatikan.`,
-                                      'heading',
-                                  )
-                        }
-                    >
-                        {item.off ? 'Nyalakan lagi' : 'Matikan'}
-                    </Button>
-                    {item.source === 'teacher' && (
+                {!readOnly && (
+                    <div className="flex flex-wrap gap-2 print:hidden">
+                        <Button
+                            ref={settle}
+                            variant="outline"
+                            className="min-h-11"
+                            aria-expanded={editing}
+                            aria-controls={formId}
+                            aria-label={`Atur yang membantu untuk ${label}`}
+                            onClick={() => setEditing(!editing)}
+                        >
+                            Atur
+                        </Button>
                         <Button
                             variant="outline"
                             className="min-h-11"
                             disabled={set.isPending}
-                            aria-label={`Kembali ke saran AI untuk ${label}`}
+                            aria-label={
+                                item.off
+                                    ? `Nyalakan lagi penyesuaian ${label}`
+                                    : `Matikan penyesuaian ${label}`
+                            }
                             onClick={() =>
-                                send(
-                                    { source: 'ai' },
-                                    `${label} kembali memakai saran AI.`,
-                                    'heading',
-                                )
+                                item.off
+                                    ? send(
+                                          { off: false },
+                                          `Penyesuaian ${label} dinyalakan lagi.`,
+                                          'heading',
+                                      )
+                                    : send(
+                                          { off: true },
+                                          `Penyesuaian ${label} dimatikan.`,
+                                          'heading',
+                                      )
                             }
                         >
-                            Kembali ke saran AI
+                            {item.off ? 'Nyalakan lagi' : 'Matikan'}
                         </Button>
-                    )}
-                    {item.failed && !item.off && (
-                        <Button
-                            variant="outline"
-                            className="min-h-11"
-                            disabled={set.isPending}
-                            aria-label={`Susun ulang saran ${label}`}
-                            onClick={() =>
-                                send(
-                                    { off: false },
-                                    `Saran AI ${label} disusun ulang.`,
-                                    'heading',
-                                )
-                            }
-                        >
-                            Susun ulang saran
-                        </Button>
-                    )}
-                </div>
+                        {item.source === 'teacher' && (
+                            <Button
+                                variant="outline"
+                                className="min-h-11"
+                                disabled={set.isPending}
+                                aria-label={`Kembali ke saran AI untuk ${label}`}
+                                onClick={() =>
+                                    send(
+                                        { source: 'ai' },
+                                        `${label} kembali memakai saran AI.`,
+                                        'heading',
+                                    )
+                                }
+                            >
+                                Kembali ke saran AI
+                            </Button>
+                        )}
+                        {item.failed && !item.off && (
+                            <Button
+                                variant="outline"
+                                className="min-h-11"
+                                disabled={set.isPending}
+                                aria-label={`Susun ulang saran ${label}`}
+                                onClick={() =>
+                                    send(
+                                        { off: false },
+                                        `Saran AI ${label} disusun ulang.`,
+                                        'heading',
+                                    )
+                                }
+                            >
+                                Susun ulang saran
+                            </Button>
+                        )}
+                    </div>
+                )}
             </div>
             <dl className="grid gap-2 @xl:grid-cols-2">
                 <div>
@@ -400,10 +404,12 @@ export function Adaptations({
     classId,
     studentId,
     items,
+    readOnly,
 }: {
     classId: number;
     studentId: number;
     items: AdaptationItem[];
+    readOnly: boolean;
 }) {
     const [message, setMessage] = useState({ text: '', count: 0 });
     const announce = useCallback(
@@ -438,6 +444,7 @@ export function Adaptations({
                                 classId={classId}
                                 studentId={studentId}
                                 item={item}
+                                readOnly={readOnly}
                                 announce={announce}
                             />
                         ))}

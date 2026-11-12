@@ -1,6 +1,7 @@
 import { useQuery } from '@tanstack/react-query';
 import { Link } from 'react-router';
 import { RequestError } from '../../components/request-error';
+import { Alert } from '../../components/ui/alert';
 import { Button } from '../../components/ui/button';
 import { Card } from '../../components/ui/card';
 import { textLink } from '../../components/ui/text-link';
@@ -48,12 +49,14 @@ function ChapterHistory({
     classId,
     studentId,
     studentName,
+    member,
     chapter,
     missions,
 }: {
     classId: number;
     studentId: number;
     studentName: string;
+    member: boolean;
     chapter: string;
     missions: MissionHistory[];
 }) {
@@ -116,34 +119,38 @@ function ChapterHistory({
                                         ({ id }) => id === competency.id,
                                     );
 
+                                    const status = entry && (
+                                        <>
+                                            <ShownStatus shown={entry.shown} />
+                                            {entry.shown.decision !== null &&
+                                                entry.shown.status !==
+                                                    entry.estimate && (
+                                                    <span className="text-muted-foreground block text-sm">
+                                                        Saran AI:{' '}
+                                                        {
+                                                            statusLabels[
+                                                                entry.estimate
+                                                            ]
+                                                        }
+                                                    </span>
+                                                )}
+                                        </>
+                                    );
+
                                     return (
                                         <TableCell key={competency.id}>
-                                            {entry ? (
+                                            {!entry ? (
+                                                <span className="text-muted-foreground">
+                                                    Tidak diajarkan
+                                                </span>
+                                            ) : member ? (
                                                 <div className="flex flex-col items-start gap-2">
                                                     <Link
                                                         to={`/teacher/classes/${classId}/sessions/${mission.assignmentId}/students/${studentId}#kompetensi-${competency.code}`}
                                                         aria-label={`${statusLabels[entry.shown.status]}, ${reviewLabel(entry.shown.decision)}: ${competency.code} ${studentName}, ${mission.title}. Lihat bukti`}
                                                         className="focus-visible:outline-ring hover:bg-secondary -m-1 inline-block min-h-11 rounded-md p-1 focus-visible:outline-3"
                                                     >
-                                                        <ShownStatus
-                                                            shown={entry.shown}
-                                                        />
-                                                        {entry.shown
-                                                            .decision !==
-                                                            null &&
-                                                            entry.shown
-                                                                .status !==
-                                                                entry.estimate && (
-                                                                <span className="text-muted-foreground block text-sm">
-                                                                    Saran AI:{' '}
-                                                                    {
-                                                                        statusLabels[
-                                                                            entry
-                                                                                .estimate
-                                                                        ]
-                                                                    }
-                                                                </span>
-                                                            )}
+                                                        {status}
                                                     </Link>
                                                     <FollowUpButton
                                                         classId={classId}
@@ -156,9 +163,7 @@ function ChapterHistory({
                                                     />
                                                 </div>
                                             ) : (
-                                                <span className="text-muted-foreground">
-                                                    Tidak diajarkan
-                                                </span>
+                                                status
                                             )}
                                         </TableCell>
                                     );
@@ -174,9 +179,11 @@ function ChapterHistory({
 
 function MissionSummary({
     classId,
+    member,
     mission,
 }: {
     classId: number;
+    member: boolean;
     mission: MissionHistory;
 }) {
     const exclude = useExcludeSummary(classId);
@@ -209,21 +216,23 @@ function MissionSummary({
                             ringkasan dan personalisasi.
                         </p>
                     )}
-                    <Button
-                        variant="outline"
-                        className="print:hidden"
-                        disabled={exclude.isPending}
-                        onClick={() =>
-                            exclude.mutate({
-                                summaryId: summary.id,
-                                excluded: !summary.excluded,
-                            })
-                        }
-                    >
-                        {summary.excluded
-                            ? 'Pakai lagi'
-                            : 'Tandai tidak sesuai'}
-                    </Button>
+                    {member && (
+                        <Button
+                            variant="outline"
+                            className="print:hidden"
+                            disabled={exclude.isPending}
+                            onClick={() =>
+                                exclude.mutate({
+                                    summaryId: summary.id,
+                                    excluded: !summary.excluded,
+                                })
+                            }
+                        >
+                            {summary.excluded
+                                ? 'Pakai lagi'
+                                : 'Tandai tidak sesuai'}
+                        </Button>
+                    )}
                     <RequestError error={exclude.error} />
                 </>
             ) : (
@@ -285,7 +294,7 @@ export function StudentReport({
         );
     }
 
-    const { student, missions } = query.data;
+    const { student, member, missions } = query.data;
     const chapters = [...new Set(missions.map(({ chapter }) => chapter))];
 
     return (
@@ -297,6 +306,12 @@ export function StudentReport({
                     Laporan siswa{className ? ` · ${className}` : ''} ·{' '}
                     {missions.length} misi selesai
                 </p>
+                {!member && (
+                    <Alert>
+                        Siswa ini sudah tidak di kelas ini. Halaman ini hanya
+                        untuk dibaca.
+                    </Alert>
+                )}
                 <Button
                     variant="outline"
                     className="print:hidden"
@@ -311,11 +326,13 @@ export function StudentReport({
                 report={query.data.report}
                 summaryCount={query.data.summaryCount}
                 about="Disusun AI dari ringkasan misi siswa ini yang tidak ditandai tidak sesuai, tanpa nama siswa."
+                readOnly={!member}
             />
             <Adaptations
                 classId={classId}
                 studentId={student.id}
                 items={query.data.adaptations}
+                readOnly={!member}
             />
             <Card>
                 <section aria-labelledby="history-title" className="space-y-4">
@@ -340,6 +357,7 @@ export function StudentReport({
                                 classId={classId}
                                 studentId={student.id}
                                 studentName={student.name}
+                                member={member}
                                 chapter={chapter}
                                 missions={missions.filter(
                                     (mission) => mission.chapter === chapter,
@@ -363,6 +381,7 @@ export function StudentReport({
                                 <MissionSummary
                                     key={mission.assignmentId}
                                     classId={classId}
+                                    member={member}
                                     mission={mission}
                                 />
                             ))}

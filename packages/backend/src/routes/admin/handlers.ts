@@ -18,6 +18,8 @@ import {
 import { AppError } from '../../lib/errors.ts';
 import { fieldError, validationError } from '../../lib/field-error.ts';
 import { isUniqueViolation } from '../../lib/unique-violation.ts';
+import { currentUser } from '../../auth/guards.ts';
+import { endMembership, moveMembership } from '../classes/membership.ts';
 import { classroomOf } from '../classes/queries.ts';
 import {
     GENERATED_PASSWORD_LENGTH,
@@ -286,15 +288,13 @@ export async function moveStudent(
         }
     }
 
-    await db.transaction(async (tx) => {
-        await tx
-            .delete(classMembers)
-            .where(eq(classMembers.studentId, student.id));
+    const adminId = currentUser(request).id;
 
-        if (classId !== null) {
-            await tx
-                .insert(classMembers)
-                .values({ studentId: student.id, classId });
+    await db.transaction(async (tx) => {
+        if (classId === null) {
+            await endMembership(tx, student.id, adminId, 'archived');
+        } else {
+            await moveMembership(tx, student.id, classId, adminId);
         }
     });
 

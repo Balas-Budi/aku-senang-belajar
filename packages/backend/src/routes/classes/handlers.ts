@@ -16,6 +16,7 @@ import { AppError, notFound } from '../../lib/errors.ts';
 import { retryOnUniqueViolation } from '../../lib/unique-violation.ts';
 import { visibleTo as bookVisibleTo } from '../materials/handlers.ts';
 import { visibleTo as sessionVisibleTo } from '../studio/handlers.ts';
+import { rosterOf } from './membership.ts';
 import { membersOf, ownedClassId } from './queries.ts';
 import type { ChapterParams, ClassParams, CreateClassBody } from './schema.ts';
 
@@ -70,7 +71,7 @@ export async function listStudents(
         currentUser(request).id,
     );
 
-    return membersOf(db, classId);
+    return rosterOf(db, classId);
 }
 
 export async function regenerateInviteCode(

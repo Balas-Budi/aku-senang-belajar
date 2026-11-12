@@ -1,15 +1,16 @@
 import { useQuery } from '@tanstack/react-query';
 import { useState } from 'react';
-import { classesQuery, rosterQuery, useChangeCode } from './queries';
+import { classesQuery, useChangeCode } from './queries';
 import { Button } from '../../components/ui/button';
 import { Card } from '../../components/ui/card';
 import { RequestError } from '../../components/request-error';
 import { ChallengeCard } from '../challenges/challenge-card';
 import { ClassMissions } from '../results/class-missions';
 import { ClassChapters } from './class-chapters';
+import { ClassRoster } from './class-roster';
+import { MembershipHistory } from './membership-history';
 export function ClassDetail({ id }: { id: number }) {
     const classes = useQuery(classesQuery());
-    const roster = useQuery(rosterQuery(id));
     const change = useChangeCode(id);
     const [confirm, setConfirm] = useState<'POST' | 'DELETE' | null>(null);
     const [copyMessage, setCopyMessage] = useState('');
@@ -23,46 +24,10 @@ export function ClassDetail({ id }: { id: number }) {
             <ClassMissions classId={id} />
             <ChallengeCard classId={id} />
             <div className="grid items-start gap-6 lg:grid-cols-12">
-                <Card className="lg:col-span-8">
-                    <section aria-labelledby="roster-title">
-                        <h2
-                            id="roster-title"
-                            className="mb-2 text-lg font-semibold"
-                        >
-                            Siswa yang bergabung{' '}
-                            <span className="text-muted-foreground ml-1 text-sm font-normal tabular-nums">
-                                {roster.data?.length ?? ''}
-                            </span>
-                        </h2>
-                        {roster.isPending ? (
-                            <p role="status">Memuat siswa…</p>
-                        ) : roster.isError ? (
-                            <div className="space-y-3">
-                                <RequestError error={roster.error} />
-                                <Button
-                                    onClick={() => {
-                                        void roster.refetch();
-                                    }}
-                                >
-                                    Muat ulang siswa
-                                </Button>
-                            </div>
-                        ) : roster.data.length === 0 ? (
-                            <p>
-                                Belum ada siswa. Bagikan kode kelas agar siswa
-                                dapat bergabung.
-                            </p>
-                        ) : (
-                            <ul className="divide-paper-edge divide-y">
-                                {roster.data.map((student) => (
-                                    <li key={student.id} className="py-3">
-                                        {student.name}
-                                    </li>
-                                ))}
-                            </ul>
-                        )}
-                    </section>
-                </Card>
+                <div className="min-w-0 space-y-6 lg:col-span-8">
+                    <ClassRoster classId={id} />
+                    <MembershipHistory classId={id} />
+                </div>
                 <Card className="lg:col-span-4">
                     <section
                         aria-labelledby="invite-title"

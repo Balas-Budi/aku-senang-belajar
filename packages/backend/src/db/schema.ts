@@ -54,6 +54,19 @@ export const challengeState = pgEnum('challenge_state', [
     'revealed',
     'closed',
 ]);
+export const membershipAction = pgEnum('membership_action', [
+    'joined',
+    'left',
+    'moved',
+    'deactivated',
+    'reactivated',
+    'archived',
+]);
+export const membershipEnd = pgEnum('membership_end', [
+    'left',
+    'moved',
+    'archived',
+]);
 export const sessionLength = pgEnum('session_length', [
     'short',
     'medium',
@@ -149,8 +162,51 @@ export const classMembers = pgTable(
             .notNull()
             .references(() => classes.id, { onDelete: 'cascade' }),
         joinedAt: timestamp({ withTimezone: true }).notNull().defaultNow(),
+        inactiveAt: timestamp({ withTimezone: true }),
     },
     (table) => [index('class_members_class_id_idx').on(table.classId)],
+);
+
+export const membershipEvents = pgTable(
+    'membership_events',
+    {
+        id: integer().primaryKey().generatedAlwaysAsIdentity(),
+        studentId: integer()
+            .notNull()
+            .references(() => users.id, { onDelete: 'cascade' }),
+        classId: integer()
+            .notNull()
+            .references(() => classes.id, { onDelete: 'cascade' }),
+        otherClassId: integer().references(() => classes.id, {
+            onDelete: 'set null',
+        }),
+        actorId: integer().references(() => users.id, {
+            onDelete: 'set null',
+        }),
+        action: membershipAction().notNull(),
+        createdAt: timestamp({ withTimezone: true }).notNull().defaultNow(),
+    },
+    (table) => [
+        index('membership_events_class_id_idx').on(table.classId),
+        index('membership_events_other_class_id_idx').on(table.otherClassId),
+    ],
+);
+
+export const pastMemberships = pgTable(
+    'past_memberships',
+    {
+        id: integer().primaryKey().generatedAlwaysAsIdentity(),
+        studentId: integer()
+            .notNull()
+            .references(() => users.id, { onDelete: 'cascade' }),
+        classId: integer()
+            .notNull()
+            .references(() => classes.id, { onDelete: 'cascade' }),
+        joinedAt: timestamp({ withTimezone: true }).notNull(),
+        endedAt: timestamp({ withTimezone: true }).notNull().defaultNow(),
+        reason: membershipEnd().notNull(),
+    },
+    (table) => [index('past_memberships_class_id_idx').on(table.classId)],
 );
 
 export const INTERESTS = [

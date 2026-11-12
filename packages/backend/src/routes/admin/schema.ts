@@ -95,7 +95,7 @@ export const managedUser = z.object({
     role: managedRole,
     name: z.string(),
     username: z.string(),
-    classroom: classroom.nullable(),
+    classroom: classroom.partial({ inactive: true }).nullable(),
 });
 
 export const adminClass = z.object({
