@@ -14,6 +14,7 @@ import {
     removeBlock,
     removeTheme,
     reviseSession,
+    setEpisode,
     setReadAloud,
     updateTheme,
 } from './handlers.ts';
@@ -28,6 +29,7 @@ import {
     editedBlock,
     moduleParams,
     moveBody,
+    episodeBody,
     readAloudBody,
     revisionBody,
     sessionBody,
@@ -103,6 +105,17 @@ export const studioRoutes: FastifyPluginAsyncZod = async (fastify) => {
             },
         },
         setReadAloud,
+    );
+    fastify.put(
+        '/studio/sessions/:sessionId/episode',
+        {
+            schema: {
+                params: sessionParams,
+                body: episodeBody,
+                response: { 200: studioSession },
+            },
+        },
+        setEpisode,
     );
     fastify.put(
         '/studio/sessions/:sessionId/blocks/:blockId',

@@ -393,6 +393,7 @@ export const learningSessions = pgTable(
             .references(() => modules.id, { onDelete: 'cascade' }),
         title: text().notNull(),
         summary: text().notNull(),
+        episode: text(),
         status: learningSessionStatus().notNull().default('draft'),
         createdBy: integer().references(() => users.id, {
             onDelete: 'cascade',

@@ -120,6 +120,7 @@ export type StudioSession = {
     id: number;
     title: string;
     summary: string;
+    episode: string | null;
     status: 'draft' | 'ready';
     version: number;
     drafting: 'generating' | 'failed' | null;
@@ -327,7 +328,7 @@ export function useEditBlock(sessionId: number) {
 
 function useSessionChange<T>(
     id: number,
-    scope: 'structure' | 'read-aloud',
+    scope: 'structure' | 'read-aloud' | 'episode',
     send: (input: T) => Promise<StudioSession>,
 ) {
     const client = useQueryClient();
@@ -380,6 +381,15 @@ export function useSetReadAloud(id: number) {
         api<StudioSession>(`/api/studio/sessions/${id}/read-aloud`, {
             method: 'PUT',
             body: JSON.stringify({ readAloud }),
+        }),
+    );
+}
+
+export function useSetEpisode(id: number) {
+    return useSessionChange(id, 'episode', (episode: string) =>
+        api<StudioSession>(`/api/studio/sessions/${id}/episode`, {
+            method: 'PUT',
+            body: JSON.stringify({ episode }),
         }),
     );
 }

@@ -38,8 +38,12 @@ export const moveBody = z.object({ move: z.enum(['up', 'down']) });
 export type MoveBody = z.infer<typeof moveBody>;
 
 export const readAloudBody = z.object({ readAloud: z.boolean() });
+export const episodeBody = z.object({
+    episode: z.string().trim().max(300),
+});
 
 export type ReadAloudBody = z.infer<typeof readAloudBody>;
+export type EpisodeBody = z.infer<typeof episodeBody>;
 
 export const sessionParams = z.object({
     sessionId: z.coerce.number().int().positive(),
@@ -129,6 +133,7 @@ export const studioSession = z.object({
     id: z.number(),
     title: z.string(),
     summary: z.string(),
+    episode: z.string().nullable(),
     status: z.enum(learningSessionStatus.enumValues),
     version: z.number(),
     drafting: z.enum(sessionDrafting.enumValues).nullable(),

@@ -1,4 +1,15 @@
-import { and, asc, eq, gte, inArray, isNotNull, lte, sql } from 'drizzle-orm';
+import {
+    and,
+    asc,
+    desc,
+    eq,
+    gte,
+    inArray,
+    isNotNull,
+    lt,
+    lte,
+    sql,
+} from 'drizzle-orm';
 import type { FastifyInstance } from 'fastify';
 import { z } from 'zod';
 import { AiError, aiConfig, chatJson } from '../ai/chat.ts';
@@ -23,6 +34,7 @@ import { pageContent } from '../materials/page-content.ts';
 import {
     checkDraft,
     mendDraft,
+    MAX_EPISODES,
     SESSION_PROMPT_VERSION,
     SESSION_SYSTEM_PROMPT,
     sessionDraft,
@@ -78,6 +90,7 @@ async function draftContext(db: Queryable, sessionId: number) {
         .select({
             title: learningSessions.title,
             summary: learningSessions.summary,
+            episode: learningSessions.episode,
             length: learningSessions.length,
             moduleId: modules.id,
             moduleTitle: modules.title,
@@ -126,9 +139,24 @@ async function draftContext(db: Queryable, sessionId: number) {
                   )
                   .orderBy(asc(materialPages.number));
     const blocks = await blocksWithCodes(db, sessionId);
+    const earlier = await db
+        .select({ episode: learningSessions.episode })
+        .from(learningSessions)
+        .where(
+            and(
+                eq(learningSessions.moduleId, session.moduleId),
+                lt(learningSessions.id, sessionId),
+                isNotNull(learningSessions.episode),
+            ),
+        )
+        .orderBy(desc(learningSessions.id))
+        .limit(MAX_EPISODES);
 
     return {
         session,
+        episodes: earlier
+            .flatMap(({ episode }) => (episode === null ? [] : [episode]))
+            .reverse(),
         competencies: missionCompetencies.map(
             ({ pages: _, ...competency }) => ({
                 ...competency,
@@ -148,6 +176,7 @@ async function draftContext(db: Queryable, sessionId: number) {
                 : {
                       title: session.title,
                       summary: session.summary,
+                      episode: session.episode,
                       blocks: blocks
                           .filter(({ kind }) => kind !== 'brain_game')
                           .map((block) => ({
@@ -205,6 +234,7 @@ async function storeDraft(
             .set({
                 title: draft.title,
                 summary: draft.summary,
+                episode: draft.episode,
                 version: sql`${learningSessions.version} + 1`,
                 drafting: null,
                 draftError: null,
@@ -241,6 +271,7 @@ async function draftSession(
                     context.pages,
                     context.current && { draft: context.current, note },
                     context.session.length,
+                    context.episodes,
                 ),
                 schema: sessionDraft,
                 check: checkDraft(

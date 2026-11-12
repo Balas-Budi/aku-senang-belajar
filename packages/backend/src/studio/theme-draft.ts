@@ -9,7 +9,7 @@ import {
     type SessionBlock,
 } from '../learning/blocks.ts';
 import { moduleHeader, type ModuleInfo } from './material-text.ts';
-import { blockProblems, problemList } from './session-draft.ts';
+import { blockProblems, problemList, STORY_FRIEND } from './session-draft.ts';
 
 export const interestNames: Record<Interest, string> = {
     animals: 'Hewan',
@@ -22,7 +22,7 @@ export const interestNames: Record<Interest, string> = {
     nature: 'Alam',
 };
 
-export const THEME_PROMPT_VERSION = 'theme-2026-11-11';
+export const THEME_PROMPT_VERSION = 'theme-2026-11-12-story';
 
 export const THEME_SYSTEM_PROMPT = [
     'You rewrite a primary school mission so its stories are set in a theme a child likes, for grade 4 to 6 students in Indonesia.',
@@ -30,6 +30,7 @@ export const THEME_SYSTEM_PROMPT = [
     'Reply with only a JSON object without indentation: {"blocks":[{"screen":<number>,"content":{...}}, ...]}, one entry per screen you receive, in the same order, each "content" with exactly the same keys and shape as the screen you received.',
     '- Write in Indonesian, in short sentences for a 10-year-old. A screen text has at most two sentences.',
     "- Set the story, the examples, the hints, the praise, and the questions in the theme: its people, places, and things. Keep the lesson's idea, what each screen teaches, and how hard it is.",
+    `- ${STORY_FRIEND}, the jalak bali who is the student's friend, stays wherever the mission has it, now inside the theme; keep the student as "kamu".`,
     '- Never change an option "id", an "answer", a "fraction" number, or how many items a list has.',
     '- A screen with an "activity" keeps its "type", every card and place "id", its "shape", and its "parts"; rewrite only the "label" of its cards and places, and leave a label that is a number or a term of the lesson, such as "1/4" or "Pembilang", exactly as written.',
     '- Keep every number exactly as written and as many times as the screen writes it: digits stay digits and words stay words ("4" stays "4", "empat" stays "empat", "1/4" stays "1/4").',

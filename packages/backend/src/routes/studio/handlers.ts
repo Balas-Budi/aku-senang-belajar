@@ -57,6 +57,7 @@ import type {
     ModuleParams,
     MoveBody,
     ReadAloudBody,
+    EpisodeBody,
     RevisionBody,
     SessionBody,
     SessionParams,
@@ -309,6 +310,7 @@ async function studioSession(db: Queryable, sessionId: number, userId: number) {
             draftError: learningSessions.draftError,
             length: learningSessions.length,
             readAloud: learningSessions.readAloud,
+            episode: learningSessions.episode,
             createdBy: learningSessions.createdBy,
             module: {
                 id: modules.id,
@@ -1259,6 +1261,23 @@ export async function setReadAloud(
     await db
         .update(learningSessions)
         .set({ readAloud: request.body.readAloud })
+        .where(eq(learningSessions.id, session.id));
+
+    return studioSession(db, session.id, userId);
+}
+
+export async function setEpisode(
+    request: FastifyRequest<{ Params: SessionParams; Body: EpisodeBody }>,
+) {
+    const { db } = request.server;
+    const userId = currentUser(request).id;
+    const session = await ownSession(db, request.params.sessionId, userId);
+
+    if (session.drafting === 'generating') throw stillDrafting();
+
+    await db
+        .update(learningSessions)
+        .set({ episode: request.body.episode || null })
         .where(eq(learningSessions.id, session.id));
 
     return studioSession(db, session.id, userId);

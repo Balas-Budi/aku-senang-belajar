@@ -12,6 +12,7 @@ import {
     useEditBlock,
     useMoveBlock,
     useReviseSession,
+    useSetEpisode,
     useSetReadAloud,
     type Issue,
     type StudioBlock,
@@ -730,6 +731,92 @@ function ReadAloudCard({ session }: { session: StudioSession }) {
     );
 }
 
+function EpisodeCard({ session }: { session: StudioSession }) {
+    const save = useSetEpisode(session.id);
+    const [editing, setEditing] = useState(false);
+    const editButton = useRef<HTMLButtonElement>(null);
+    const close = () => {
+        setEditing(false);
+        requestAnimationFrame(() => editButton.current?.focus());
+    };
+    return (
+        <Card className="space-y-3">
+            <section aria-labelledby="episode-title" className="space-y-2">
+                <h2 id="episode-title" className="text-lg font-semibold">
+                    Cerita misi ini
+                </h2>
+                <p className="text-muted-foreground max-w-prose">
+                    Misi berikutnya di bab ini melanjutkan cerita si Jalak dari
+                    sini.
+                </p>
+                {editing ? (
+                    <form
+                        className="space-y-3"
+                        onSubmit={(event) => {
+                            event.preventDefault();
+                            const episode = new FormData(
+                                event.currentTarget,
+                            ).get('episode');
+                            if (typeof episode !== 'string') return;
+                            save.mutate(episode, { onSuccess: close });
+                        }}
+                    >
+                        <TextAreaField
+                            id={`episode-${session.id}`}
+                            name="episode"
+                            label="Ringkasan cerita"
+                            maxLength={300}
+                            defaultValue={session.episode ?? ''}
+                            error={save.error}
+                            autoFocus
+                        />
+                        <StudioError error={save.error} />
+                        <div className="flex flex-wrap gap-3">
+                            <Button type="submit" disabled={save.isPending}>
+                                {save.isPending
+                                    ? 'Menyimpan…'
+                                    : 'Simpan cerita'}
+                            </Button>
+                            <Button
+                                variant="outline"
+                                disabled={save.isPending}
+                                onClick={() => {
+                                    save.reset();
+                                    close();
+                                }}
+                            >
+                                Batal
+                            </Button>
+                        </div>
+                    </form>
+                ) : (
+                    <>
+                        <p className="max-w-prose">
+                            {session.episode ??
+                                'Belum ada ringkasan cerita. Misi berikutnya dimulai tanpa cerita sebelumnya.'}
+                        </p>
+                        <Button
+                            ref={editButton}
+                            variant="outline"
+                            className="min-h-11 px-4 text-sm"
+                            disabled={session.drafting === 'generating'}
+                            onClick={() => {
+                                save.reset();
+                                setEditing(true);
+                            }}
+                        >
+                            Ubah cerita
+                        </Button>
+                    </>
+                )}
+            </section>
+            <p role="status" className="text-status-visible font-semibold">
+                {!editing && save.isSuccess && 'Cerita tersimpan.'}
+            </p>
+        </Card>
+    );
+}
+
 export function StudioView({ id }: { id: number }) {
     const query = useQuery(studioSessionQuery(id));
     const [published, setPublished] = useState(false);
@@ -847,6 +934,9 @@ export function StudioView({ id }: { id: number }) {
                     <AssignCard session={session} takeFocus={published} />
                 )}
                 {!session.prepared && <ReadAloudCard session={session} />}
+                {!session.prepared && session.blocks.length > 0 && (
+                    <EpisodeCard session={session} />
+                )}
                 {session.competencies.length > 0 && (
                     <Card>
                         <section

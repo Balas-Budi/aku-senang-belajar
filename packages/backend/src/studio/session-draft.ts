@@ -12,7 +12,9 @@ import {
     type ModuleInfo,
 } from './material-text.ts';
 
-export const SESSION_PROMPT_VERSION = 'session-2026-11-12';
+export const SESSION_PROMPT_VERSION = 'session-2026-11-12-story';
+export const MAX_EPISODES = 6;
+export const STORY_FRIEND = 'si Jalak';
 
 export const STORY_RANGE = {
     short: [4, 5],
@@ -55,6 +57,9 @@ export const SESSION_SYSTEM_PROMPT = [
     '- When you revise a draft, copy each of its diagrams unchanged, key for key, unless the teacher asks to change or remove it or its screen\'s text changes so that it no longer fits; add a diagram only where the teacher asks for one. Each block of the current draft carries "screen", the screen number the teacher sees; leave "screen" out of your reply.',
     '- Write the JSON without indentation or line breaks.',
     '- Name no real person, student, or school.',
+    `- The story world: ${STORY_FRIEND}, a young jalak bali (Bali starling: white feathers, blue skin around its eyes, black wing tips), is the student's friend and explores the lesson with them. The student is the hero, spoken to as "kamu"; ${STORY_FRIEND} wonders, tries, sometimes errs, and cheers, but never teaches what the material does not say. Add no other fixed character; people met on the way stay unnamed or get an invented first name once.`,
+    `- The story screens, the hook, and the checks happen inside this world, in places a child in Indonesia knows (a market, a kitchen, a garden, a school yard, a village in Bali). The challenge and the extra challenge still set the idea in a new situation, where ${STORY_FRIEND} may come along.`,
+    '- When "Story so far in this chapter" is given, this misi is the next episode of the same story. The hook or the first story screen recalls the last episode in one short clause, such as "Setelah membagi kue di dapur kemarin, …", and the new scene follows from it: the same place, or a place the story moves to for a reason it gives. Never retell earlier episodes or repeat their lessons.',
     '- Teach and test only the competencies you receive. A module can hold several misi, so its other competencies belong to other misi, even where its pages explain them.',
     '- The challenge and the extra challenge are transfer questions: a student who only remembers an example of the lesson must not be able to answer them from memory. Neither repeats a sentence of a story, a check, a hint, or an example, and neither asks with the same numbers and the same options as a check.',
     '',
@@ -75,7 +80,7 @@ export const SESSION_SYSTEM_PROMPT = [
     'Every competency you receive needs at least one check or the challenge that tests it; the extra challenge does not count. Each block names the competency codes it serves in "competencies" and the page numbers it rests on in "pages".',
     '',
     'Reply with one JSON object and nothing else, in this shape:',
-    '{"title": "...", "summary": "...", "blocks": [',
+    '{"title": "...", "summary": "...", "episode": "...", "blocks": [',
     '{"kind": "hook", "content": {"prompt": "...", "options": [{"id": "a", "label": "..."}, {"id": "b", "label": "..."}]}, "competencies": [], "pages": [12]},',
     '{"kind": "story", "content": {"text": "...", "diagram": {"label": "Roti dibagi menjadi 4 bagian sama besar, 1 bagian diwarnai: 1/4.", "shapes": [{"type": "rect", "x": 20, "y": 20, "width": 120, "height": 60, "fill": "yellow", "parts": 4, "shaded": 1}, {"type": "text", "x": 35, "y": 100, "text": "1/4"}]}}, "competencies": ["C1"], "pages": [12]},',
     '{"kind": "check", "content": {"prompt": "...", "options": [{"id": "a", "label": "..."}, {"id": "b", "label": "..."}], "answer": "b", "praise": "...", "hints": [{"text": "..."}, {"text": "..."}, {"text": "..."}], "example": {"text": "..."}, "reveal": "..."}, "competencies": ["C1"], "pages": [12]},',
@@ -84,7 +89,7 @@ export const SESSION_SYSTEM_PROMPT = [
     '{"kind": "reflection", "content": {"topics": ["...", "..."], "takeaways": ["..."]}, "competencies": [], "pages": []},',
     '{"kind": "extra_challenge", "content": {"prompt": "...", "options": [{"id": "a", "label": "..."}, {"id": "b", "label": "..."}, {"id": "c", "label": "..."}], "answer": "c", "praise": "...", "hints": [{"text": "..."}, {"text": "..."}, {"text": "..."}], "example": {"text": "..."}, "reveal": "..."}, "competencies": ["C1"], "pages": [13]}',
     ']}',
-    '"title" names the mission in at most 60 characters; "summary" is one sentence for the student\'s list.',
+    '"title" names the mission in at most 60 characters; "summary" is one sentence for the student\'s list; "episode" is one or two sentences, at most 300 characters, of what happened in this misi\'s story, for the next misi to continue from, not what it teaches.',
 ].join('\n');
 
 const draftedBlock = z.object({
@@ -104,6 +109,7 @@ const draftedBlock = z.object({
 export const sessionDraft = z.object({
     title: z.string().trim().min(1).max(80),
     summary: z.string().trim().min(1).max(300),
+    episode: z.string().trim().min(1).max(300),
     blocks: z.array(draftedBlock).min(5).max(30),
 });
 
@@ -121,6 +127,7 @@ export function sessionMessage(
     pages: MaterialPage[],
     revision: { draft: unknown; note: string | null } | null,
     length: SessionLength | null = null,
+    episodes: string[] = [],
 ) {
     const range = length && STORY_RANGE[length];
 
@@ -143,6 +150,14 @@ export function sessionMessage(
                     : []),
             ].join('\n'),
         ),
+        ...(episodes.length > 0
+            ? [
+                  'Story so far in this chapter, oldest first:',
+                  ...episodes.map(
+                      (episode, index) => `${index + 1}. ${episode}`,
+                  ),
+              ]
+            : []),
         ...materialSection(pages),
         ...(revision
             ? [
