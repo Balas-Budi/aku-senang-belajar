@@ -5,6 +5,7 @@ import {
     eq,
     gte,
     inArray,
+    notInArray,
     isNotNull,
     lt,
     lte,
@@ -119,6 +120,22 @@ async function draftContext(db: Queryable, sessionId: number) {
         .from(competencies)
         .where(inArray(competencies.id, sessionCompetencyIds(db, sessionId)))
         .orderBy(asc(competencies.id));
+    const others = await db
+        .select({
+            code: competencies.code,
+            description: competencies.description,
+        })
+        .from(competencies)
+        .where(
+            and(
+                eq(competencies.moduleId, session.moduleId),
+                notInArray(
+                    competencies.id,
+                    sessionCompetencyIds(db, sessionId),
+                ),
+            ),
+        )
+        .orderBy(asc(competencies.id));
     const pages =
         session.firstPage === null || session.lastPage === null
             ? []
@@ -169,6 +186,7 @@ async function draftContext(db: Queryable, sessionId: number) {
         pages: pages.flatMap(({ number, text }) =>
             text === null ? [] : [{ number, text }],
         ),
+        others,
         restingOn: missionCompetencies.flatMap(({ pages: list }) => list),
         current:
             blocks.length === 0
@@ -272,6 +290,7 @@ async function draftSession(
                     context.current && { draft: context.current, note },
                     context.session.length,
                     context.episodes,
+                    context.others,
                 ),
                 schema: sessionDraft,
                 check: checkDraft(

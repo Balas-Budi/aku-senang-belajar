@@ -59,7 +59,9 @@ export const demoModule: PreparedModule = {
     session: {
         title: 'Pecahan: bagian yang sama besar',
         summary:
-            'Kancil membagi satu roti untuk empat temannya. Kapan satu potong disebut seperempat?',
+            'Kamu dan si Jalak membagi satu roti untuk empat teman. Kapan satu potong disebut seperempat?',
+        episode:
+            'Di dapur, kamu dan si Jalak membagi satu roti untuk empat teman, dan kamu menemukan bahwa seperempat adalah 1 dari 4 bagian yang sama besar.',
     },
     blocks: [
         {
@@ -70,7 +72,7 @@ export const demoModule: PreparedModule = {
         {
             kind: 'hook',
             content: {
-                prompt: 'Kancil mau membagi 1 roti untuk 4 temannya. Cara mana yang adil?',
+                prompt: 'Kamu dan si Jalak mau membagi 1 roti untuk 4 teman. Cara mana yang adil?',
                 illustration: 'loaf-whole',
                 options: [
                     { id: 'a', label: 'A', illustration: 'loaf-quarters' },
@@ -87,7 +89,7 @@ export const demoModule: PreparedModule = {
         {
             kind: 'story',
             content: {
-                text: 'Kancil memotong roti menjadi 4 bagian yang sama besar. Setiap teman mendapat satu bagian.',
+                text: 'Kamu memotong roti menjadi 4 bagian yang sama besar, lalu si Jalak membagikannya. Setiap teman mendapat satu bagian.',
                 illustration: 'loaf-quarters',
             },
             competencies: ['C1'],
@@ -144,7 +146,7 @@ export const demoModule: PreparedModule = {
         {
             kind: 'story',
             content: {
-                text: 'Kancil juga punya roti bundar. Ia memotongnya menjadi 4 bagian yang sama besar, jadi tiap potongnya juga 1/4.',
+                text: 'Si Jalak membawa roti bundar. Kamu memotongnya menjadi 4 bagian yang sama besar, jadi tiap potongnya juga 1/4.',
                 illustration: 'round-quarter-marked',
             },
             competencies: ['C1'],
@@ -152,7 +154,7 @@ export const demoModule: PreparedModule = {
         {
             kind: 'check',
             content: {
-                prompt: 'Di dapur Kancil ada tiga roti bundar. Pilih roti yang tiap potongnya seperempat.',
+                prompt: 'Di dapur ada tiga roti bundar. Bantu si Jalak memilih roti yang tiap potongnya seperempat.',
                 options: [
                     { id: 'a', label: 'A', illustration: 'round-thirds' },
                     { id: 'b', label: 'B', illustration: 'round-quarters' },
@@ -176,7 +178,7 @@ export const demoModule: PreparedModule = {
                     },
                 ],
                 example: {
-                    text: 'Ingat roti bundar Kancil tadi. Ia memotongnya silang tepat di tengah, jadi 4 potongnya sama besar.',
+                    text: 'Ingat roti bundar si Jalak tadi. Kamu memotongnya silang tepat di tengah, jadi 4 potongnya sama besar.',
                     illustration: 'round-quarter-marked',
                 },
                 reveal: 'Jawabannya roti B, karena hanya roti B yang dipotong jadi 4 bagian yang sama besar.',

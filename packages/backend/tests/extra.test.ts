@@ -192,7 +192,7 @@ test('a drafted misi ends with exactly one extra challenge that names its compet
         }),
         'C3 has no check or challenge that tests it',
     );
-    assert.equal(SESSION_PROMPT_VERSION, 'session-2026-11-12-story');
+    assert.equal(SESSION_PROMPT_VERSION, 'session-2026-11-13-scope');
     assert.ok(
         SESSION_SYSTEM_PROMPT.includes(
             '5. One "extra_challenge" after the reflection',

@@ -22,7 +22,7 @@ export type PreparedModule = {
         description: string;
         rubric?: CompetencyRubric;
     }[];
-    session: { title: string; summary: string };
+    session: { title: string; summary: string; episode?: string };
     blocks: (SessionBlock & { competencies: string[] })[];
 };
 

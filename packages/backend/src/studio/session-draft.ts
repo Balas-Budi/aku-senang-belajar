@@ -12,7 +12,7 @@ import {
     type ModuleInfo,
 } from './material-text.ts';
 
-export const SESSION_PROMPT_VERSION = 'session-2026-11-12-story';
+export const SESSION_PROMPT_VERSION = 'session-2026-11-13-scope';
 export const MAX_EPISODES = 6;
 export const STORY_FRIEND = 'si Jalak';
 
@@ -60,7 +60,7 @@ export const SESSION_SYSTEM_PROMPT = [
     `- The story world: ${STORY_FRIEND}, a young jalak bali (Bali starling: white feathers, blue skin around its eyes, black wing tips), is the student's friend and explores the lesson with them. The student is the hero, spoken to as "kamu"; ${STORY_FRIEND} wonders, tries, sometimes errs, and cheers, but never teaches what the material does not say. Add no other fixed character; people met on the way stay unnamed or get an invented first name once.`,
     `- The story screens, the hook, and the checks happen inside this world, in places a child in Indonesia knows (a market, a kitchen, a garden, a school yard, a village in Bali). The challenge and the extra challenge still set the idea in a new situation, where ${STORY_FRIEND} may come along.`,
     '- When "Story so far in this chapter" is given, this misi is the next episode of the same story. The hook or the first story screen recalls the last episode in one short clause, such as "Setelah membagi kue di dapur kemarin, …", and the new scene follows from it: the same place, or a place the story moves to for a reason it gives. Never retell earlier episodes or repeat their lessons.',
-    '- Teach and test only the competencies you receive. A module can hold several misi, so its other competencies belong to other misi, even where its pages explain them.',
+    '- Teach and test only the competencies you receive. A module can hold several misi, so its other competencies belong to other misi, even where its pages explain them. When "Not this misi" lists them, no screen, hint, example, challenge, or extra challenge explains one of them or needs it to be answered: for example, a misi on what a fraction means never asks which of two fractions is larger when that is another misi\'s competency.',
     '- The challenge and the extra challenge are transfer questions: a student who only remembers an example of the lesson must not be able to answer them from memory. Neither repeats a sentence of a story, a check, a hint, or an example, and neither asks with the same numbers and the same options as a check.',
     '',
     'The blocks, in this order:',
@@ -128,6 +128,7 @@ export function sessionMessage(
     revision: { draft: unknown; note: string | null } | null,
     length: SessionLength | null = null,
     episodes: string[] = [],
+    others: { code: string; description: string }[] = [],
 ) {
     const range = length && STORY_RANGE[length];
 
@@ -150,6 +151,14 @@ export function sessionMessage(
                     : []),
             ].join('\n'),
         ),
+        ...(others.length > 0
+            ? [
+                  'Not this misi (other misi of this chapter teach these):',
+                  ...others.map(
+                      ({ code, description }) => `${code}: ${description}`,
+                  ),
+              ]
+            : []),
         ...(episodes.length > 0
             ? [
                   'Story so far in this chapter, oldest first:',

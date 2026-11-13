@@ -948,7 +948,10 @@ test('a student gets the first theme of their interests on start and keeps it: t
     );
 
     const detail = await asStudent(app, student.token, 'GET', detailUrl);
-    assert.match(detail.body, /Tema Luar angkasa: Kancil mau membagi 1 roti/);
+    assert.match(
+        detail.body,
+        /Tema Luar angkasa: Kamu dan si Jalak mau membagi 1 roti/,
+    );
     assert.doesNotMatch(detail.body, /Tema Musik/);
 
     const attemptId: number = started.json().id;

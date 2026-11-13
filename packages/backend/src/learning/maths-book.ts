@@ -52,12 +52,14 @@ export const mathsBook: PreparedBook = {
                 {
                     title: 'Pembilang dan penyebut',
                     summary:
-                        'Kancil menulis pecahan di papan. Apa arti angka di atas dan di bawah garis?',
+                        'Si Jalak melihat pecahan di papan. Apa arti angka di atas dan di bawah garis?',
+                    episode:
+                        'Di sekolah, si Jalak melihat 1/4 di papan tulis, dan kamu menjelaskan bahwa angka di atas garis adalah pembilang dan angka di bawahnya penyebut.',
                     blocks: [
                         {
                             kind: 'hook',
                             content: {
-                                prompt: 'Kancil menulis 1/4 di papan tulis. Menurutmu, angka 4 itu menunjukkan apa?',
+                                prompt: 'Setelah membagi roti kemarin, si Jalak melihat 1/4 di papan tulis. Menurutmu, angka 4 itu menunjukkan apa?',
                                 illustration: 'loaf-quarter-marked',
                                 options: [
                                     { id: 'a', label: 'Banyak roti' },
@@ -65,7 +67,7 @@ export const mathsBook: PreparedBook = {
                                         id: 'b',
                                         label: 'Banyak potongan yang sama besar',
                                     },
-                                    { id: 'c', label: 'Banyak teman Kancil' },
+                                    { id: 'c', label: 'Banyak teman si Jalak' },
                                 ],
                             },
                             competencies: ['C4'],
@@ -88,7 +90,7 @@ export const mathsBook: PreparedBook = {
                         {
                             kind: 'story',
                             content: {
-                                text: 'Roti ini dipotong menjadi 4 bagian sama besar, jadi penyebutnya 4. Kancil mengambil satu bagian, jadi pembilangnya 1.',
+                                text: 'Roti ini dipotong menjadi 4 bagian sama besar, jadi penyebutnya 4. Si Jalak mengambil satu bagian, jadi pembilangnya 1.',
                                 illustration: 'loaf-quarter-marked',
                             },
                             competencies: ['C4'],
@@ -96,7 +98,7 @@ export const mathsBook: PreparedBook = {
                         {
                             kind: 'check',
                             content: {
-                                prompt: 'Roti bundar ini dipotong menjadi 3 bagian sama besar, dan Kancil mengambil 1/3 roti. Berapa penyebutnya?',
+                                prompt: 'Roti bundar ini dipotong menjadi 3 bagian sama besar, dan si Jalak mengambil 1/3 roti. Berapa penyebutnya?',
                                 illustration: 'round-thirds',
                                 options: [
                                     { id: 'a', label: '1' },
@@ -128,7 +130,7 @@ export const mathsBook: PreparedBook = {
                         {
                             kind: 'story',
                             content: {
-                                text: 'Pembilang menunjukkan berapa bagian yang diambil. Kalau Kancil mengambil 1 dari 2 bagian roti, ia mendapat 1/2 roti.',
+                                text: 'Pembilang menunjukkan berapa bagian yang diambil. Kalau si Jalak mengambil 1 dari 2 bagian roti, ia mendapat 1/2 roti.',
                                 illustration: 'loaf-halves',
                             },
                             competencies: ['C4'],
@@ -211,12 +213,14 @@ export const mathsBook: PreparedBook = {
                 {
                     title: 'Potongan mana yang lebih besar?',
                     summary:
-                        'Kancil membagi roti untuk 2, 3, atau 4 teman. Kapan potongannya paling besar?',
+                        'Kamu dan si Jalak membagi roti untuk 2, 3, atau 4 teman. Kapan potongannya paling besar?',
+                    episode:
+                        'Di pasar, kamu dan si Jalak membandingkan roti yang dibagi 2, 3, dan 4, dan menemukan bahwa makin banyak bagiannya, makin kecil tiap potongnya.',
                     blocks: [
                         {
                             kind: 'hook',
                             content: {
-                                prompt: 'Kancil punya dua roti yang sama besar. Potongan roti mana yang lebih besar?',
+                                prompt: 'Setelah belajar pembilang dan penyebut kemarin, kamu dan si Jalak ke pasar membawa dua roti yang sama besar. Potongan roti mana yang lebih besar?',
                                 options: [
                                     {
                                         id: 'a',
@@ -235,7 +239,7 @@ export const mathsBook: PreparedBook = {
                         {
                             kind: 'story',
                             content: {
-                                text: 'Kancil memotong satu roti menjadi 2 bagian sama besar. Setiap bagian adalah 1/2 roti.',
+                                text: 'Kamu memotong satu roti menjadi 2 bagian sama besar. Setiap bagian adalah 1/2 roti.',
                                 illustration: 'loaf-halves',
                             },
                             competencies: ['C5'],
@@ -243,7 +247,7 @@ export const mathsBook: PreparedBook = {
                         {
                             kind: 'story',
                             content: {
-                                text: 'Roti lain yang sama besar ia potong menjadi 4 bagian sama besar. Setiap bagian adalah 1/4 roti, lebih kecil daripada 1/2 roti.',
+                                text: 'Roti lain yang sama besar kamu potong menjadi 4 bagian sama besar. Setiap bagian adalah 1/4 roti, lebih kecil daripada 1/2 roti.',
                                 illustration: 'loaf-quarters',
                             },
                             competencies: ['C5'],

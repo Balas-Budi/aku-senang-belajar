@@ -9,6 +9,7 @@ import {
     allShapes,
     brokenDraft,
     c1,
+    c2,
     draft,
     drawnDraft,
     get,
@@ -528,8 +529,13 @@ test('a teacher chooses the competencies a session teaches: AI drafts only those
     const user = provider.requests[0].body.messages[1].content;
 
     assert.equal(studio.drafting, null);
-    assert.match(user, /C1: Mengenali 1\/4 pada gambar\./);
-    assert.doesNotMatch(user, /C2: /);
+    const [chosen, others] = user.split(
+        'Not this misi (other misi of this chapter teach these):\n',
+    );
+
+    assert.match(chosen, /C1: Mengenali 1\/4 pada gambar\./);
+    assert.doesNotMatch(chosen, /C2: /);
+    assert.ok(others.startsWith(`C2: ${c2.description}\n`));
     assert.deepEqual(studio.competencies, [
         { code: 'C1', description: c1.description },
     ]);
