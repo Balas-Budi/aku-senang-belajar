@@ -143,7 +143,7 @@ export function VersionCard({ material }: { material: MaterialDetail }) {
                                 aria-disabled={upload.isPending}
                                 className="aria-disabled:opacity-60"
                             >
-                                {upload.isPending ? 'Membaca PDF…' : 'Unggah'}
+                                {upload.isPending ? 'Mengunggah…' : 'Unggah'}
                             </Button>
                         </form>
                     </details>

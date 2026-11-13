@@ -178,7 +178,7 @@ export function UploadForm() {
                 </div>
                 <RequestError error={upload.error} />
                 <Button type="submit" disabled={upload.isPending}>
-                    {upload.isPending ? 'Membaca PDF…' : 'Unggah dan baca PDF'}
+                    {upload.isPending ? 'Mengunggah…' : 'Unggah dan baca PDF'}
                 </Button>
             </form>
         </Card>

@@ -193,7 +193,11 @@ export function ReasonField({
     const field = useRef<HTMLTextAreaElement>(null);
     function begin(starter: string) {
         const start = starter.replace(/\s*\.{3}$/, ' ');
-        const next = value.trim() ? `${value.trimEnd()} ${start}` : start;
+        const next = value.includes(start.trim())
+            ? value
+            : value.trim()
+              ? `${value.trimEnd()} ${start}`
+              : start;
         onChange(next);
         requestAnimationFrame(() => {
             field.current?.focus();
