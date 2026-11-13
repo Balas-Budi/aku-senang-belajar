@@ -17,6 +17,7 @@ import {
     RequestError,
     requestErrorMessage,
 } from '../../components/request-error';
+import { TEACHER_TITLE } from '../student/teacher-title';
 export function StudentClass() {
     const query = useQuery(studentClassQuery());
     const path = useQuery(studentPathQuery());
@@ -133,7 +134,7 @@ export function StudentClass() {
                                         {classroom.name}
                                     </h3>
                                     <p className="text-muted-foreground mt-1 text-base break-words">
-                                        Bersama {classroom.teacherName}
+                                        Bersama {TEACHER_TITLE}
                                     </p>
                                 </div>
                                 <p className="text-primary bg-secondary inline-flex items-center gap-2 rounded-xl px-3 py-2 text-sm font-bold">
@@ -161,9 +162,7 @@ export function StudentClass() {
                                     Tanyakan kepada gurumu, ya.
                                 </p>
                             ) : (
-                                <PathOverview
-                                    teacherName={classroom.teacherName}
-                                />
+                                <PathOverview teacherName={TEACHER_TITLE} />
                             )}
                         </div>
                     ) : (

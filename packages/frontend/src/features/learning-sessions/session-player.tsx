@@ -7,7 +7,6 @@ import { Button, buttonVariants } from '../../components/ui/button';
 import { Dialog } from '../../components/ui/dialog';
 import { cn } from '../../lib/cn';
 import { useMinutesLeft } from '../../lib/use-minutes-left';
-import { studentClassQuery } from '../classes/queries';
 import { LearningSettingsForm } from '../settings/learning-settings';
 import { TextScale } from '../settings/text-scale';
 import { AdaptationContext, MissionReadAloudContext } from './adaptation';
@@ -30,6 +29,7 @@ import { SessionDone, SessionIntro, SessionPreparing } from './session-screens';
 import { useActionError, WaitContext } from './session-ui';
 import { stepLabels, stepOrder } from './steps';
 import { StoryBlock } from './story-block';
+import { TEACHER_TITLE } from '../student/teacher-title';
 
 const tool =
     'text-primary-deep min-h-12 rounded-xl border-2 px-3 font-semibold';
@@ -117,13 +117,12 @@ function TimeLeft({ endsAt }: { endsAt: string }) {
 
 export function SessionPlayer({ assignmentId }: { assignmentId: number }) {
     const { data: session } = useSuspenseQuery(sessionQuery(assignmentId));
-    const { data: mine } = useSuspenseQuery(studentClassQuery());
     const { attempt } = session;
     const { data: watched } = useQuery({
         ...studentLiveQuery(assignmentId),
         enabled: attempt?.status === 'in_progress',
     });
-    const teacher = mine.classroom?.teacherName ?? 'gurumu';
+    const teacher = TEACHER_TITLE;
     const [adjusting, setAdjusting] = useState(false);
     const [pausing, setPausing] = useState(false);
     const [helping, setHelping] = useState(false);

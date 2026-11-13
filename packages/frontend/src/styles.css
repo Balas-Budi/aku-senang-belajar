@@ -44,6 +44,7 @@
     --color-status-verify-soft: #fff0e6;
     --color-ai-suggestion: #5b3fd9;
 }
+:root:has(.student-space),
 .student-space,
 .login-page {
     background-color: var(--color-student-surface);
