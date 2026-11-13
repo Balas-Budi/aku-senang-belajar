@@ -433,7 +433,7 @@ export function SubjectPath({ subject }: { subject: Subject }) {
                                 key={stage.id}
                                 stage={stage}
                                 chapter={chapter}
-                                number={index + 1}
+                                number={position + 1}
                                 lane={lanes[position % lanes.length]}
                                 current={stage === current}
                                 anchor={index === 0}
