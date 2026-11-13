@@ -110,13 +110,6 @@ export function useJoinClass() {
         onSuccess: () => client.invalidateQueries({ queryKey: ['student'] }),
     });
 }
-export function useLeaveClass() {
-    const client = useQueryClient();
-    return useMutation({
-        mutationFn: () => api('/api/student/class', { method: 'DELETE' }),
-        onSuccess: () => client.invalidateQueries({ queryKey: ['student'] }),
-    });
-}
 export function useCreateClass() {
     const client = useQueryClient();
     return useMutation({

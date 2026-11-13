@@ -152,10 +152,9 @@ test('a student is in one class at most', async (t) => {
     );
 });
 
-test('a student leaves the class and can then join another', async (t) => {
+test('a student cannot leave the class alone; only an admin or the teacher takes them out', async (t) => {
     const app = await testApp(t);
     const { classroom } = await teacherWithClass(app);
-    const { classroom: next } = await teacherWithClass(app);
     const student = await signedInStudent(app);
 
     await joinClass(app, student.token, classroom.inviteCode);
@@ -167,13 +166,10 @@ test('a student leaves the class and can then join another', async (t) => {
         cookies: as(student.token),
     });
 
-    assert.equal(left.statusCode, 204);
-    assert.deepEqual((await myClass(app, student.token)).json(), {
-        classroom: null,
-    });
+    assert.equal(left.statusCode, 404);
     assert.equal(
-        (await joinClass(app, student.token, next.inviteCode)).statusCode,
-        201,
+        (await myClass(app, student.token)).json().classroom.id,
+        classroom.id,
     );
 });
 

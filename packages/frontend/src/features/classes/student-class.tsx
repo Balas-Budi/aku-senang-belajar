@@ -1,6 +1,6 @@
 import { useQuery } from '@tanstack/react-query';
 import { useRef, useState } from 'react';
-import { studentClassQuery, useJoinClass, useLeaveClass } from './queries';
+import { studentClassQuery, useJoinClass } from './queries';
 import { ClassCodeField, inviteCodeMessages } from './class-code-field';
 import { meQuery } from '../auth/queries';
 import { ChallengeInvite } from '../challenges/challenge-invite';
@@ -22,8 +22,6 @@ export function StudentClass() {
     const path = useQuery(studentPathQuery());
     const { data: user } = useQuery(meQuery());
     const join = useJoinClass();
-    const leave = useLeaveClass();
-    const [confirmLeave, setConfirmLeave] = useState(false);
     const [typing, setTyping] = useState(false);
     const [cheers, setCheers] = useState(0);
     const [schoolGreets, setSchoolGreets] = useState(0);
@@ -167,64 +165,6 @@ export function StudentClass() {
                                     teacherName={classroom.teacherName}
                                 />
                             )}
-                            <details className="text-base">
-                                <summary className="text-muted-foreground focus-visible:outline-ring min-h-12 cursor-pointer rounded-lg py-3 underline underline-offset-4 focus-visible:outline-3">
-                                    Ingin pindah kelas?
-                                </summary>
-                                <p className="my-3 leading-relaxed">
-                                    Keluar dari kelas ini, lalu masukkan kode
-                                    kelas baru dari guru.
-                                </p>
-                                {!confirmLeave ? (
-                                    <Button
-                                        variant="outline"
-                                        feel="chunky"
-                                        onClick={() => setConfirmLeave(true)}
-                                    >
-                                        Keluar dari kelas
-                                    </Button>
-                                ) : (
-                                    <div className="space-y-3">
-                                        <p>
-                                            Yakin ingin keluar dari{' '}
-                                            {classroom.name}?
-                                        </p>
-                                        <div className="flex flex-wrap gap-3">
-                                            <Button
-                                                feel="chunky"
-                                                disabled={leave.isPending}
-                                                onClick={() =>
-                                                    leave.mutate(undefined, {
-                                                        onSuccess: () =>
-                                                            setConfirmLeave(
-                                                                false,
-                                                            ),
-                                                        onError: (error) =>
-                                                            showError(
-                                                                requestErrorMessage(
-                                                                    error,
-                                                                ),
-                                                            ),
-                                                    })
-                                                }
-                                            >
-                                                {leave.isPending
-                                                    ? 'Sedang keluar…'
-                                                    : 'Ya, keluar dari kelas'}
-                                            </Button>
-                                            <Button
-                                                variant="outline"
-                                                feel="chunky"
-                                                onClick={() =>
-                                                    setConfirmLeave(false)
-                                                }
-                                            >
-                                                Tetap di kelas
-                                            </Button>
-                                        </div>
-                                    </div>
-                                )}
-                            </details>
                         </div>
                     ) : (
                         <div className="grid items-center gap-6 md:grid-cols-[13rem_minmax(0,1fr)] md:gap-10">

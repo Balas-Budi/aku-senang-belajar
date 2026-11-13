@@ -177,7 +177,7 @@ test('a teacher deactivates, reactivates, moves, and archives memberships of the
     );
     assert.equal(
         (await call(app, wulan.token, 'DELETE', '/student/class')).statusCode,
-        204,
+        404,
     );
 
     const history = (
@@ -185,7 +185,6 @@ test('a teacher deactivates, reactivates, moves, and archives memberships of the
     ).json();
 
     assert.deepEqual(told(history.events), [
-        'Wulan left by student',
         'Citra archived by teacher',
         'Bima moved out by teacher',
         'Wulan reactivated by teacher',
@@ -194,7 +193,7 @@ test('a teacher deactivates, reactivates, moves, and archives memberships of the
         'Bima joined by student',
         'Wulan joined by student',
     ]);
-    assert.equal(history.events[2].otherClass, 'Kelas 4A');
+    assert.equal(history.events[1].otherClass, 'Kelas 4A');
     assert.deepEqual(
         history.past.map(
             ({ name, reason, submitted }: Record<string, unknown>) => [
@@ -204,7 +203,6 @@ test('a teacher deactivates, reactivates, moves, and archives memberships of the
             ],
         ),
         [
-            ['Wulan Sari', 'left', 0],
             ['Citra Dewi', 'archived', 0],
             ['Bima Putra', 'moved', 0],
         ],
@@ -233,7 +231,7 @@ test('a teacher deactivates, reactivates, moves, and archives memberships of the
     assert.equal(told(back.events)[0], 'Citra joined by student');
     assert.deepEqual(
         back.past.map(({ name }: { name: string }) => name),
-        ['Wulan Sari', 'Bima Putra'],
+        ['Bima Putra'],
     );
 });
 

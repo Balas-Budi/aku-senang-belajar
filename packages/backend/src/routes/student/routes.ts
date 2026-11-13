@@ -7,7 +7,6 @@ import {
     assignmentDetail,
     myLive,
     joinClass,
-    leaveClass,
     moveCheckpoint,
     answerExtraQuestion,
     answerReviewQuestion,
@@ -73,7 +72,6 @@ export const studentRoutes: FastifyPluginAsyncZod = async (fastify) => {
         },
         joinClass,
     );
-    fastify.delete('/class', leaveClass);
     fastify.get(
         '/path',
         { schema: { response: { 200: pathResponse } } },

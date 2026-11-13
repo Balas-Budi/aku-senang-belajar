@@ -21,7 +21,7 @@ import { liveOf, stepIndex } from '../../learning/live.ts';
 import { AppError, notFound } from '../../lib/errors.ts';
 import { fieldError } from '../../lib/field-error.ts';
 import { isUniqueViolation } from '../../lib/unique-violation.ts';
-import { endMembership, startMembership } from '../classes/membership.ts';
+import { startMembership } from '../classes/membership.ts';
 import { classroomOf } from '../classes/queries.ts';
 import {
     alreadyAnswered,
@@ -114,16 +114,6 @@ export async function myPath(request: FastifyRequest) {
 
 export async function myCards(request: FastifyRequest) {
     return cardsOf(request.server.db, currentUser(request).id);
-}
-
-export async function leaveClass(request: FastifyRequest, reply: FastifyReply) {
-    const studentId = currentUser(request).id;
-
-    await request.server.db.transaction((tx) =>
-        endMembership(tx, studentId, studentId, 'left'),
-    );
-
-    return reply.code(204).send();
 }
 
 async function attemptOf(request: FastifyRequest, assignmentId: number) {
