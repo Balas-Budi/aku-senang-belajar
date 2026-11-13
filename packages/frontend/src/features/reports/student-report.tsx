@@ -4,7 +4,6 @@ import { RequestError } from '../../components/request-error';
 import { Alert } from '../../components/ui/alert';
 import { Button } from '../../components/ui/button';
 import { Card } from '../../components/ui/card';
-import { textLink } from '../../components/ui/text-link';
 import {
     Table,
     TableCell,
@@ -28,6 +27,7 @@ import {
 } from './queries';
 import { Adaptations } from './adaptations';
 import { ReportText } from './report-text';
+import { BackLink } from '../../components/back-link';
 
 const day = new Intl.DateTimeFormat('id-ID', { dateStyle: 'medium' });
 
@@ -259,12 +259,9 @@ export function StudentReport({
     const classes = useQuery(classesQuery());
     const className = classes.data?.find(({ id }) => id === classId)?.name;
     const back = (
-        <Link
-            to={`/teacher/classes/${classId}`}
-            className={`${textLink} print:hidden`}
-        >
+        <BackLink to={`/teacher/classes/${classId}`}>
             Kembali ke {className ?? 'kelas'}
-        </Link>
+        </BackLink>
     );
 
     if (query.isPending) {
@@ -299,9 +296,11 @@ export function StudentReport({
 
     return (
         <div className="space-y-6">
-            <div className="space-y-2">
-                {back}
-                <h1 className="text-2xl font-semibold">{student.name}</h1>
+            {back}
+            <Card className="space-y-2 print:border-0 print:p-0 print:shadow-none">
+                <h1 className="font-display text-primary-deep text-3xl leading-tight font-semibold break-words sm:text-4xl">
+                    {student.name}
+                </h1>
                 <p className="text-muted-foreground">
                     Laporan siswa{className ? ` · ${className}` : ''} ·{' '}
                     {missions.length} misi selesai
@@ -319,7 +318,7 @@ export function StudentReport({
                 >
                     Cetak atau simpan PDF
                 </Button>
-            </div>
+            </Card>
             <ReportText
                 classId={classId}
                 reportUrl={`/api/classes/${classId}/students/${studentId}/report`}
@@ -339,7 +338,7 @@ export function StudentReport({
                     <div className="space-y-1">
                         <h2
                             id="history-title"
-                            className="text-lg font-semibold"
+                            className="font-display text-primary-deep text-xl font-semibold sm:text-2xl"
                         >
                             Riwayat per kompetensi
                         </h2>
@@ -372,7 +371,7 @@ export function StudentReport({
                     <section aria-labelledby="summaries-title">
                         <h2
                             id="summaries-title"
-                            className="text-lg font-semibold"
+                            className="font-display text-primary-deep text-xl font-semibold sm:text-2xl"
                         >
                             Ringkasan per misi
                         </h2>
@@ -398,7 +397,7 @@ export function StudentReport({
                         <div className="space-y-1">
                             <h2
                                 id="practice-title"
-                                className="text-lg font-semibold"
+                                className="font-display text-primary-deep text-xl font-semibold sm:text-2xl"
                             >
                                 {practiceTitle(query.data.reviews)}
                             </h2>

@@ -1,3 +1,4 @@
+import { PlusIcon, UploadIcon } from '../../components/icons/workspace-icons';
 import { useState } from 'react';
 import { useCreateUser, useImportUsers, type ManagedRole } from './queries';
 import { CredentialSheet, type Credential } from './credential-sheet';
@@ -23,9 +24,23 @@ export function AccountCreate({ role }: { role: ManagedRole }) {
                     />
                 </div>
             )}
-            <details className="border-paper-edge bg-background rounded-2xl border p-5">
-                <summary className="focus-visible:outline-ring cursor-pointer py-2 text-lg font-semibold focus-visible:outline-3">
-                    Buat akun {role === 'student' ? 'siswa' : 'guru'}
+            <details className="group border-paper-edge bg-background rounded-[20px] border p-5 shadow-[0_1px_2px_rgb(28_22_96/0.05),0_8px_24px_-12px_rgb(28_22_96/0.12)]">
+                <summary className="focus-visible:outline-ring font-display text-primary-deep flex min-h-12 cursor-pointer list-none items-center gap-3 rounded-xl py-1 text-xl font-semibold focus-visible:outline-3 sm:text-2xl [&::-webkit-details-marker]:hidden">
+                    <span
+                        aria-hidden="true"
+                        className="bg-primary flex size-11 shrink-0 items-center justify-center rounded-xl text-white"
+                    >
+                        <PlusIcon />
+                    </span>
+                    <span className="flex-1">
+                        Buat akun {role === 'student' ? 'siswa' : 'guru'}
+                    </span>
+                    <span className="text-primary text-base font-semibold group-open:hidden">
+                        Buka
+                    </span>
+                    <span className="text-primary hidden text-base font-semibold group-open:inline">
+                        Tutup
+                    </span>
                 </summary>
                 <form
                     className="mt-4 max-w-xl space-y-4"
@@ -97,9 +112,21 @@ export function AccountCreate({ role }: { role: ManagedRole }) {
                     </Button>
                 </form>
             </details>
-            <details className="border-paper-edge bg-background rounded-2xl border p-5">
-                <summary className="focus-visible:outline-ring cursor-pointer py-2 text-lg font-semibold focus-visible:outline-3">
-                    Impor akun dari Excel
+            <details className="group border-paper-edge bg-background rounded-[20px] border p-5 shadow-[0_1px_2px_rgb(28_22_96/0.05),0_8px_24px_-12px_rgb(28_22_96/0.12)]">
+                <summary className="focus-visible:outline-ring font-display text-primary-deep flex min-h-12 cursor-pointer list-none items-center gap-3 rounded-xl py-1 text-xl font-semibold focus-visible:outline-3 sm:text-2xl [&::-webkit-details-marker]:hidden">
+                    <span
+                        aria-hidden="true"
+                        className="bg-status-visible flex size-11 shrink-0 items-center justify-center rounded-xl text-white"
+                    >
+                        <UploadIcon />
+                    </span>
+                    <span className="flex-1">Impor akun dari Excel</span>
+                    <span className="text-primary text-base font-semibold group-open:hidden">
+                        Buka
+                    </span>
+                    <span className="text-primary hidden text-base font-semibold group-open:inline">
+                        Tutup
+                    </span>
                 </summary>
                 <form
                     className="mt-4 max-w-xl space-y-4"

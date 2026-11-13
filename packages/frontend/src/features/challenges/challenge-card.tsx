@@ -188,11 +188,11 @@ export function ChallengeCard({ classId }: { classId: number }) {
                         id="challenge-title"
                         ref={heading}
                         tabIndex={-1}
-                        className={`text-lg font-semibold ${focusHeading}`}
+                        className={`font-display text-primary-deep text-xl font-semibold sm:text-2xl ${focusHeading}`}
                     >
                         Tantangan kelas
                     </h2>
-                    <p className="text-muted-foreground text-sm">
+                    <p className="text-muted-foreground text-base">
                         Satu pertanyaan yang dijawab seluruh kelas pada waktu
                         yang sama, untuk bahan diskusi. Tanpa nilai dan tanpa
                         batas waktu.

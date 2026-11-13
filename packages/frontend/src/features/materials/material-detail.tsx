@@ -1,3 +1,14 @@
+import {
+    SectionTabs,
+    useSection,
+    type SectionTab,
+} from '../../components/section-tabs';
+import { Pager, usePages } from '../../components/pager';
+import {
+    BookIcon,
+    SendIcon,
+    SettingsIcon,
+} from '../../components/icons/workspace-icons';
 import { useQuery } from '@tanstack/react-query';
 import { useRef, useState, type RefObject } from 'react';
 import { Link, useNavigate } from 'react-router';
@@ -21,7 +32,6 @@ import { RequestError } from '../../components/request-error';
 import { Alert } from '../../components/ui/alert';
 import { Button, buttonVariants } from '../../components/ui/button';
 import { Card } from '../../components/ui/card';
-import { textLink } from '../../components/ui/text-link';
 import { useCreateSession, type SessionLength } from '../studio/queries';
 import {
     choiceBox,
@@ -204,9 +214,11 @@ function ModuleItem({
             : []),
     ];
     return (
-        <li className="space-y-2 py-3">
+        <li className="border-paper-edge space-y-3 rounded-2xl border p-4">
             <div>
-                <p className="font-semibold">{module.title}</p>
+                <p className="text-lg font-semibold break-words">
+                    {module.title}
+                </p>
                 {origin.length > 0 && (
                     <p className="text-muted-foreground text-sm tabular-nums">
                         {origin.join(' · ')}
@@ -232,24 +244,35 @@ function ModuleItem({
                 </ul>
             )}
             {module.sessions.length > 0 && (
-                <ul>
+                <ul className="space-y-2">
                     {module.sessions.map((session) => (
-                        <li key={session.id}>
+                        <li
+                            key={session.id}
+                            className="bg-student-surface/70 flex flex-wrap items-center gap-3 rounded-xl p-3"
+                        >
+                            <span className="min-w-0 flex-1 basis-48">
+                                <span className="block font-semibold break-words">
+                                    {session.title}
+                                </span>
+                                <span className="text-muted-foreground block text-sm">
+                                    {[
+                                        ...(session.competencies.length > 0
+                                            ? [listOf(session.competencies)]
+                                            : []),
+                                        sessionState(session),
+                                    ].join(' · ')}
+                                </span>
+                            </span>
                             <Link
                                 to={`/teacher/studio/${session.id}`}
-                                className={textLink}
+                                aria-label={`Buka studio ${session.title}`}
+                                className={buttonVariants({
+                                    variant: 'outline',
+                                    className: 'min-h-11 bg-white px-4',
+                                })}
                             >
-                                {session.title}
-                            </Link>{' '}
-                            <span className="text-muted-foreground text-sm">
-                                ·{' '}
-                                {[
-                                    ...(session.competencies.length > 0
-                                        ? [listOf(session.competencies)]
-                                        : []),
-                                    sessionState(session),
-                                ].join(' · ')}
-                            </span>
+                                Buka studio
+                            </Link>
                         </li>
                     ))}
                 </ul>
@@ -408,6 +431,30 @@ function PageRow({
     );
 }
 
+function PageList({ material }: { material: MaterialDetail }) {
+    const { page, pages, setPage, shown } = usePages(material.pages, 20);
+    return (
+        <div className="space-y-4">
+            <ul className="divide-paper-edge divide-y">
+                {shown.map((item) => (
+                    <PageRow
+                        key={item.number}
+                        materialId={material.id}
+                        version={material.version}
+                        page={item}
+                    />
+                ))}
+            </ul>
+            <Pager
+                label="Halaman daftar halaman buku"
+                page={page}
+                pages={pages}
+                onPage={setPage}
+            />
+        </div>
+    );
+}
+
 export function MaterialDetailView({ id }: { id: number }) {
     const query = useQuery(materialQuery(id));
     const reactivate = useUpdateMaterial(id);
@@ -417,6 +464,26 @@ export function MaterialDetailView({ id }: { id: number }) {
     const chaptersHeading = useRef<HTMLHeadingElement>(null);
     const say = (text: string) =>
         setMessage((previous) => ({ text, count: previous.count + 1 }));
+    const tabs: SectionTab[] = [
+        {
+            key: 'bab',
+            label: 'Bab dan misi',
+            icon: <SendIcon className="size-5" />,
+            badge: query.data ? String(query.data.modules.length) : null,
+        },
+        {
+            key: 'halaman',
+            label: 'Halaman buku',
+            icon: <BookIcon className="size-5" />,
+            badge: query.data ? String(query.data.pageCount) : null,
+        },
+        {
+            key: 'sumber',
+            label: 'Sumber dan versi',
+            icon: <SettingsIcon className="size-5" />,
+        },
+    ];
+    const section = useSection(tabs);
     if (query.isPending) return <p role="status">Memuat materi…</p>;
     if (query.isError)
         return (
@@ -463,16 +530,22 @@ export function MaterialDetailView({ id }: { id: number }) {
                     }}
                 />
             )}
-            <div className="flex flex-wrap items-start justify-between gap-x-4 gap-y-3">
+            <Card className="flex flex-wrap items-start justify-between gap-x-4 gap-y-3">
+                <span
+                    aria-hidden="true"
+                    className="bg-secondary text-primary-deep hidden size-16 shrink-0 items-center justify-center rounded-2xl sm:flex"
+                >
+                    <BookIcon className="size-8" />
+                </span>
                 <div className="min-w-0 flex-1 basis-64">
                     <h1
                         ref={heading}
                         tabIndex={-1}
-                        className={`text-2xl font-semibold break-words ${focusHeading}`}
+                        className={`font-display text-primary-deep text-3xl leading-tight font-semibold break-words sm:text-4xl ${focusHeading}`}
                     >
                         {material.title}
                     </h1>
-                    <p className="text-muted-foreground mt-2 tabular-nums">
+                    <p className="text-muted-foreground mt-2 text-lg tabular-nums">
                         {materialMeta(material)} ·{' '}
                         {own
                             ? pagesRead(material)
@@ -488,11 +561,15 @@ export function MaterialDetailView({ id }: { id: number }) {
                     </p>
                 </div>
                 {own && !material.archived && (
-                    <Button variant="outline" onClick={() => setAsking(true)}>
+                    <Button
+                        variant="outline"
+                        className="min-h-11 bg-white px-4"
+                        onClick={() => setAsking(true)}
+                    >
                         Arsipkan materi
                     </Button>
                 )}
-            </div>
+            </Card>
             {material.archived && (
                 <Alert className="space-y-3">
                     <p>
@@ -541,7 +618,21 @@ export function MaterialDetailView({ id }: { id: number }) {
                     </p>
                 </Alert>
             )}
-            {material.modules.length > 0 && (
+            <SectionTabs
+                label={`Bagian materi ${material.title}`}
+                tabs={tabs}
+                current={section}
+            />
+            {section === 'bab' && material.modules.length === 0 && (
+                <Card>
+                    <p>
+                        {reading
+                            ? 'Bab muncul di sini setelah AI selesai membaca buku.'
+                            : 'Belum ada bab. Tambahkan bab sendiri di bawah.'}
+                    </p>
+                </Card>
+            )}
+            {section === 'bab' && material.modules.length > 0 && (
                 <Card>
                     <section
                         aria-labelledby="modules-title"
@@ -551,7 +642,7 @@ export function MaterialDetailView({ id }: { id: number }) {
                             ref={chaptersHeading}
                             id="modules-title"
                             tabIndex={-1}
-                            className={`text-lg font-semibold ${focusHeading}`}
+                            className={`font-display text-primary-deep text-xl font-semibold sm:text-2xl ${focusHeading}`}
                         >
                             Bab
                         </h2>
@@ -561,7 +652,7 @@ export function MaterialDetailView({ id }: { id: number }) {
                                 sesinya. Bab yang tidak dipakai boleh dibiarkan.
                             </p>
                         )}
-                        <ul className="divide-paper-edge divide-y">
+                        <ul className="space-y-3">
                             {material.modules.map((module) => (
                                 <ModuleItem
                                     key={module.id}
@@ -574,49 +665,45 @@ export function MaterialDetailView({ id }: { id: number }) {
                     </section>
                 </Card>
             )}
-            {own && !material.archived && material.readablePages > 0 && (
-                <details className="space-y-3">
-                    <summary className="focus-visible:outline-ring w-fit cursor-pointer list-none rounded-xl focus-visible:outline-3 focus-visible:outline-offset-3 [&::-webkit-details-marker]:hidden">
-                        <span
-                            className={buttonVariants({ variant: 'outline' })}
-                        >
-                            Tambah bab sendiri
-                        </span>
-                    </summary>
-                    <ModuleForm
-                        key={material.version}
-                        materialId={material.id}
-                        pageCount={material.pageCount}
-                    />
-                </details>
-            )}
-            <LicenceCard material={material} />
-            {own && <VersionCard material={material} />}
-            {material.pages.length > 0 && (
+            {section === 'bab' &&
+                own &&
+                !material.archived &&
+                material.readablePages > 0 && (
+                    <details className="space-y-3">
+                        <summary className="focus-visible:outline-ring w-fit cursor-pointer list-none rounded-xl focus-visible:outline-3 focus-visible:outline-offset-3 [&::-webkit-details-marker]:hidden">
+                            <span
+                                className={buttonVariants({
+                                    variant: 'outline',
+                                })}
+                            >
+                                Tambah bab sendiri
+                            </span>
+                        </summary>
+                        <ModuleForm
+                            key={material.version}
+                            materialId={material.id}
+                            pageCount={material.pageCount}
+                        />
+                    </details>
+                )}
+            {section === 'sumber' && <LicenceCard material={material} />}
+            {section === 'sumber' && own && <VersionCard material={material} />}
+            {section === 'halaman' && material.pages.length > 0 && (
                 <Card>
                     <section
                         aria-labelledby="pages-title"
                         className="space-y-2"
                     >
-                        <h2 id="pages-title" className="text-lg font-semibold">
+                        <h2
+                            id="pages-title"
+                            className="font-display text-primary-deep text-xl font-semibold sm:text-2xl"
+                        >
                             Halaman{' '}
                             <span className="text-muted-foreground ml-1 text-sm font-normal tabular-nums">
                                 {material.pageCount}
                             </span>
                         </h2>
-                        <ul
-                            key={material.version}
-                            className="divide-paper-edge divide-y"
-                        >
-                            {material.pages.map((page) => (
-                                <PageRow
-                                    key={page.number}
-                                    materialId={material.id}
-                                    version={material.version}
-                                    page={page}
-                                />
-                            ))}
-                        </ul>
+                        <PageList key={material.version} material={material} />
                     </section>
                 </Card>
             )}

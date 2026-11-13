@@ -408,7 +408,7 @@ export function LiveCard({
                     id="live-title"
                     ref={heading}
                     tabIndex={-1}
-                    className={`text-lg font-semibold ${focusHeading}`}
+                    className={`font-display text-primary-deep text-xl font-semibold sm:text-2xl ${focusHeading}`}
                 >
                     Sesi langsung
                 </h2>

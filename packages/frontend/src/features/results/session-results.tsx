@@ -3,7 +3,7 @@ import { Link } from 'react-router';
 import { RequestError } from '../../components/request-error';
 import { Button } from '../../components/ui/button';
 import { Card } from '../../components/ui/card';
-import { cellLink, textLink } from '../../components/ui/text-link';
+import { cellLink } from '../../components/ui/text-link';
 import {
     Table,
     TableCell,
@@ -18,6 +18,7 @@ import { LiveCard } from '../live/live-card';
 import { AnalyseAgain, stateLabel, waitsForTeacher } from './analysis-state';
 import { sessionResultsQuery } from './queries';
 import { reviewLabel, ShownStatus, statusLabels, StatusLegend } from './status';
+import { BackLink } from '../../components/back-link';
 
 export function SessionResults({
     classId,
@@ -30,9 +31,9 @@ export function SessionResults({
     const classes = useQuery(classesQuery());
     const className = classes.data?.find(({ id }) => id === classId)?.name;
     const back = (
-        <Link to={`/teacher/classes/${classId}`} className={textLink}>
+        <BackLink to={`/teacher/classes/${classId}`}>
             Kembali ke {className ?? 'kelas'}
-        </Link>
+        </BackLink>
     );
 
     if (results.isPending) {
@@ -74,9 +75,9 @@ export function SessionResults({
 
     return (
         <div className="space-y-6">
-            <div>
-                {back}
-                <h1 className="mt-1 text-2xl font-semibold">
+            {back}
+            <Card className="space-y-2 print:border-0 print:p-0 print:shadow-none">
+                <h1 className="font-display text-primary-deep text-3xl leading-tight font-semibold break-words sm:text-4xl">
                     {assignment.title}
                 </h1>
                 <p className="text-muted-foreground mt-1">
@@ -87,7 +88,7 @@ export function SessionResults({
                     {submitted} dari {students.length} siswa sudah mengirim ·{' '}
                     {analysed} sudah dianalisis
                 </p>
-            </div>
+            </Card>
             <LiveCard classId={classId} assignmentId={assignmentId} />
             <Card>
                 <section
@@ -96,7 +97,7 @@ export function SessionResults({
                 >
                     <h2
                         id="competencies-title"
-                        className="text-lg font-semibold"
+                        className="font-display text-primary-deep text-xl font-semibold sm:text-2xl"
                     >
                         Kompetensi
                     </h2>
@@ -141,7 +142,10 @@ export function SessionResults({
             </Card>
             <Card>
                 <section aria-labelledby="results-title" className="space-y-4">
-                    <h2 id="results-title" className="text-lg font-semibold">
+                    <h2
+                        id="results-title"
+                        className="font-display text-primary-deep text-xl font-semibold sm:text-2xl"
+                    >
                         Hasil per siswa
                     </h2>
                     <StatusLegend />

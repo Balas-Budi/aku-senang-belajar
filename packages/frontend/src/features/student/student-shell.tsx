@@ -1,5 +1,6 @@
 import { useEffect, useRef, useState, type ReactNode } from 'react';
 import { LogoutDialog } from './logout-dialog';
+import { LogoMark } from '../../components/logo-mark';
 import { Link } from 'react-router';
 import { Button, buttonVariants } from '../../components/ui/button';
 import { useErrorToast } from '../../components/ui/toast';
@@ -60,8 +61,9 @@ export function StudentShell({
                 <div className="mx-auto flex max-w-5xl items-center justify-between gap-3 px-4 py-3 sm:px-8">
                     <Link
                         to="/student"
-                        className="font-display text-primary-deep focus-visible:outline-ring rounded-lg text-xl leading-tight font-semibold focus-visible:outline-3"
+                        className="font-display text-primary-deep focus-visible:outline-ring flex items-center gap-2 rounded-lg text-lg leading-tight font-semibold focus-visible:outline-3 sm:text-xl"
                     >
+                        <LogoMark className="size-9 shrink-0 sm:size-10" />
                         Aku Senang Belajar
                     </Link>
                     <details ref={menu} className="group relative shrink-0">

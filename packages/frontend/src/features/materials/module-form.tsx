@@ -166,7 +166,7 @@ export function ModuleForm({
                 <div>
                     <h2
                         id="module-form-title"
-                        className="text-lg font-semibold"
+                        className="font-display text-primary-deep text-xl font-semibold sm:text-2xl"
                     >
                         Bab dari halaman pilihan Anda
                     </h2>

@@ -54,7 +54,10 @@ export function LicenceCard({ material }: { material: MaterialDetail }) {
         <Card>
             <section aria-labelledby="licence-title">
                 <div className="flex flex-wrap items-center justify-between gap-x-4 gap-y-2">
-                    <h2 id="licence-title" className="text-lg font-semibold">
+                    <h2
+                        id="licence-title"
+                        className="font-display text-primary-deep text-xl font-semibold sm:text-2xl"
+                    >
                         Sumber dan hak pakai
                     </h2>
                     {own && (

@@ -4,7 +4,7 @@ import { cn } from '../../lib/cn';
 export function Table({ className, ...props }: ComponentProps<'table'>) {
     return (
         <table
-            className={cn('w-full text-left text-sm', className)}
+            className={cn('w-full text-left text-base', className)}
             {...props}
         />
     );

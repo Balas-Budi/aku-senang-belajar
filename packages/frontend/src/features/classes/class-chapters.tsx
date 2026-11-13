@@ -6,7 +6,10 @@ import { Card } from '../../components/ui/card';
 import { textLink } from '../../components/ui/text-link';
 import { ApiError } from '../../lib/api';
 import type { Subject } from '../assignments/queries';
-import { subjects } from '../assignments/subject-art';
+import { SubjectArt, subjects } from '../assignments/subject-art';
+import { SectionTitle } from '../../components/section-title';
+import { BookIcon } from '../../components/icons/workspace-icons';
+import { cn } from '../../lib/cn';
 import {
     classChaptersQuery,
     useChapterAccess,
@@ -37,15 +40,33 @@ function ChapterRow({
             : undefined;
     const opened = chapter.openStages > 0;
     return (
-        <li className="flex flex-wrap items-center justify-between gap-x-4 gap-y-2 py-3">
-            <div className="min-w-0">
-                <h4 className="font-semibold break-words">{chapter.title}</h4>
+        <li className="flex flex-wrap items-center justify-between gap-x-4 gap-y-3 py-4">
+            <div className="min-w-0 flex-1 basis-64">
+                <span
+                    className={cn(
+                        'mb-1 inline-block rounded-full px-3 py-0.5 text-sm font-semibold',
+                        opened
+                            ? 'bg-status-visible/10 text-status-visible'
+                            : chapter.waitingStages > 0
+                              ? 'bg-secondary text-ai-suggestion'
+                              : 'bg-muted text-muted-foreground',
+                    )}
+                >
+                    {opened
+                        ? 'Dibuka'
+                        : chapter.waitingStages > 0
+                          ? 'Siap dibuka'
+                          : 'Belum ada misi'}
+                </span>
+                <h4 className="text-base font-semibold break-words">
+                    {chapter.title}
+                </h4>
                 <p className="text-muted-foreground text-sm">
                     {opened
                         ? `Dibuka untuk kelas · ${chapter.openStages} misi`
                         : chapter.waitingStages > 0
-                          ? `Belum dibuka · ${chapter.waitingStages} misi siap`
-                          : 'Belum ada misi yang siap'}
+                          ? `${chapter.waitingStages} misi siap dibagikan`
+                          : 'Siapkan misinya dulu di Materi.'}
                     {opened &&
                         chapter.waitingStages > 0 &&
                         ` · ${chapter.waitingStages} misi baru belum dibagikan`}
@@ -56,7 +77,10 @@ function ChapterRow({
                 {opened && (
                     <Link
                         to={`/teacher/classes/${classId}/chapters/${chapter.id}`}
-                        className={buttonVariants({ variant: 'outline' })}
+                        className={buttonVariants({
+                            variant: 'outline',
+                            className: 'min-h-11 bg-white px-4',
+                        })}
                     >
                         Laporan bab
                     </Link>
@@ -64,6 +88,7 @@ function ChapterRow({
                 {chapter.waitingStages > 0 && (
                     <Button
                         variant={opened ? 'outline' : 'primary'}
+                        className="min-h-11 px-4"
                         disabled={access.isPending}
                         onClick={() => change('PUT')}
                     >
@@ -77,6 +102,7 @@ function ChapterRow({
                 {opened && !chapter.started && (
                     <Button
                         variant="outline"
+                        className="min-h-11 bg-white px-4"
                         disabled={access.isPending}
                         onClick={() => change('DELETE')}
                     >
@@ -89,7 +115,10 @@ function ChapterRow({
                 {!opened && chapter.waitingStages === 0 && ownBookId && (
                     <Link
                         to={`/teacher/materials/${ownBookId}`}
-                        className={textLink}
+                        className={buttonVariants({
+                            variant: 'outline',
+                            className: 'min-h-11 bg-white px-4',
+                        })}
                     >
                         Siapkan misi
                     </Link>
@@ -105,11 +134,11 @@ export function ClassChapters({ classId }: { classId: number }) {
     return (
         <Card>
             <section aria-labelledby="chapters-title" className="space-y-3">
-                <div>
-                    <h2 id="chapters-title" className="text-lg font-semibold">
+                <div className="space-y-2">
+                    <SectionTitle id="chapters-title" icon={<BookIcon />}>
                         Bab untuk kelas ini
-                    </h2>
-                    <p className="text-muted-foreground text-sm">
+                    </SectionTitle>
+                    <p className="text-muted-foreground text-base">
                         Siswa hanya melihat bab yang Anda buka. Misi di dalam
                         bab terbuka satu per satu, sesuai urutan.
                     </p>
@@ -143,11 +172,16 @@ export function ClassChapters({ classId }: { classId: number }) {
                                 <section
                                     key={book.id}
                                     aria-labelledby={`class-book-${book.id}`}
+                                    className="border-paper-edge rounded-2xl border px-4 pt-4"
                                 >
                                     <h3
                                         id={`class-book-${book.id}`}
-                                        className="font-semibold"
+                                        className="flex flex-wrap items-center gap-x-2 text-lg font-semibold"
                                     >
+                                        <SubjectArt
+                                            subject={subject}
+                                            className="size-9"
+                                        />
                                         {book.title}
                                         <span className="text-muted-foreground font-normal">
                                             {' '}

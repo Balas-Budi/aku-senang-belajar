@@ -24,7 +24,9 @@ export default function AccountHome() {
         );
     return (
         <div className="max-w-2xl space-y-6">
-            <h1 className="text-2xl font-semibold">Pengaturan akun</h1>
+            <h1 className="font-display text-primary-deep text-3xl leading-tight font-semibold break-words sm:text-4xl">
+                Pengaturan akun
+            </h1>
             <Card className="space-y-6 sm:p-6">
                 <ChangePasswordForm />
                 <LogoutEverywhere student={false} />

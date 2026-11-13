@@ -3,9 +3,8 @@ import { useEffect, useState } from 'react';
 import { Link } from 'react-router';
 import { RequestError } from '../../components/request-error';
 import { Alert } from '../../components/ui/alert';
-import { Button } from '../../components/ui/button';
+import { Button, buttonVariants } from '../../components/ui/button';
 import { Card } from '../../components/ui/card';
-import { textLink } from '../../components/ui/text-link';
 import { cn } from '../../lib/cn';
 import { subjects } from '../assignments/subject-art';
 import { Illustration } from '../learning-sessions/illustration';
@@ -23,6 +22,7 @@ import {
 } from './queries';
 import { decisionLabels, ShownStatus, StatusChip } from './status';
 import { VerificationForm } from './verification-form';
+import { BackLink } from '../../components/back-link';
 
 const kindLabels = {
     check: 'Soal cek',
@@ -286,7 +286,10 @@ function CompetencyCard({
             className="scroll-mt-6 space-y-5 sm:p-6"
         >
             <div className="space-y-3">
-                <h2 id={titleId} className="text-lg font-semibold">
+                <h2
+                    id={titleId}
+                    className="font-display text-primary-deep text-xl font-semibold sm:text-2xl"
+                >
                     <span className="text-muted-foreground mr-1">{code}</span>{' '}
                     {description}
                 </h2>
@@ -419,12 +422,11 @@ export function StudentEvidence({
         studentEvidenceQuery(classId, assignmentId, studentId),
     );
     const back = (title?: string) => (
-        <Link
+        <BackLink
             to={`/teacher/classes/${classId}/sessions/${assignmentId}#siswa-${studentId}`}
-            className={textLink}
         >
             Kembali ke hasil {title ?? 'misi'}
-        </Link>
+        </BackLink>
     );
 
     if (evidence.isPending) {
@@ -459,9 +461,11 @@ export function StudentEvidence({
 
     return (
         <div className="space-y-6">
-            <div className="space-y-2">
-                {back(assignment.title)}
-                <h1 className="text-2xl font-semibold">{student.name}</h1>
+            {back(assignment.title)}
+            <Card className="space-y-2 print:border-0 print:p-0 print:shadow-none">
+                <h1 className="font-display text-primary-deep text-3xl leading-tight font-semibold break-words sm:text-4xl">
+                    {student.name}
+                </h1>
                 <p className="text-muted-foreground">
                     {assignment.title} · {subjects[assignment.subject].label} ·{' '}
                     {assignment.moduleTitle}
@@ -499,11 +503,14 @@ export function StudentEvidence({
                 )}
                 <Link
                     to={`/teacher/classes/${classId}/students/${student.id}`}
-                    className={textLink}
+                    className={buttonVariants({
+                        variant: 'outline',
+                        className: 'min-h-11 bg-white px-4',
+                    })}
                 >
                     Lihat laporan {student.name}
                 </Link>
-            </div>
+            </Card>
             {competencies.map((competency) => (
                 <CompetencyCard
                     key={competency.id}

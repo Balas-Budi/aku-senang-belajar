@@ -425,7 +425,10 @@ export function Adaptations({
                 className="@container space-y-4"
             >
                 <div className="space-y-1">
-                    <h2 id="helped-title" className="text-lg font-semibold">
+                    <h2
+                        id="helped-title"
+                        className="font-display text-primary-deep text-xl font-semibold sm:text-2xl"
+                    >
                         Yang membantu
                     </h2>
                     <p className="text-muted-foreground text-sm">

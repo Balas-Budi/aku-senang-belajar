@@ -594,7 +594,10 @@ export function ThemesCard({
                         id="themes-title"
                         ref={heading}
                         tabIndex={-1}
-                        className={cn(focusHeading, 'text-lg font-semibold')}
+                        className={cn(
+                            focusHeading,
+                            'font-display text-primary-deep text-xl font-semibold sm:text-2xl',
+                        )}
                     >
                         Tema cerita
                     </h2>

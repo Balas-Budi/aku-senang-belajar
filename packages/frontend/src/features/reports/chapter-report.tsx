@@ -3,7 +3,7 @@ import { Link } from 'react-router';
 import { RequestError } from '../../components/request-error';
 import { Button, buttonVariants } from '../../components/ui/button';
 import { Card } from '../../components/ui/card';
-import { cellLink, textLink } from '../../components/ui/text-link';
+import { cellLink } from '../../components/ui/text-link';
 import {
     Table,
     TableCell,
@@ -21,6 +21,7 @@ import {
 } from '../results/status';
 import { chapterReportQuery, type Counts } from './queries';
 import { ReportText } from './report-text';
+import { BackLink } from '../../components/back-link';
 
 function countsLine(counts: Counts | undefined, students: number) {
     if (!counts) return `0 dari ${students} siswa sudah punya bukti`;
@@ -44,12 +45,9 @@ export function ChapterReport({
     const classes = useQuery(classesQuery());
     const className = classes.data?.find(({ id }) => id === classId)?.name;
     const back = (
-        <Link
-            to={`/teacher/classes/${classId}`}
-            className={`${textLink} print:hidden`}
-        >
+        <BackLink to={`/teacher/classes/${classId}?bagian=bab`}>
             Kembali ke {className ?? 'kelas'}
-        </Link>
+        </BackLink>
     );
 
     if (query.isPending) {
@@ -84,9 +82,9 @@ export function ChapterReport({
 
     return (
         <div className="space-y-6">
-            <div className="space-y-2">
-                {back}
-                <h1 className="text-2xl font-semibold">
+            {back}
+            <Card className="space-y-2 print:border-0 print:p-0 print:shadow-none">
+                <h1 className="font-display text-primary-deep text-3xl leading-tight font-semibold break-words sm:text-4xl">
                     Laporan bab {chapter.title}
                 </h1>
                 <p className="text-muted-foreground">
@@ -105,7 +103,7 @@ export function ChapterReport({
                         Unduh CSV
                     </a>
                 </div>
-            </div>
+            </Card>
             <ReportText
                 classId={classId}
                 reportUrl={reportUrl}
@@ -120,7 +118,7 @@ export function ChapterReport({
                 >
                     <h2
                         id="competencies-title"
-                        className="text-lg font-semibold"
+                        className="font-display text-primary-deep text-xl font-semibold sm:text-2xl"
                     >
                         Kompetensi
                     </h2>
@@ -154,7 +152,10 @@ export function ChapterReport({
             <Card>
                 <section aria-labelledby="map-title" className="space-y-4">
                     <div className="space-y-1">
-                        <h2 id="map-title" className="text-lg font-semibold">
+                        <h2
+                            id="map-title"
+                            className="font-display text-primary-deep text-xl font-semibold sm:text-2xl"
+                        >
                             Peta kelas
                         </h2>
                         <p className="text-muted-foreground text-sm">

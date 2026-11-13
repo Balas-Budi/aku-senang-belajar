@@ -84,7 +84,10 @@ export function ReportText({
         <Card>
             <section aria-labelledby="report-title" className="space-y-4">
                 <div className="space-y-1">
-                    <h2 id="report-title" className="text-lg font-semibold">
+                    <h2
+                        id="report-title"
+                        className="font-display text-primary-deep text-xl font-semibold sm:text-2xl"
+                    >
                         Ringkasan untuk guru
                     </h2>
                     <p className="text-muted-foreground text-sm print:hidden">

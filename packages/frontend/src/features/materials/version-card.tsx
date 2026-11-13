@@ -48,7 +48,7 @@ export function VersionCard({ material }: { material: MaterialDetail }) {
                     id="versions-title"
                     ref={heading}
                     tabIndex={-1}
-                    className={`text-lg font-semibold ${focusHeading}`}
+                    className={`font-display text-primary-deep text-xl font-semibold sm:text-2xl ${focusHeading}`}
                 >
                     Versi
                 </h2>

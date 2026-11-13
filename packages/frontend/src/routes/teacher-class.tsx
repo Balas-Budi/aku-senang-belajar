@@ -1,5 +1,5 @@
 import { dehydrate, HydrationBoundary } from '@tanstack/react-query';
-import { data, Link } from 'react-router';
+import { data } from 'react-router';
 import { requireUser } from '../lib/require-user.server';
 import {
     classChaptersQuery,
@@ -12,7 +12,7 @@ import { classChallengeQuery } from '../features/challenges/queries';
 import { classFollowUpsQuery } from '../features/follow-ups/queries';
 import { classMissionsQuery } from '../features/results/queries';
 import { ApiError } from '../lib/api';
-import { textLink } from '../components/ui/text-link';
+import { BackLink } from '../components/back-link';
 import type { Route } from './+types/teacher-class';
 export async function loader({ request, params }: Route.LoaderArgs) {
     const { client, cookie } = await requireUser(request, 'teacher');
@@ -36,14 +36,16 @@ export async function loader({ request, params }: Route.LoaderArgs) {
     }
     return { id, dehydratedState: dehydrate(client) };
 }
-export const meta = () => [{ title: 'Daftar siswa | Aku Senang Belajar' }];
+export const meta = () => [{ title: 'Kelas | Aku Senang Belajar' }];
 export default function Detail({ loaderData }: Route.ComponentProps) {
     return (
         <HydrationBoundary state={loaderData.dehydratedState}>
-            <Link to="/teacher/classes" className={textLink}>
-                Kembali ke daftar kelas
-            </Link>
-            <ClassDetail id={loaderData.id} />
+            <div className="space-y-4">
+                <BackLink to="/teacher/classes">
+                    Kembali ke daftar kelas
+                </BackLink>
+                <ClassDetail id={loaderData.id} />
+            </div>
         </HydrationBoundary>
     );
 }

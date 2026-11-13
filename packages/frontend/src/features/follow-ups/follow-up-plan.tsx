@@ -2,9 +2,8 @@ import { useQuery } from '@tanstack/react-query';
 import { type ReactNode, type RefObject, useRef, useState } from 'react';
 import { Link } from 'react-router';
 import { RequestError } from '../../components/request-error';
-import { Button } from '../../components/ui/button';
+import { Button, buttonVariants } from '../../components/ui/button';
 import { Card } from '../../components/ui/card';
-import { textLink } from '../../components/ui/text-link';
 import { classesQuery } from '../classes/queries';
 import { StatusChip } from '../results/status';
 import { focusHeading } from '../studio/studio-labels';
@@ -15,6 +14,7 @@ import {
     type Practice,
     useMarkFollowUp,
 } from './queries';
+import { BackLink } from '../../components/back-link';
 
 const day = new Intl.DateTimeFormat('id-ID', { dateStyle: 'medium' });
 const busy = 'aria-disabled:opacity-60';
@@ -137,7 +137,7 @@ function PlanSection({
                     id={id}
                     ref={heading}
                     tabIndex={-1}
-                    className={`text-lg font-semibold ${focusHeading}`}
+                    className={`font-display text-primary-deep text-xl font-semibold sm:text-2xl ${focusHeading}`}
                 >
                     {title}{' '}
                     <span className="text-muted-foreground ml-1 text-sm font-normal tabular-nums">
@@ -164,7 +164,10 @@ export function FollowUpsLink({ classId }: { classId: number }) {
     return (
         <Link
             to={`/teacher/classes/${classId}/follow-ups`}
-            className={textLink}
+            className={buttonVariants({
+                variant: 'outline',
+                className: 'min-h-11 bg-white px-4',
+            })}
         >
             {open === undefined
                 ? 'Rencana tindak lanjut'
@@ -182,9 +185,9 @@ export function FollowUpPlan({ classId }: { classId: number }) {
     const doneHeading = useRef<HTMLHeadingElement>(null);
     const className = classes.data?.find(({ id }) => id === classId)?.name;
     const back = (
-        <Link to={`/teacher/classes/${classId}`} className={textLink}>
+        <BackLink to={`/teacher/classes/${classId}`}>
             Kembali ke {className ?? 'kelas'}
-        </Link>
+        </BackLink>
     );
 
     if (!query.data)
@@ -242,16 +245,16 @@ export function FollowUpPlan({ classId }: { classId: number }) {
 
     return (
         <div className="space-y-6">
-            <div className="space-y-1">
-                {back}
-                <h1 className="text-2xl font-semibold">
+            {back}
+            <Card className="space-y-2 print:border-0 print:p-0 print:shadow-none">
+                <h1 className="font-display text-primary-deep text-3xl leading-tight font-semibold break-words sm:text-4xl">
                     Rencana tindak lanjut
                 </h1>
                 <p className="text-muted-foreground">
                     Penguatan dan Pengayaan muncul di jalur siswa sebagai kartu
                     Dari gurumu. Diskusi kelas dan Ajar ulang hanya untuk Anda.
                 </p>
-            </div>
+            </Card>
             <PlanSection
                 id="follow-ups-open"
                 title="Terbuka"

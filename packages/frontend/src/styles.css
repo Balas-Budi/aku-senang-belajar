@@ -44,6 +44,10 @@
     --color-status-verify-soft: #fff0e6;
     --color-ai-suggestion: #5b3fd9;
 }
+.workspace,
+:root:has(.workspace) {
+    background-color: #f4f3fb;
+}
 :root:has(.student-space),
 .student-space,
 .login-page {

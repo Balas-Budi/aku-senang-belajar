@@ -2,9 +2,8 @@ import { useQuery } from '@tanstack/react-query';
 import type { ReactNode } from 'react';
 import { Link } from 'react-router';
 import { RequestError } from '../../components/request-error';
-import { Button } from '../../components/ui/button';
+import { Button, buttonVariants } from '../../components/ui/button';
 import { Card } from '../../components/ui/card';
-import { textLink } from '../../components/ui/text-link';
 import {
     classMembershipQuery,
     type MembershipEvent,
@@ -62,7 +61,7 @@ function Section({
     return (
         <Card>
             <details>
-                <summary className="focus-visible:outline-ring cursor-pointer rounded py-2.5 text-lg font-semibold focus-visible:outline-3">
+                <summary className="font-display text-primary-deep focus-visible:outline-ring min-h-11 cursor-pointer rounded py-2.5 text-xl font-semibold focus-visible:outline-3">
                     {title}
                     {count !== undefined && (
                         <>
@@ -130,7 +129,10 @@ export function MembershipHistory({ classId }: { classId: number }) {
                                 </div>
                                 <Link
                                     to={`/teacher/classes/${classId}/students/${member.studentId}`}
-                                    className={textLink}
+                                    className={buttonVariants({
+                                        variant: 'outline',
+                                        className: 'min-h-11 bg-white px-4',
+                                    })}
                                 >
                                     Lihat hasil belajar
                                     <span className="sr-only">

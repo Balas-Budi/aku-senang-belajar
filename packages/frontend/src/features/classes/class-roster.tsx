@@ -243,7 +243,7 @@ export function ClassRoster({ classId }: { classId: number }) {
                     id="roster-title"
                     ref={heading}
                     tabIndex={-1}
-                    className={`text-lg font-semibold ${focusHeading}`}
+                    className={`font-display text-primary-deep text-xl font-semibold sm:text-2xl ${focusHeading}`}
                 >
                     Siswa yang bergabung{' '}
                     <span className="text-muted-foreground ml-1 text-sm font-normal tabular-nums">
@@ -269,7 +269,16 @@ export function ClassRoster({ classId }: { classId: number }) {
                                     <li key={student.id} className="py-3">
                                         <div className="flex flex-wrap items-center justify-between gap-x-4 gap-y-2">
                                             <p className="flex min-w-0 flex-wrap items-center gap-x-3 gap-y-1">
-                                                <span className="min-w-0 break-words">
+                                                <span
+                                                    aria-hidden="true"
+                                                    className="bg-secondary text-primary-deep flex size-10 shrink-0 items-center justify-center rounded-full font-semibold"
+                                                >
+                                                    {student.name
+                                                        .trim()
+                                                        .charAt(0)
+                                                        .toUpperCase()}
+                                                </span>
+                                                <span className="min-w-0 text-base font-semibold break-words">
                                                     {student.name}
                                                 </span>
                                                 {student.inactive && (
@@ -280,6 +289,7 @@ export function ClassRoster({ classId }: { classId: number }) {
                                             </p>
                                             <Button
                                                 variant="outline"
+                                                className="min-h-11 bg-white px-4"
                                                 aria-expanded={open}
                                                 aria-controls={panelId}
                                                 onClick={() =>

@@ -1,11 +1,11 @@
 import { dehydrate, HydrationBoundary } from '@tanstack/react-query';
-import { data, Link } from 'react-router';
+import { data } from 'react-router';
 import { requireUser } from '../lib/require-user.server';
 import { materialQuery } from '../features/materials/queries';
 import { MaterialDetailView } from '../features/materials/material-detail';
 import { ApiError } from '../lib/api';
-import { textLink } from '../components/ui/text-link';
 import type { Route } from './+types/teacher-material';
+import { BackLink } from '../components/back-link';
 export async function loader({ request, params }: Route.LoaderArgs) {
     const { client, cookie } = await requireUser(request, 'teacher');
     const id = Number(params.materialId);
@@ -24,9 +24,7 @@ export const meta = () => [{ title: 'Materi | Aku Senang Belajar' }];
 export default function Material({ loaderData }: Route.ComponentProps) {
     return (
         <HydrationBoundary state={loaderData.dehydratedState}>
-            <Link to="/teacher/materials" className={textLink}>
-                Kembali ke Materi
-            </Link>
+            <BackLink to="/teacher/materials">Kembali ke Materi</BackLink>
             <MaterialDetailView id={loaderData.id} />
         </HydrationBoundary>
     );

@@ -1,4 +1,3 @@
-import { useState } from 'react';
 import { Outlet, useLocation, useMatch, useNavigate } from 'react-router';
 import { useQuery } from '@tanstack/react-query';
 import { meQuery, useLogout, type Role } from '../features/auth/queries';
@@ -6,6 +5,13 @@ import { classesQuery } from '../features/classes/queries';
 import { Button } from './ui/button';
 import { RequestError } from './request-error';
 import { WorkspaceShell, type WorkspaceLink } from './workspace-shell';
+import {
+    BookIcon,
+    ClassIcon,
+    HomeIcon,
+    StudentIcon,
+    TeacherIcon,
+} from './icons/workspace-icons';
 import { StudentShell } from '../features/student/student-shell';
 
 function useWorkspaceLinks(role: Role): WorkspaceLink[] {
@@ -26,6 +32,7 @@ function useWorkspaceLinks(role: Role): WorkspaceLink[] {
             {
                 to: '/admin?role=student',
                 label: 'Akun siswa',
+                icon: <StudentIcon />,
                 current:
                     onAccounts && shown === 'student'
                         ? filtered
@@ -36,6 +43,7 @@ function useWorkspaceLinks(role: Role): WorkspaceLink[] {
             {
                 to: '/admin?role=teacher',
                 label: 'Akun guru',
+                icon: <TeacherIcon />,
                 current: onAccounts && shown === 'teacher' ? 'page' : false,
             },
         ];
@@ -49,11 +57,13 @@ function useWorkspaceLinks(role: Role): WorkspaceLink[] {
         {
             to: '/teacher',
             label: 'Beranda',
+            icon: <HomeIcon />,
             current: location.pathname === '/teacher' ? 'page' : false,
         },
         {
             to: '/teacher/classes',
             label: 'Kelas',
+            icon: <ClassIcon />,
             current: location.pathname === '/teacher/classes' ? 'page' : false,
             nested: classroom
                 ? [
@@ -71,6 +81,7 @@ function useWorkspaceLinks(role: Role): WorkspaceLink[] {
         {
             to: '/teacher/materials',
             label: 'Materi',
+            icon: <BookIcon />,
             current:
                 location.pathname === '/teacher/materials'
                     ? 'page'
@@ -87,7 +98,6 @@ export function RoleShell({ role }: { role: Role }) {
     const logout = useLogout();
     const navigate = useNavigate();
     const links = useWorkspaceLinks(role);
-    const [help, setHelp] = useState(false);
     const user = query.data;
     const leave = () =>
         logout.mutate(undefined, {
@@ -135,22 +145,6 @@ export function RoleShell({ role }: { role: Role }) {
         >
             <RequestError error={logout.error} />
             <Outlet />
-            <footer className="border-paper-edge text-muted-foreground border-t pt-6 print:hidden">
-                <button
-                    type="button"
-                    className="focus-visible:outline-ring min-h-12 underline underline-offset-4 focus-visible:outline-3"
-                    aria-expanded={help}
-                    onClick={() => setHelp(!help)}
-                >
-                    Butuh bantuan akun?
-                </button>
-                {help && (
-                    <p className="mt-2">
-                        Minta bantuan admin sekolah untuk membuat akun atau
-                        mengatur ulang kata sandi.
-                    </p>
-                )}
-            </footer>
         </WorkspaceShell>
     );
 }

@@ -1,3 +1,4 @@
+import { SendIcon } from '../../components/icons/workspace-icons';
 import { useQuery } from '@tanstack/react-query';
 import { useEffect, useRef, useState } from 'react';
 import { Link } from 'react-router';
@@ -42,6 +43,7 @@ import { textLink } from '../../components/ui/text-link';
 import { classesQuery } from '../classes/queries';
 import { stepLabels, stepOrder } from '../learning-sessions/steps';
 import { licenceLabels } from '../materials/licence-fields';
+import { BackLink } from '../../components/back-link';
 
 function stateOf(session: StudioSession) {
     if (session.prepared) return 'Disiapkan tim Aku Senang Belajar';
@@ -410,7 +412,10 @@ function RevisionForm({
         <Card>
             <section aria-labelledby="revision-title" className="space-y-4">
                 <div>
-                    <h2 id="revision-title" className="text-lg font-semibold">
+                    <h2
+                        id="revision-title"
+                        className="font-display text-primary-deep text-xl font-semibold sm:text-2xl"
+                    >
                         Minta revisi
                     </h2>
                     <p className="text-muted-foreground mt-1">
@@ -494,7 +499,10 @@ function PublishCard({
         <Card>
             <section aria-labelledby="publish-title" className="space-y-4">
                 <div>
-                    <h2 id="publish-title" className="text-lg font-semibold">
+                    <h2
+                        id="publish-title"
+                        className="font-display text-primary-deep text-xl font-semibold sm:text-2xl"
+                    >
                         Terbitkan
                     </h2>
                     <p className="text-muted-foreground mt-1">
@@ -586,7 +594,7 @@ function AssignCard({
                         id="assign-title"
                         ref={heading}
                         tabIndex={-1}
-                        className="focus-visible:outline-ring rounded text-lg font-semibold focus-visible:outline-3 focus-visible:outline-offset-4"
+                        className="focus-visible:outline-ring font-display text-primary-deep rounded text-xl font-semibold focus-visible:outline-3 focus-visible:outline-offset-4 sm:text-2xl"
                     >
                         Tugaskan ke kelas
                     </h2>
@@ -742,7 +750,10 @@ function EpisodeCard({ session }: { session: StudioSession }) {
     return (
         <Card className="space-y-3">
             <section aria-labelledby="episode-title" className="space-y-2">
-                <h2 id="episode-title" className="text-lg font-semibold">
+                <h2
+                    id="episode-title"
+                    className="font-display text-primary-deep text-xl font-semibold sm:text-2xl"
+                >
                     Cerita misi ini
                 </h2>
                 <p className="text-muted-foreground max-w-prose">
@@ -886,37 +897,50 @@ export function StudioView({ id }: { id: number }) {
     );
     return (
         <>
-            <Link
-                to={`/teacher/materials/${session.material.id}`}
-                className={textLink}
-            >
+            <BackLink to={`/teacher/materials/${session.material.id}`}>
                 Kembali ke {session.material.title}
-            </Link>
+            </BackLink>
             <div className="space-y-6">
-                <div>
-                    <h1 className="text-2xl font-semibold">{session.title}</h1>
-                    <p className="text-muted-foreground mt-2 tabular-nums">
-                        Modul {module.title}
-                        {module.firstPage !== null &&
-                            `, halaman ${module.firstPage} sampai ${module.lastPage}`}{' '}
-                        · {stateOf(session)}
-                        {session.length !== null &&
-                            ` · Panjang misi: ${lengthLabels[session.length]}`}
-                    </p>
-                    {rights && (
-                        <p className="text-muted-foreground mt-1 break-words">
-                            {material.source ? 'Sumber' : 'Hak pakai'}: {rights}
+                <Card className="flex items-start gap-4">
+                    <span
+                        aria-hidden="true"
+                        className="bg-secondary text-primary-deep hidden size-16 shrink-0 items-center justify-center rounded-2xl sm:flex"
+                    >
+                        <SendIcon className="size-8" />
+                    </span>
+                    <div className="min-w-0 flex-1">
+                        <span className="bg-secondary text-primary-deep mb-2 inline-block rounded-full px-3 py-0.5 text-sm font-semibold">
+                            Studio misi
+                        </span>
+                        <h1 className="font-display text-primary-deep text-3xl leading-tight font-semibold break-words sm:text-4xl">
+                            {session.title}
+                        </h1>
+                        <p className="text-muted-foreground mt-2 text-lg tabular-nums">
+                            Modul {module.title}
+                            {module.firstPage !== null &&
+                                `, halaman ${module.firstPage} sampai ${module.lastPage}`}{' '}
+                            · {stateOf(session)}
+                            {session.length !== null &&
+                                ` · Panjang misi: ${lengthLabels[session.length]}`}
                         </p>
-                    )}
-                    {material.licenceNote && (
-                        <p className="text-muted-foreground mt-1 break-words whitespace-pre-line">
-                            {material.licenceNote}
-                        </p>
-                    )}
-                    {session.summary && (
-                        <p className="mt-2 max-w-prose">{session.summary}</p>
-                    )}
-                </div>
+                        {rights && (
+                            <p className="text-muted-foreground mt-1 break-words">
+                                {material.source ? 'Sumber' : 'Hak pakai'}:{' '}
+                                {rights}
+                            </p>
+                        )}
+                        {material.licenceNote && (
+                            <p className="text-muted-foreground mt-1 break-words whitespace-pre-line">
+                                {material.licenceNote}
+                            </p>
+                        )}
+                        {session.summary && (
+                            <p className="mt-2 max-w-prose">
+                                {session.summary}
+                            </p>
+                        )}
+                    </div>
+                </Card>
                 <p role="status" className="sr-only">
                     {announcementOf(session)}
                 </p>
@@ -945,7 +969,7 @@ export function StudioView({ id }: { id: number }) {
                         >
                             <h2
                                 id="competencies-title"
-                                className="text-lg font-semibold"
+                                className="font-display text-primary-deep text-xl font-semibold sm:text-2xl"
                             >
                                 Kompetensi sesi ini
                             </h2>
@@ -974,7 +998,7 @@ export function StudioView({ id }: { id: number }) {
                             <section aria-labelledby={`step-${step}`}>
                                 <h2
                                     id={`step-${step}`}
-                                    className="text-lg font-semibold"
+                                    className="font-display text-primary-deep text-xl font-semibold sm:text-2xl"
                                 >
                                     {stepLabels[step]}{' '}
                                     <span className="text-muted-foreground ml-1 text-sm font-normal tabular-nums">
@@ -996,7 +1020,7 @@ export function StudioView({ id }: { id: number }) {
                         >
                             <h2
                                 id="extra-title"
-                                className="text-lg font-semibold"
+                                className="font-display text-primary-deep text-xl font-semibold sm:text-2xl"
                             >
                                 Tantangan tambahan
                             </h2>
