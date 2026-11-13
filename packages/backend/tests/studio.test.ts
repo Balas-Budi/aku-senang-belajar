@@ -131,7 +131,7 @@ test('a drawn draft is stored with every diagram as the model drew it, under the
     assert.deepEqual(storedDiagrams(session), drawnDiagrams);
 
     const system = provider.requests[0].body.messages[0].content;
-    assert.match(system, /160 wide and 120 high/);
+    assert.match(system, /160 wide, 120 high/);
     assert.match(system, /"parts"/);
     assert.doesNotMatch(system, /There are no pictures/);
 });
@@ -202,7 +202,7 @@ test('a revision sends the stored diagrams with screen numbers and asks to keep 
     );
     assert.ok(user.includes(quarters.label));
     assert.ok(user.includes('"screen":3'));
-    assert.ok(system.includes('copy each of its diagrams unchanged'));
+    assert.ok(system.includes('copy each diagram unchanged'));
 });
 
 test('a cut-off first draft is asked for fewer diagrams, a cut-off revision to keep them', async (t) => {

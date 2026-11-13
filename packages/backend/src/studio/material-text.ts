@@ -4,6 +4,8 @@ export type ModuleInfo = {
     title: string;
     /** The subject's name, as teachers see it. */
     subject: string;
+    /** Whether the subject counts and measures; left out, the header says nothing about it. */
+    numeric?: boolean;
     grade: number | null;
 };
 
@@ -13,6 +15,11 @@ export function moduleHeader(module: ModuleInfo) {
     return [
         `Module: ${module.title}`,
         `Subject: ${module.subject}`,
+        ...(module.numeric === undefined
+            ? []
+            : [
+                  `Subject kind: ${module.numeric ? 'numbers' : 'words and ideas'}`,
+              ]),
         `Grade: ${module.grade ?? 'not given'}`,
     ];
 }

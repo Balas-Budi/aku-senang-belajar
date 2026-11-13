@@ -43,7 +43,7 @@ import {
     storedBlocks,
     type SessionDraft,
 } from './session-draft.ts';
-import { materialSubjectName } from '../subjects.ts';
+import { isNumericSubject, materialSubjectName } from '../subjects.ts';
 
 export const DRAFT_TIMEOUT_MS = 180_000;
 export const DRAFT_TURNS = 3;
@@ -100,6 +100,7 @@ async function draftContext(db: Queryable, sessionId: number) {
             lastPage: modules.lastPage,
             materialId: materials.id,
             subject: materialSubjectName,
+            subjectKey: materials.subject,
             grade: materials.grade,
             materialVersion: modules.materialVersion,
         })
@@ -284,6 +285,7 @@ async function draftSession(
                     {
                         title: context.session.moduleTitle,
                         subject: context.session.subject,
+                        numeric: isNumericSubject(context.session.subjectKey),
                         grade: context.session.grade,
                     },
                     context.competencies,
@@ -298,6 +300,7 @@ async function draftSession(
                     context.competencies.map(({ code }) => code),
                     context.pages.map(({ number }) => number),
                     context.session.length,
+                    isNumericSubject(context.session.subjectKey),
                 ),
                 mend: mendDraft,
                 turns: DRAFT_TURNS,

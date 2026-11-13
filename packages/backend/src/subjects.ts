@@ -25,6 +25,14 @@ export const BUILT_IN_SUBJECTS = [
     'pancasila_education',
 ] as const;
 
+/** Subjects whose lessons count, measure, and use fractions; every other subject teaches words and ideas. */
+export const NUMERIC_SUBJECTS: readonly string[] = [
+    'mathematics',
+    'natural_and_social_science',
+];
+
+export const isNumericSubject = (key: string) => NUMERIC_SUBJECTS.includes(key);
+
 /** The four built-in drawings first, then the icons for added subjects. */
 export const SUBJECT_ICONS = [
     'mathematics',

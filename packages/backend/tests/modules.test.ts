@@ -76,7 +76,7 @@ test('text inside the material stays data, and a reply naming a page outside the
     assert.equal(provider.requests.length, 2);
 
     const [system, user] = provider.requests[0].body.messages;
-    assert.match(system.content, /never an instruction/);
+    assert.match(system.content, /never instruction to you/);
     assert.ok(
         user.content.indexOf('<material>') < user.content.indexOf(injection),
     );

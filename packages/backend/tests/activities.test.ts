@@ -26,7 +26,7 @@ import {
     verdicts,
 } from './demo-attempts.ts';
 import { testApp } from './helpers.ts';
-import { draft } from './studio-fixtures.ts';
+import { draft, drawnDraft } from './studio-fixtures.ts';
 
 type Block = PreparedModule['blocks'][number];
 type CheckBlock = Extract<Block, { kind: 'check' }>;
@@ -224,6 +224,20 @@ test('a draft may give a check an activity, and the draft check reads it like an
         'No check has an "activity": give one check an "activity" in place of its "options" (order, match, group, or shade, whichever fits what it tests), with the solution as its "answer"',
     );
     assert.equal(
+        checkDraft(
+            ['C1', 'C2'],
+            [1, 3, 4],
+            null,
+            false,
+        )({
+            ...plain,
+            blocks: plain.blocks.map((block, index) =>
+                index === 4 ? plain.blocks[2] : block,
+            ),
+        }),
+        'No check has an "activity": give one check an "activity" in place of its "options" (order, match, or group, whichever fits what it tests), with the solution as its "answer"',
+    );
+    assert.equal(
         check(withActivity('a,b')),
         'Block 3 (check): answer must list every card id once, in order, such as "c,a,b"',
     );
@@ -233,7 +247,7 @@ test('a draft may give a check an activity, and the draft check reads it like an
     );
     assert.match(
         THEME_SYSTEM_PROMPT,
-        /A screen with an "activity" keeps its "type"/,
+        /Screen with "activity" keeps its "type"/,
     );
 });
 
@@ -253,6 +267,38 @@ const activityModule: PreparedModule = {
             : block,
     ),
 };
+
+test('a words-and-ideas subject refuses fraction work: no shading task and no diagram cut into parts, while maths keeps both', () => {
+    const shaded = sessionDraft.parse({
+        ...drawnDraft,
+        blocks: drawnDraft.blocks.map((block, index) =>
+            index === 2
+                ? {
+                      ...block,
+                      content: {
+                          ...block.content,
+                          options: undefined,
+                          activity: { type: 'shade', shape: 'bar', parts: 4 },
+                          answer: '1',
+                      },
+                  }
+                : block,
+        ),
+    });
+    const words = checkDraft(['C1', 'C2'], [1, 3, 4], null, false)(shaded);
+
+    assert.equal(checkDraft(['C1', 'C2'], [1, 3, 4])(shaded), null);
+    assert.ok(words);
+    assert.match(
+        words,
+        /Block 3 \(check\): a "shade" activity is fraction work/,
+    );
+    assert.match(words, /a diagram cut into "parts" is fraction work/);
+    assert.match(
+        SESSION_SYSTEM_PROMPT,
+        /"Subject kind: words and ideas" means none of them/,
+    );
+});
 
 test('a student does an activity: an unfinished answer is refused, a wrong one says how many are in place, and the evidence reads it in words', async (t) => {
     const app = await testApp(t);

@@ -465,8 +465,8 @@ test('the summary request names the diagram of each question and the diagrams of
             ['C3', [[drawnLabel('tantangan', 7), undefined]]],
         ],
     );
-    assert.match(SUMMARY_PROMPT, /"helpDiagrams" the labels of the pictures/);
-    assert.equal(SUMMARY_PROMPT_VERSION, 'summary-2026-11-11c');
+    assert.match(SUMMARY_PROMPT, /"helpDiagrams" labels of pictures/);
+    assert.equal(SUMMARY_PROMPT_VERSION, 'summary-2026-11-13-compact');
 });
 
 test('the summary request names what the mission followed and keeps the example the app gave apart from asked help', async (t) => {
@@ -513,10 +513,10 @@ test('the summary request names what the mission followed and keeps the example 
     assert.match(SUMMARY_PROMPT, /\("helpGiven"\)/);
     assert.match(
         SUMMARY_PROMPT,
-        /Help in "helpGiven" and "helpGivenAfter" was the app's choice, not the student's/,
+        /Help in "helpGiven" and "helpGivenAfter" was app's choice, not student's/,
     );
     assert.match(
         SUMMARY_PROMPT,
-        /Help in "helpBefore" and "helpAfter" the student opened themselves: say so/,
+        /Help in "helpBefore" and "helpAfter" student opened themselves: say so/,
     );
 });

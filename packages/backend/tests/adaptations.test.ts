@@ -645,7 +645,7 @@ test('two kept summaries ask once with notes and try counts, without the student
             aiReason: chosen.reason,
             summaryIds: [taken.id, older.summaryId],
             model: 'provider-model-name',
-            promptVersion: 'suggestion-2026-11-10',
+            promptVersion: 'suggestion-2026-11-13-compact',
             handled: 1,
             tries: 0,
         },
