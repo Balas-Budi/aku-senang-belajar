@@ -5,7 +5,7 @@ import { StudentNavLink } from '../../components/student-nav-link';
 import { RequestError } from '../../components/request-error';
 import { Button, buttonVariants } from '../../components/ui/button';
 import type { Subject } from '../assignments/queries';
-import { subjects } from '../assignments/subject-art';
+import { SubjectName } from '../assignments/subject-art';
 import {
     ReactingJalak,
     ScreenCard,
@@ -32,7 +32,7 @@ function ExtraRun({
             to={`/student/subjects/${subject}`}
             className={buttonVariants({ feel: 'chunky' })}
         >
-            Kembali ke {subjects[subject].label}
+            Kembali ke <SubjectName subject={subject} />
         </Link>
     );
 
@@ -96,7 +96,7 @@ export function ExtraSession({ subject }: { subject: Subject }) {
     return (
         <div className="space-y-6">
             <StudentNavLink back to={`/student/subjects/${subject}`}>
-                Kembali ke {subjects[subject].label}
+                Kembali ke <SubjectName subject={subject} />
             </StudentNavLink>
             {query.isPending ? (
                 <p role="status" className="text-muted-foreground">

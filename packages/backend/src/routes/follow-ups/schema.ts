@@ -1,6 +1,7 @@
 import { z } from 'zod';
-import { followUpKind, subject, understandingStatus } from '../../db/schema.ts';
+import { followUpKind, understandingStatus } from '../../db/schema.ts';
 import { reviewQuestion, reviewQuery } from '../student/schema.ts';
+import { subjectKey } from '../../subjects.ts';
 
 const id = z.coerce.number().int().positive();
 
@@ -45,7 +46,7 @@ const followUp = z.object({
     kind,
     assignmentId: z.number(),
     mission: z.string(),
-    subject: z.enum(subject.enumValues),
+    subject: subjectKey,
     competency: z
         .object({ id: z.number(), code: z.string(), description: z.string() })
         .nullable(),
@@ -86,7 +87,7 @@ export const studentFollowUpsResponse = z.object({
 });
 
 export const studentFollowUpResponse = z.object({
-    followUp: offered.extend({ subject: z.enum(subject.enumValues) }),
+    followUp: offered.extend({ subject: subjectKey }),
     questions: z.array(reviewQuestion),
 });
 

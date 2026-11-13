@@ -9,7 +9,7 @@ import {
 import { Button, buttonVariants } from '../../components/ui/button';
 import { useErrorToast } from '../../components/ui/toast';
 import type { Subject } from '../assignments/queries';
-import { subjects } from '../assignments/subject-art';
+import { SubjectName } from '../assignments/subject-art';
 import {
     answerLabels,
     answerMissing,
@@ -222,7 +222,7 @@ function ReviewRun({
             to={`/student/subjects/${subject}`}
             className={buttonVariants({ feel: 'chunky' })}
         >
-            Kembali ke {subjects[subject].label}
+            Kembali ke <SubjectName subject={subject} />
         </Link>
     );
     const question = questions[index];
@@ -286,7 +286,7 @@ export function ReviewSession({ subject }: { subject: Subject }) {
     return (
         <div className="space-y-6">
             <StudentNavLink back to={`/student/subjects/${subject}`}>
-                Kembali ke {subjects[subject].label}
+                Kembali ke <SubjectName subject={subject} />
             </StudentNavLink>
             {query.isPending ? (
                 <p role="status" className="text-muted-foreground">

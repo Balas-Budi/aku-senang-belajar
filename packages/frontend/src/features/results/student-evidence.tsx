@@ -6,7 +6,7 @@ import { Alert } from '../../components/ui/alert';
 import { Button, buttonVariants } from '../../components/ui/button';
 import { Card } from '../../components/ui/card';
 import { cn } from '../../lib/cn';
-import { subjects } from '../assignments/subject-art';
+import { SubjectName } from '../assignments/subject-art';
 import { Illustration } from '../learning-sessions/illustration';
 import { interests } from '../profile/interests';
 import { adaptationParts } from '../reports/adaptations';
@@ -467,7 +467,8 @@ export function StudentEvidence({
                     {student.name}
                 </h1>
                 <p className="text-muted-foreground">
-                    {assignment.title} · {subjects[assignment.subject].label} ·{' '}
+                    {assignment.title} ·{' '}
+                    <SubjectName subject={assignment.subject} /> ·{' '}
                     {assignment.moduleTitle}
                 </p>
                 {theme && (

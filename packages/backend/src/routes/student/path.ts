@@ -8,7 +8,6 @@ import {
     materials,
     modules,
     sessionBlocks,
-    subject,
 } from '../../db/schema.ts';
 import {
     isMissionKind,
@@ -16,8 +15,9 @@ import {
     stepOfKind,
 } from '../../learning/blocks.ts';
 import { AppError } from '../../lib/errors.ts';
+import { subjectKeys } from '../../subjects.ts';
 
-type Subject = (typeof subject.enumValues)[number];
+type Subject = string;
 
 type ChapterRow = { id: number; title: string; subject: Subject };
 
@@ -36,7 +36,11 @@ export const stageLocked = () =>
         code: 'STAGE_LOCKED',
     });
 
-function buildPath(chapterRows: ChapterRow[], stageRows: StageRow[]) {
+function buildPath(
+    keys: string[],
+    chapterRows: ChapterRow[],
+    stageRows: StageRow[],
+) {
     const chapters = chapterRows.map((chapter) => {
         const rows = stageRows.filter((row) => row.moduleId === chapter.id);
         const stages = rows.map((row, index) => {
@@ -65,7 +69,7 @@ function buildPath(chapterRows: ChapterRow[], stageRows: StageRow[]) {
     });
 
     return {
-        subjects: subject.enumValues
+        subjects: keys
             .map((name) => ({
                 subject: name,
                 chapters: chapters
@@ -133,7 +137,7 @@ export async function pathOf(db: Queryable, studentId: number) {
                       asc(modules.id),
                   );
 
-    return buildPath(chapterRows, stageRows);
+    return buildPath(await subjectKeys(db), chapterRows, stageRows);
 }
 
 export async function isStageLocked(

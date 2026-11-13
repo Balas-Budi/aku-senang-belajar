@@ -13,16 +13,11 @@ import {
     text,
     timestamp,
     unique,
+    uniqueIndex,
     vector,
 } from 'drizzle-orm/pg-core';
 
 export const role = pgEnum('role', ['teacher', 'student', 'admin']);
-export const subject = pgEnum('subject', [
-    'mathematics',
-    'natural_and_social_science',
-    'indonesian_language',
-    'pancasila_education',
-]);
 export const learningSessionStatus = pgEnum('learning_session_status', [
     'draft',
     'ready',
@@ -144,6 +139,25 @@ export const verificationDecision = pgEnum('verification_decision', [
     'unsure',
 ]);
 
+/** School subjects. The four built-in keys stay fixed; teachers and admins add more. */
+export const subjects = pgTable(
+    'subjects',
+    {
+        key: text().primaryKey(),
+        position: integer().notNull().generatedAlwaysAsIdentity(),
+        name: text().notNull(),
+        color: text().notNull(),
+        icon: text().notNull(),
+        createdBy: integer().references(() => users.id, {
+            onDelete: 'set null',
+        }),
+        createdAt: timestamp({ withTimezone: true }).notNull().defaultNow(),
+    },
+    (table) => [
+        uniqueIndex('subjects_name_unique').on(sql`lower(${table.name})`),
+    ],
+);
+
 export const users = pgTable('users', {
     id: integer().primaryKey().generatedAlwaysAsIdentity(),
     role: role().notNull(),
@@ -262,7 +276,9 @@ export const materials = pgTable(
     'materials',
     {
         id: integer().primaryKey().generatedAlwaysAsIdentity(),
-        subject: subject().notNull(),
+        subject: text()
+            .notNull()
+            .references(() => subjects.key, { onDelete: 'restrict' }),
         title: text().notNull(),
         grade: integer(),
         ownerId: integer().references(() => users.id, { onDelete: 'cascade' }),
@@ -856,7 +872,9 @@ export const learnerAdaptations = pgTable(
         classId: integer()
             .notNull()
             .references(() => classes.id, { onDelete: 'cascade' }),
-        subject: subject().notNull(),
+        subject: text()
+            .notNull()
+            .references(() => subjects.key, { onDelete: 'restrict' }),
         aiHelpFirst: adaptationHelp(),
         aiLead: adaptationLead(),
         aiReason: text(),

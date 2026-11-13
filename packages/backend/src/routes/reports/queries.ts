@@ -15,7 +15,6 @@ import {
     reviewTries,
     sessionBlocks,
     studentSettings,
-    subject,
 } from '../../db/schema.ts';
 import { followedPair } from '../../learning/adaptation.ts';
 import { sessionBlock } from '../../learning/blocks.ts';
@@ -34,9 +33,10 @@ import {
     reachableAttempts,
     shownOf,
 } from '../results/queries.ts';
+import { subjectKeys } from '../../subjects.ts';
 
 type Status = typeof assessments.$inferSelect.status;
-type Subject = (typeof subject.enumValues)[number];
+type Subject = string;
 type Round = {
     tries: number;
     result: 'correct' | 'revealed' | 'open';
@@ -565,7 +565,7 @@ export async function adaptationsOf(
                   ({ subject: taughtSubject }) => taughtSubject,
               )
             : [only];
-    const shown = subject.enumValues.filter(
+    const shown = (await subjectKeys(db)).filter(
         (value) =>
             taught.includes(value) || rows.some((row) => row.subject === value),
     );

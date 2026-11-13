@@ -4,11 +4,11 @@ import {
     attemptStatus,
     INTERESTS,
     responseOutcome,
-    subject,
     textSize,
 } from '../../db/schema.ts';
 import { adaptationPair } from '../../learning/adaptation.ts';
 import { blockContent, steps } from '../../learning/blocks.ts';
+import { subjectKey } from '../../subjects.ts';
 
 export const TRY_LIMIT = 3;
 
@@ -33,7 +33,7 @@ const assignmentFields = {
     id: z.number(),
     title: z.string(),
     summary: z.string(),
-    subject: z.enum(subject.enumValues),
+    subject: subjectKey,
     moduleId: z.number(),
     moduleTitle: z.string(),
     readAloud: z.boolean(),
@@ -51,7 +51,7 @@ const stage = z.object({
 export const pathResponse = z.object({
     subjects: z.array(
         z.object({
-            subject: z.enum(subject.enumValues),
+            subject: subjectKey,
             chapters: z.array(
                 z.object({
                     id: z.number(),
@@ -70,7 +70,7 @@ export const cardsResponse = z.object({
             id: z.number(),
             title: z.string(),
             chapter: z.string(),
-            subject: z.enum(subject.enumValues),
+            subject: subjectKey,
             takeaways: z.array(z.string()),
         }),
     ),
@@ -78,7 +78,7 @@ export const cardsResponse = z.object({
         z.object({
             id: z.number(),
             title: z.string(),
-            subject: z.enum(subject.enumValues),
+            subject: subjectKey,
         }),
     ),
 });
@@ -227,7 +227,7 @@ export const feedbackResponse = z.object({
 
 export const helpResponse = z.object({ earned: earned.nullable() });
 
-export const reviewQuery = z.object({ subject: z.enum(subject.enumValues) });
+export const reviewQuery = z.object({ subject: subjectKey });
 
 export const reviewQuestion = z.object({
     id: z.number(),

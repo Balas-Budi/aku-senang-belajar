@@ -43,6 +43,7 @@ import {
     storedBlocks,
     type SessionDraft,
 } from './session-draft.ts';
+import { materialSubjectName } from '../subjects.ts';
 
 export const DRAFT_TIMEOUT_MS = 180_000;
 export const DRAFT_TURNS = 3;
@@ -98,7 +99,7 @@ async function draftContext(db: Queryable, sessionId: number) {
             firstPage: modules.firstPage,
             lastPage: modules.lastPage,
             materialId: materials.id,
-            subject: materials.subject,
+            subject: materialSubjectName,
             grade: materials.grade,
             materialVersion: modules.materialVersion,
         })

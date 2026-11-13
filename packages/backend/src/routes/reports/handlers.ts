@@ -44,6 +44,7 @@ import type {
     ReportParams,
     SummaryParams,
 } from './schema.ts';
+import { requireSubject } from '../../subjects.ts';
 
 type Status = typeof assessments.$inferSelect.status;
 type Decision = typeof verifications.$inferSelect.decision;
@@ -319,6 +320,7 @@ export async function setAdaptation(
         request.params.studentId,
     );
     const { subject } = request.params;
+    await requireSubject(db, subject);
     const { body } = request;
     const choice =
         'helpFirst' in body

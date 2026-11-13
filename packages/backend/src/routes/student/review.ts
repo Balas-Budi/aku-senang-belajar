@@ -7,7 +7,6 @@ import {
     competencies,
     reviewTries,
     sessionBlocks,
-    type subject,
     type understandingStatus,
 } from '../../db/schema.ts';
 import { themedBlock, themesFor } from '../../learning/themed-blocks.ts';
@@ -19,7 +18,7 @@ import { earnedOf, followUp, judge, placedRight } from './attempts.ts';
 import { missionsOf } from './missions.ts';
 import { answer as storedAnswer, type Answer } from './schema.ts';
 
-type Subject = (typeof subject.enumValues)[number];
+type Subject = string;
 type UnderstandingStatus = (typeof understandingStatus.enumValues)[number];
 type Try = typeof reviewTries.$inferSelect;
 

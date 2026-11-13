@@ -6,7 +6,7 @@ import { RequestError } from '../../components/request-error';
 import { Button, buttonVariants } from '../../components/ui/button';
 import { ApiError } from '../../lib/api';
 import type { Subject } from '../assignments/queries';
-import { subjects } from '../assignments/subject-art';
+import { SubjectName } from '../assignments/subject-art';
 import {
     ReactingJalak,
     ScreenCard,
@@ -67,7 +67,7 @@ function FollowUpRun({
                         to={`/student/subjects/${subject}`}
                         className={buttonVariants({ feel: 'chunky' })}
                     >
-                        Kembali ke {subjects[subject].label}
+                        Kembali ke <SubjectName subject={subject} />
                     </Link>
                 </div>
             </ScreenCard>
@@ -107,7 +107,7 @@ export function FollowUpSession({ followUpId }: { followUpId: number }) {
         <div className="space-y-6">
             {subject ? (
                 <StudentNavLink back to={`/student/subjects/${subject}`}>
-                    Kembali ke {subjects[subject].label}
+                    Kembali ke <SubjectName subject={subject} />
                 </StudentNavLink>
             ) : (
                 <StudentNavLink back to="/student">

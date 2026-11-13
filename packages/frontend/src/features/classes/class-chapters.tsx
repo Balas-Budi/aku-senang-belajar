@@ -7,7 +7,11 @@ import { Card } from '../../components/ui/card';
 import { textLink } from '../../components/ui/text-link';
 import { ApiError } from '../../lib/api';
 import type { Subject } from '../assignments/queries';
-import { SubjectArt, subjects } from '../assignments/subject-art';
+import {
+    SubjectArt,
+    SubjectName,
+    useSubjects,
+} from '../assignments/subject-art';
 import { SectionTitle } from '../../components/section-title';
 import { BookIcon } from '../../components/icons/workspace-icons';
 import { cn } from '../../lib/cn';
@@ -179,7 +183,7 @@ function BookItem({
                         </span>
                         <span className="mt-1 flex flex-wrap items-center gap-x-3 gap-y-1">
                             <span className="text-muted-foreground text-sm">
-                                {subjects[book.subject].label} ·{' '}
+                                <SubjectName subject={book.subject} /> ·{' '}
                                 {book.chapters.length} bab
                                 {book.prepared && ' · Siap pakai'}
                             </span>
@@ -238,11 +242,17 @@ function BookItem({
     );
 }
 
+const rank = (order: string[], key: string) => {
+    const index = order.indexOf(key);
+    return index === -1 ? order.length : index;
+};
+
 export function ClassChapters({ classId }: { classId: number }) {
     const books = useQuery(classChaptersQuery(classId));
     const [open, setOpen] = useState<Set<number>>(() => new Set());
-    const ordered = (Object.keys(subjects) as Subject[]).flatMap((subject) =>
-        (books.data ?? []).filter((book) => book.subject === subject),
+    const order = useSubjects().list.map(({ key }) => key);
+    const ordered = [...(books.data ?? [])].sort(
+        (a, b) => rank(order, a.subject) - rank(order, b.subject),
     );
     const allOpen =
         ordered.length > 0 && ordered.every(({ id }) => open.has(id));

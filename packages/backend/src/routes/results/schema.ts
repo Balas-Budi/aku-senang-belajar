@@ -3,13 +3,13 @@ import { evidenceQuestion, selfReport } from '../../analysis/evidence.ts';
 import { assessmentFlag } from '../../analysis/prompt.ts';
 import {
     analysisRunStatus,
-    subject,
     uncertaintyLevel,
     understandingStatus,
     verificationDecision,
 } from '../../db/schema.ts';
 import { adaptationPair } from '../../learning/adaptation.ts';
 import { competencyRubric } from '../../learning/rubric.ts';
+import { subjectKey } from '../../subjects.ts';
 
 const id = z.coerce.number().int().positive();
 
@@ -45,7 +45,7 @@ const shown = z.object({ status, decision: decision.nullable() });
 const assignment = z.object({
     id: z.number(),
     title: z.string(),
-    subject: z.enum(subject.enumValues),
+    subject: subjectKey,
     moduleTitle: z.string(),
 });
 

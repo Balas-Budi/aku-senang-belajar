@@ -12,7 +12,7 @@ import {
 import { useQuery } from '@tanstack/react-query';
 import { useRef, useState, type RefObject } from 'react';
 import { Link, useNavigate } from 'react-router';
-import { materialMeta } from './library';
+import { MaterialMeta } from './library';
 import { BookViewer } from './book-viewer';
 import { ChapterActions } from './chapter-actions';
 import { LicenceCard } from './licence-card';
@@ -682,7 +682,7 @@ export function MaterialDetailView({ id }: { id: number }) {
                         {material.title}
                     </h1>
                     <p className="text-muted-foreground mt-2 text-lg tabular-nums">
-                        {materialMeta(material)} ·{' '}
+                        <MaterialMeta material={material} /> ·{' '}
                         {own
                             ? pagesRead(material)
                             : 'Disiapkan tim Aku Senang Belajar'}

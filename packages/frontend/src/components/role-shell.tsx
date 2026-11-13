@@ -47,6 +47,13 @@ function useWorkspaceLinks(role: Role): WorkspaceLink[] {
                 icon: <TeacherIcon />,
                 current: onAccounts && shown === 'teacher' ? 'page' : false,
             },
+            {
+                to: '/admin/subjects',
+                label: 'Mata pelajaran',
+                icon: <BookIcon />,
+                current:
+                    location.pathname === '/admin/subjects' ? 'page' : false,
+            },
         ];
     }
 

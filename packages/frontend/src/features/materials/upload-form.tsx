@@ -3,7 +3,8 @@ import { useNavigate } from 'react-router';
 import { LicenceFields } from './licence-fields';
 import { pdfLimits } from './pdf-field';
 import { useUploadMaterial } from './queries';
-import { subjects } from '../assignments/subject-art';
+import { useSubjects } from '../assignments/subject-art';
+import { NewSubjectButton } from '../subjects/subject-form';
 import { FormField, fieldErrorText } from '../../components/form-field';
 import { RequestError } from '../../components/request-error';
 import { CloseIcon } from '../../components/icons/close-icon';
@@ -134,29 +135,35 @@ function GradePicker({ error }: { error: unknown }) {
 
 function SubjectSelect({ error }: { error: unknown }) {
     const message = fieldErrorText(error, 'subject');
+    const { list } = useSubjects();
+    const [value, setValue] = useState('');
     return (
         <div className="space-y-2">
             <label htmlFor="subject" className="block font-medium">
                 Mata pelajaran
             </label>
-            <select
-                id="subject"
-                name="subject"
-                required
-                defaultValue=""
-                aria-invalid={message !== null}
-                aria-describedby={message ? 'subject-error' : undefined}
-                className="border-border bg-background focus-visible:outline-ring min-h-12 w-full rounded-lg border px-3 focus-visible:outline-3"
-            >
-                <option value="" disabled>
-                    Pilih mata pelajaran
-                </option>
-                {Object.entries(subjects).map(([value, { label }]) => (
-                    <option key={value} value={value}>
-                        {label}
+            <div className="flex flex-col gap-2 sm:flex-row">
+                <select
+                    id="subject"
+                    name="subject"
+                    required
+                    value={value}
+                    onChange={(event) => setValue(event.currentTarget.value)}
+                    aria-invalid={message !== null}
+                    aria-describedby={message ? 'subject-error' : undefined}
+                    className="border-border bg-background focus-visible:outline-ring min-h-12 w-full min-w-0 flex-1 rounded-lg border px-3 focus-visible:outline-3"
+                >
+                    <option value="" disabled>
+                        Pilih mata pelajaran
                     </option>
-                ))}
-            </select>
+                    {list.map((subject) => (
+                        <option key={subject.key} value={subject.key}>
+                            {subject.name}
+                        </option>
+                    ))}
+                </select>
+                <NewSubjectButton onCreated={({ key }) => setValue(key)} />
+            </div>
             <FieldError id="subject-error" message={message} />
         </div>
     );

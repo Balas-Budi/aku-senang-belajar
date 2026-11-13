@@ -7,7 +7,6 @@ import {
     reviewTries,
     sessionBlocks,
     sessionCompetencies,
-    type subject,
 } from '../../db/schema.ts';
 import type { SessionBlock } from '../../learning/blocks.ts';
 import { themedBlock, themesFor } from '../../learning/themed-blocks.ts';
@@ -24,7 +23,7 @@ import {
 } from './review.ts';
 import type { Answer } from './schema.ts';
 
-type Subject = (typeof subject.enumValues)[number];
+type Subject = string;
 type ExtraBlock = Extract<SessionBlock, { kind: 'extra_challenge' }>;
 
 export const asCheck = (block: ExtraBlock) => ({

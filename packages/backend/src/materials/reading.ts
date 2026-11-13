@@ -21,6 +21,7 @@ import {
 import { chunkPages } from './chunks.ts';
 import { pageContent } from './page-content.ts';
 import { storeModule } from './store-module.ts';
+import { materialSubjectName } from '../subjects.ts';
 
 export const READING_PROMPT_VERSION = 'reading-2026-11-12';
 export const MAX_READING_TRIES = 3;
@@ -163,7 +164,7 @@ async function claimNext(
                 outline: materialVersions.outline,
                 readingTries: materialVersions.readingTries,
                 title: materials.title,
-                subject: materials.subject,
+                subject: materialSubjectName,
                 grade: materials.grade,
             })
             .from(materialVersions)

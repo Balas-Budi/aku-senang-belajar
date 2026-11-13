@@ -15,7 +15,6 @@ import {
     reviewTries,
     sessionBlocks,
     sessionCompetencies,
-    type subject,
     users,
 } from '../../db/schema.ts';
 import { themedBlock, themesFor } from '../../learning/themed-blocks.ts';
@@ -41,8 +40,9 @@ import type {
     StudentFollowUpParams,
     StudentFollowUpsQuery,
 } from './schema.ts';
+import { requireSubject } from '../../subjects.ts';
 
-type Subject = (typeof subject.enumValues)[number];
+type Subject = string;
 type Kind = typeof followUps.$inferSelect.kind;
 type Try = typeof reviewTries.$inferSelect;
 type Asked = { kind: Kind; sessionId: number; competencyId: number | null };
@@ -514,6 +514,8 @@ async function askedBlock(
 export async function myFollowUps(
     request: FastifyRequest<{ Querystring: StudentFollowUpsQuery }>,
 ) {
+    if (request.query.subject !== undefined)
+        await requireSubject(request.server.db, request.query.subject);
     const offered = await offeredTo(
         request.server.db,
         currentUser(request).id,

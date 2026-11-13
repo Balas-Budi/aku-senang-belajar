@@ -34,7 +34,6 @@ import {
     responses,
     sessionBlocks,
     sessionCompetencies,
-    type subject,
 } from '../db/schema.ts';
 import { adaptationPair, putFirstText } from '../learning/adaptation.ts';
 import { currentRuns } from '../routes/results/queries.ts';
@@ -42,7 +41,7 @@ import { pathOf } from '../routes/student/path.ts';
 import { missionsOf } from '../routes/student/missions.ts';
 import { helpBetween, type HelpEvent } from './help.ts';
 
-type Subject = (typeof subject.enumValues)[number];
+type Subject = string;
 type Mission = Awaited<ReturnType<typeof missionsOf>>[number];
 type Kept = Awaited<ReturnType<typeof keptSummaries>>[number];
 

@@ -3,17 +3,15 @@ import { Link } from 'react-router';
 import { materialsQuery, pagesRead, type Material } from './queries';
 import { MaterialFilters, useMaterialFilters } from './material-filters';
 import { UploadButton } from './upload-form';
-import { SubjectArt, subjects } from '../assignments/subject-art';
+import { SubjectArt, useSubject } from '../assignments/subject-art';
 import { PageHeader } from '../../components/page-header';
 import { ArrowRightIcon } from '../../components/icons/arrow-icon';
 import { RequestError } from '../../components/request-error';
 import { Button } from '../../components/ui/button';
 
-export function materialMeta(material: Material) {
-    return [
-        subjects[material.subject].label,
-        material.grade ? `Kelas ${material.grade}` : null,
-    ]
+export function MaterialMeta({ material }: { material: Material }) {
+    const subject = useSubject(material.subject);
+    return [subject.label, material.grade ? `Kelas ${material.grade}` : null]
         .filter(Boolean)
         .join(' · ');
 }
@@ -52,7 +50,7 @@ function MaterialList({
                                             {material.title}
                                         </span>
                                         <span className="text-muted-foreground block text-sm">
-                                            {materialMeta(material)}
+                                            <MaterialMeta material={material} />
                                         </span>
                                         <span className="block text-sm tabular-nums">
                                             {material.prepared

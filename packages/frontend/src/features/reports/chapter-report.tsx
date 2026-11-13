@@ -11,7 +11,7 @@ import {
     TableHeader,
     TableRow,
 } from '../../components/ui/table';
-import { subjects } from '../assignments/subject-art';
+import { SubjectName } from '../assignments/subject-art';
 import { classesQuery } from '../classes/queries';
 import {
     reviewLabel,
@@ -89,7 +89,8 @@ export function ChapterReport({
                 </h1>
                 <p className="text-muted-foreground">
                     {className ? `${className} · ` : ''}
-                    {subjects[chapter.subject].label} · {missions.length} misi
+                    <SubjectName subject={chapter.subject} /> ·{' '}
+                    {missions.length} misi
                 </p>
                 <div className="flex flex-wrap gap-2 print:hidden">
                     <Button variant="outline" onClick={() => window.print()}>

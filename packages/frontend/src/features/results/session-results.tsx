@@ -11,7 +11,7 @@ import {
     TableHeader,
     TableRow,
 } from '../../components/ui/table';
-import { subjects } from '../assignments/subject-art';
+import { SubjectName } from '../assignments/subject-art';
 import { classesQuery } from '../classes/queries';
 import { FollowUpButton } from '../follow-ups/follow-up-dialog';
 import { LiveCard } from '../live/live-card';
@@ -81,7 +81,7 @@ export function SessionResults({
                     {assignment.title}
                 </h1>
                 <p className="text-muted-foreground mt-1">
-                    {subjects[assignment.subject].label} ·{' '}
+                    <SubjectName subject={assignment.subject} /> ·{' '}
                     {assignment.moduleTitle}
                 </p>
                 <p className="mt-2 tabular-nums">

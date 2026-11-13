@@ -11,6 +11,7 @@ import { studentSettingsQuery } from '../features/settings/queries';
 import { ApiError } from '../lib/api';
 import { requireUser } from '../lib/require-user.server';
 import type { Route } from './+types/student-session';
+import { subjectsQuery } from '../features/subjects/queries';
 export async function loader({ request, params }: Route.LoaderArgs) {
     const { client, cookie } = await requireUser(request, 'student');
     const id = Number(params.assignmentId);
@@ -21,6 +22,7 @@ export async function loader({ request, params }: Route.LoaderArgs) {
             client.fetchQuery(sessionQuery(id, cookie)),
             client.fetchQuery(studentClassQuery(cookie)),
             client.prefetchQuery(studentSettingsQuery(cookie)),
+            client.prefetchQuery(subjectsQuery(cookie)),
         ]);
     } catch (error) {
         if (error instanceof ApiError && error.status === 404)

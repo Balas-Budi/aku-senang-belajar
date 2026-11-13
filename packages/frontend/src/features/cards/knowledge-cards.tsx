@@ -4,7 +4,11 @@ import { StudentNavLink } from '../../components/student-nav-link';
 import { RequestError } from '../../components/request-error';
 import { Button } from '../../components/ui/button';
 import { cn } from '../../lib/cn';
-import { SubjectArt, subjects } from '../assignments/subject-art';
+import {
+    SubjectArt,
+    SubjectName,
+    useSubject,
+} from '../assignments/subject-art';
 import { ChapterSticker } from '../path/chapter-sticker';
 import { studentCardsQuery, type KnowledgeCards as Cards } from './queries';
 
@@ -64,7 +68,7 @@ export function KnowledgeCards() {
                                     className="size-24"
                                 />
                                 <span className="text-muted-foreground text-base">
-                                    {subjects[sticker.subject].label}
+                                    <SubjectName subject={sticker.subject} />
                                 </span>
                                 <span className="font-display text-primary-deep leading-snug font-semibold break-words">
                                     {sticker.title}
@@ -122,7 +126,7 @@ function KnowledgeCard({
     card: Cards['cards'][number];
     number: number;
 }) {
-    const subject = subjects[card.subject];
+    const subject = useSubject(card.subject);
     return (
         <li
             style={{ '--card': subject.color } as CSSProperties}

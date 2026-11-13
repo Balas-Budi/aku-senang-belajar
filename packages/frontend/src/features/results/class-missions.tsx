@@ -3,7 +3,7 @@ import { Link } from 'react-router';
 import { RequestError } from '../../components/request-error';
 import { Button, buttonVariants } from '../../components/ui/button';
 import { Card } from '../../components/ui/card';
-import { SubjectArt, subjects } from '../assignments/subject-art';
+import { SubjectArt, SubjectName } from '../assignments/subject-art';
 import { SectionTitle } from '../../components/section-title';
 import { SendIcon } from '../../components/icons/workspace-icons';
 import { FollowUpsLink } from '../follow-ups/follow-up-plan';
@@ -83,8 +83,10 @@ export function ClassMissions({ classId }: { classId: number }) {
                                             {mission.title}
                                         </h3>
                                         <p className="text-muted-foreground text-sm">
-                                            {subjects[mission.subject].label} ·{' '}
-                                            {mission.moduleTitle}
+                                            <SubjectName
+                                                subject={mission.subject}
+                                            />{' '}
+                                            · {mission.moduleTitle}
                                         </p>
                                     </div>
                                     <Progress

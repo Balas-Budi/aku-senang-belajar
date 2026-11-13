@@ -52,6 +52,7 @@ import type {
     PageRange,
     UploadQuery,
 } from './schema.ts';
+import { materialSubjectName, requireSubject } from '../../subjects.ts';
 
 const SNIPPET_LENGTH = 160;
 
@@ -280,7 +281,7 @@ async function ownRange(
 ) {
     const [material] = await db
         .select({
-            subject: materials.subject,
+            subject: materialSubjectName,
             grade: materials.grade,
             version: materials.version,
             archivedAt: materials.archivedAt,
@@ -455,6 +456,7 @@ export async function uploadMaterial(
 
     const { title, subject, grade, source, licence, licenceNote } =
         request.query;
+    await requireSubject(request.server.db, subject);
     const materialId = await request.server.db.transaction(async (tx) => {
         const [material] = await tx
             .insert(materials)

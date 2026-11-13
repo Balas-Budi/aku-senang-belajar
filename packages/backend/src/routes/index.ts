@@ -10,6 +10,7 @@ import { liveRoutes } from './live/routes.ts';
 import { resultRoutes } from './results/routes.ts';
 import { studentRoutes } from './student/routes.ts';
 import { studioRoutes } from './studio/routes.ts';
+import { subjectRoutes } from './subjects/routes.ts';
 import { userRoutes } from './users/routes.ts';
 
 export const api: FastifyPluginAsyncZod = async (fastify) => {
@@ -25,4 +26,5 @@ export const api: FastifyPluginAsyncZod = async (fastify) => {
     await fastify.register(studentRoutes, { prefix: '/student' });
     await fastify.register(adminRoutes, { prefix: '/admin' });
     await fastify.register(userRoutes, { prefix: '/users' });
+    await fastify.register(subjectRoutes, { prefix: '/subjects' });
 };

@@ -10,7 +10,7 @@ import { RequestError } from '../../components/request-error';
 import { Alert } from '../../components/ui/alert';
 import { Button } from '../../components/ui/button';
 import { Card } from '../../components/ui/card';
-import { subjects } from '../assignments/subject-art';
+import { useSubject } from '../assignments/subject-art';
 import type { Adaptation } from '../learning-sessions/queries';
 import { choiceBox, choiceCard, focusHeading } from '../studio/studio-labels';
 import {
@@ -155,7 +155,7 @@ function AdaptationRow({
     const heading = useRef<HTMLHeadingElement>(null);
     const settle = useRef<HTMLButtonElement>(null);
     const formId = useId();
-    const label = subjects[item.subject].label;
+    const label = useSubject(item.subject).label;
     const headingId = `helped-${item.subject}`;
     const prefill = item.teacher ?? item;
     const wasPending = useRef(item.pending);

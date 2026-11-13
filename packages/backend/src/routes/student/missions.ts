@@ -7,10 +7,9 @@ import {
     learningSessions,
     materials,
     modules,
-    type subject,
 } from '../../db/schema.ts';
 
-type Subject = (typeof subject.enumValues)[number];
+type Subject = string;
 
 export function missionsOf(
     db: Queryable,

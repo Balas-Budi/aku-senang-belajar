@@ -1,6 +1,6 @@
 import { cn } from '../../lib/cn';
 import type { Subject } from '../assignments/queries';
-import { subjects } from '../assignments/subject-art';
+import { useSubject } from '../assignments/subject-art';
 
 const edge =
     'M60 12A13 13 0 0 1 84 18.43A13 13 0 0 1 101.57 36A13 13 0 0 1 108 60A13 13 0 0 1 101.57 84A13 13 0 0 1 84 101.57A13 13 0 0 1 60 108A13 13 0 0 1 36 101.57A13 13 0 0 1 18.43 84A13 13 0 0 1 12 60A13 13 0 0 1 18.43 36A13 13 0 0 1 36 18.43A13 13 0 0 1 60 12Z';
@@ -12,6 +12,7 @@ export function ChapterSticker({
     subject: Subject;
     className?: string;
 }) {
+    const look = useSubject(subject);
     return (
         <svg
             viewBox="0 0 120 120"
@@ -24,7 +25,7 @@ export function ChapterSticker({
                 d={edge}
             />
             <path
-                fill={subjects[subject].color}
+                fill={look.color}
                 stroke="white"
                 strokeWidth="7"
                 strokeLinejoin="round"
@@ -39,7 +40,7 @@ export function ChapterSticker({
                 strokeLinecap="round"
                 strokeLinejoin="round"
             >
-                {subjects[subject].drawing}
+                {look.drawing}
             </g>
             <circle
                 cx="92"

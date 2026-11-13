@@ -1,10 +1,6 @@
 import { z } from 'zod';
-import {
-    membershipAction,
-    membershipEnd,
-    role,
-    subject,
-} from '../../db/schema.ts';
+import { membershipAction, membershipEnd, role } from '../../db/schema.ts';
+import { subjectKey } from '../../subjects.ts';
 
 export const classParams = z.object({
     classId: z.coerce.number().int().positive(),
@@ -77,7 +73,7 @@ export const chapterParams = classParams.extend({
 export const bookResponse = z.object({
     id: z.number(),
     title: z.string(),
-    subject: z.enum(subject.enumValues),
+    subject: subjectKey,
     prepared: z.boolean(),
     chapters: z.array(
         z.object({

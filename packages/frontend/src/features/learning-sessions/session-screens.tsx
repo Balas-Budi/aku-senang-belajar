@@ -7,7 +7,7 @@ import { requestErrorMessage } from '../../components/request-error';
 import { Button, buttonVariants } from '../../components/ui/button';
 import { useErrorToast } from '../../components/ui/toast';
 import { cn } from '../../lib/cn';
-import { SubjectArt, subjects } from '../assignments/subject-art';
+import { SubjectArt, SubjectName } from '../assignments/subject-art';
 import { studentPathQuery, subjectStages } from '../path/queries';
 import { TextScale } from '../settings/text-scale';
 import {
@@ -82,7 +82,7 @@ export function SessionIntro({
                 <SubjectArt subject={session.subject} className="size-16" />
                 <p className="text-muted-foreground leading-snug">
                     <span className="text-primary-deep font-bold">
-                        {subjects[session.subject].label}
+                        <SubjectName subject={session.subject} />
                     </span>
                     <br />
                     Bab {session.moduleTitle}

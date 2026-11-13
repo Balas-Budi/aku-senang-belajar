@@ -43,6 +43,9 @@ export default [
             'routes/teacher-student-report.tsx',
         ),
     ]),
-    route('admin', 'routes/admin-layout.tsx', [index('routes/admin-home.tsx')]),
+    route('admin', 'routes/admin-layout.tsx', [
+        index('routes/admin-home.tsx'),
+        route('subjects', 'routes/admin-subjects.tsx'),
+    ]),
     route('*', 'routes/not-found.tsx'),
 ] satisfies RouteConfig;

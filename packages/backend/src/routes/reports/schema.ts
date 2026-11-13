@@ -5,10 +5,10 @@ import {
     adaptationSource,
     analysisRunStatus,
     sessionDrafting,
-    subject,
     understandingStatus,
     verificationDecision,
 } from '../../db/schema.ts';
+import { subjectKey } from '../../subjects.ts';
 
 const id = z.coerce.number().int().positive();
 
@@ -18,7 +18,7 @@ export const summaryParams = z.object({ summaryId: id });
 export const checkBody = z.object({ text: z.string().trim().min(1).max(3000) });
 export const excludedBody = z.object({ excluded: z.boolean() });
 export const adaptationParams = classStudentParams.extend({
-    subject: z.enum(subject.enumValues),
+    subject: subjectKey,
 });
 
 const help = z.enum(adaptationHelp.enumValues);
@@ -31,7 +31,7 @@ export const adaptationBody = z.union([
 ]);
 
 export const adaptationItem = z.object({
-    subject: z.enum(subject.enumValues),
+    subject: subjectKey,
     helpFirst: help.nullable(),
     lead: lead.nullable(),
     source: z.enum(adaptationSource.enumValues),
@@ -78,7 +78,7 @@ export const chapterReportResponse = z.object({
     chapter: z.object({
         id: z.number(),
         title: z.string(),
-        subject: z.enum(subject.enumValues),
+        subject: subjectKey,
     }),
     missions: z.array(
         z.object({

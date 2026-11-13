@@ -9,7 +9,7 @@ import { RequestError } from '../../components/request-error';
 import { Button, buttonVariants } from '../../components/ui/button';
 import { cn } from '../../lib/cn';
 import type { Subject } from '../assignments/queries';
-import { SubjectArt, subjects } from '../assignments/subject-art';
+import { SubjectArt, useSubject } from '../assignments/subject-art';
 import { studentFollowUpsQuery } from '../follow-ups/queries';
 import { studentExtraQuery, studentReviewQuery } from '../review/queries';
 import { stepLabels } from '../learning-sessions/steps';
@@ -276,7 +276,7 @@ export function SubjectPath({ subject }: { subject: Subject }) {
     const followUps =
         useQuery(studentFollowUpsQuery(subject)).data?.followUps ?? [];
     const path = useRef<HTMLDivElement>(null);
-    const { label, tint } = subjects[subject];
+    const { label, tint } = useSubject(subject);
     useEffect(() => {
         function openMission() {
             return (

@@ -1,9 +1,11 @@
 import { dehydrate, HydrationBoundary } from '@tanstack/react-query';
 import { requireUser } from '../lib/require-user.server';
 import { RoleShell } from '../components/role-shell';
+import { subjectsQuery } from '../features/subjects/queries';
 import type { Route } from './+types/admin-layout';
 export async function loader({ request }: Route.LoaderArgs) {
-    const { client } = await requireUser(request, 'admin');
+    const { client, cookie } = await requireUser(request, 'admin');
+    await client.prefetchQuery(subjectsQuery(cookie));
     return { dehydratedState: dehydrate(client) };
 }
 export default function Layout({ loaderData }: Route.ComponentProps) {

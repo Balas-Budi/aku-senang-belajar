@@ -40,6 +40,7 @@ import {
     type BaseBlock,
     type ThemeReply,
 } from './theme-draft.ts';
+import { materialSubjectName } from '../subjects.ts';
 
 export async function baseBlocks(
     db: Queryable,
@@ -59,7 +60,7 @@ async function themeContext(db: Queryable, sessionId: number, rowId: number) {
         .select({
             theme: sessionThemes.theme,
             title: modules.title,
-            subject: materials.subject,
+            subject: materialSubjectName,
             grade: materials.grade,
         })
         .from(sessionThemes)

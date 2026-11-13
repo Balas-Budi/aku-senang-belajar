@@ -58,6 +58,7 @@ import type {
     ReviewTryBody,
     SettingsBody,
 } from './schema.ts';
+import { requireSubject } from '../../subjects.ts';
 
 const alreadyInClass = () =>
     new AppError(409, {
@@ -611,6 +612,7 @@ export async function saveSettings(
 export async function myReview(
     request: FastifyRequest<{ Querystring: ReviewQuery }>,
 ) {
+    await requireSubject(request.server.db, request.query.subject);
     return reviewOf(
         request.server.db,
         currentUser(request).id,
@@ -621,6 +623,7 @@ export async function myReview(
 export async function myExtra(
     request: FastifyRequest<{ Querystring: ReviewQuery }>,
 ) {
+    await requireSubject(request.server.db, request.query.subject);
     return extraOf(
         request.server.db,
         currentUser(request).id,

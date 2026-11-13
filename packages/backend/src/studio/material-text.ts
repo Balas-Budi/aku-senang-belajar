@@ -1,18 +1,10 @@
-import type { subject } from '../db/schema.ts';
-
 export type MaterialPage = { number: number; text: string };
 
 export type ModuleInfo = {
     title: string;
-    subject: (typeof subject.enumValues)[number];
+    /** The subject's name, as teachers see it. */
+    subject: string;
     grade: number | null;
-};
-
-const subjectNames: Record<ModuleInfo['subject'], string> = {
-    mathematics: 'Matematika',
-    natural_and_social_science: 'IPAS',
-    indonesian_language: 'Bahasa Indonesia',
-    pancasila_education: 'Pendidikan Pancasila',
 };
 
 const asData = (text: string) => text.replace(/<\/?material>/gi, '(material)');
@@ -20,7 +12,7 @@ const asData = (text: string) => text.replace(/<\/?material>/gi, '(material)');
 export function moduleHeader(module: ModuleInfo) {
     return [
         `Module: ${module.title}`,
-        `Subject: ${subjectNames[module.subject]}`,
+        `Subject: ${module.subject}`,
         `Grade: ${module.grade ?? 'not given'}`,
     ];
 }

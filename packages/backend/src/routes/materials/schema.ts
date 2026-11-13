@@ -5,18 +5,18 @@ import {
     materialReading,
     moduleOrigin,
     sessionDrafting,
-    subject,
 } from '../../db/schema.ts';
 import {
     competencyDraft,
     competencyProposal,
 } from '../../studio/competencies.ts';
+import { subjectKey } from '../../subjects.ts';
 
 export { competencyProposal };
 
 export const uploadQuery = z.object({
     title: z.string().trim().min(1).max(120),
-    subject: z.enum(subject.enumValues),
+    subject: subjectKey,
     grade: z.coerce.number().int().min(1).max(6),
     rights: z.literal('1', { error: 'Confirm the right to use this material' }),
     source: z.string().trim().max(200).optional(),
@@ -81,7 +81,7 @@ export const readingStarted = z.object({
 export const materialSummary = z.object({
     id: z.number(),
     title: z.string(),
-    subject: z.enum(subject.enumValues),
+    subject: subjectKey,
     grade: z.number().nullable(),
     prepared: z.boolean(),
     archived: z.boolean(),

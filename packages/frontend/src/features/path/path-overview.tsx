@@ -3,7 +3,11 @@ import { Link } from 'react-router';
 import { RequestError } from '../../components/request-error';
 import { Button } from '../../components/ui/button';
 import { cn } from '../../lib/cn';
-import { SubjectArt, subjects } from '../assignments/subject-art';
+import {
+    SubjectArt,
+    SubjectName,
+    useSubjects,
+} from '../assignments/subject-art';
 import type { Subject } from '../assignments/queries';
 import {
     chaptersOf,
@@ -32,7 +36,7 @@ function SubjectTile({
             />
             <span className="min-w-0">
                 <span className="font-display text-primary-deep block text-xl leading-snug font-semibold">
-                    {subjects[subject].label}
+                    <SubjectName subject={subject} />
                 </span>
                 <span className="text-muted-foreground block text-base">
                     {open.length === 0
@@ -66,6 +70,7 @@ function SubjectTile({
 
 export function PathOverview({ teacherName }: { teacherName: string }) {
     const query = useQuery(studentPathQuery());
+    const allSubjects = useSubjects().list;
     if (query.isPending)
         return (
             <p role="status" className="text-muted-foreground text-base">
@@ -107,9 +112,18 @@ export function PathOverview({ teacherName }: { teacherName: string }) {
                 Mata pelajaran
             </h4>
             <ul className="grid gap-3 sm:grid-cols-2">
-                {(Object.keys(subjects) as Subject[]).map((subject) => (
-                    <SubjectTile key={subject} subject={subject} path={path} />
-                ))}
+                {allSubjects
+                    .filter(
+                        ({ key, builtIn }) =>
+                            builtIn || (chaptersOf(path, key)?.length ?? 0) > 0,
+                    )
+                    .map(({ key: subject }) => (
+                        <SubjectTile
+                            key={subject}
+                            subject={subject}
+                            path={path}
+                        />
+                    ))}
             </ul>
         </section>
     );

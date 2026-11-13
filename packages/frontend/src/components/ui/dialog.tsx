@@ -20,7 +20,11 @@ export function Dialog({
     return (
         <dialog
             ref={ref}
-            onClose={(event) => onClose(event.currentTarget)}
+            onClose={(event) => {
+                // A dialog opened from inside this one reaches here through React's tree.
+                if (event.target === event.currentTarget)
+                    onClose(event.currentTarget);
+            }}
             onClick={(event) => {
                 if (event.target === event.currentTarget)
                     onClose(event.currentTarget);
