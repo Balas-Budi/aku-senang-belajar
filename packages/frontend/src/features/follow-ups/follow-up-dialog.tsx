@@ -2,8 +2,7 @@ import { useQuery } from '@tanstack/react-query';
 import { type FormEvent, useEffect, useRef, useState } from 'react';
 import { Link } from 'react-router';
 import { fieldErrorText, TextAreaField } from '../../components/form-field';
-import { RequestError } from '../../components/request-error';
-import { Alert } from '../../components/ui/alert';
+import { ErrorToast, RequestError } from '../../components/request-error';
 import { Button, buttonVariants } from '../../components/ui/button';
 import { Dialog } from '../../components/ui/dialog';
 import { ApiError } from '../../lib/api';
@@ -153,9 +152,7 @@ function FollowUpForm({
 
     return (
         <form className="mt-5 space-y-5" onSubmit={submit}>
-            <fieldset
-                aria-describedby={refusal ? `${prefix}-refusal` : undefined}
-            >
+            <fieldset>
                 <legend className="mb-2 font-semibold">
                     Jenis tindak lanjut
                 </legend>
@@ -181,16 +178,6 @@ function FollowUpForm({
                         </label>
                     ))}
                 </div>
-                {refusal && (
-                    <Alert
-                        id={`${prefix}-refusal`}
-                        tone="attention"
-                        role="alert"
-                        className="mt-2"
-                    >
-                        {refusal}
-                    </Alert>
-                )}
             </fieldset>
             <fieldset aria-describedby={studentsHelp || undefined}>
                 <legend className="mb-2 font-semibold">Siswa</legend>
@@ -255,15 +242,16 @@ function FollowUpForm({
                 maxLength={300}
                 rows={3}
             />
-            {refusal ? null : error instanceof ApiError &&
-              error.status === 400 ? (
-                <p role="alert" className="text-destructive">
-                    {fieldErrorText(error, 'competencyId') ??
-                        'Tindak lanjut belum tersimpan. Perbaiki isian yang ditandai, lalu coba lagi.'}
-                </p>
-            ) : (
-                <RequestError error={error} />
-            )}
+            <ErrorToast
+                error={error}
+                message={
+                    refusal ??
+                    (error instanceof ApiError && error.status === 400
+                        ? (fieldErrorText(error, 'competencyId') ??
+                          'Tindak lanjut belum tersimpan. Perbaiki isian yang ditandai, lalu coba lagi.')
+                        : null)
+                }
+            />
             <div className="flex flex-wrap gap-3">
                 <Button
                     variant="outline"

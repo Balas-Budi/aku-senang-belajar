@@ -1,7 +1,6 @@
 import { useQuery } from '@tanstack/react-query';
 import { Link } from 'react-router';
-import { RequestError } from '../../components/request-error';
-import { Alert } from '../../components/ui/alert';
+import { ErrorToast, RequestError } from '../../components/request-error';
 import { Button, buttonVariants } from '../../components/ui/button';
 import { Card } from '../../components/ui/card';
 import { textLink } from '../../components/ui/text-link';
@@ -96,17 +95,7 @@ function ChapterRow({
                     </Link>
                 )}
             </div>
-            {access.error && (
-                <div className="basis-full">
-                    {refusal ? (
-                        <Alert tone="attention" role="alert">
-                            {refusal}
-                        </Alert>
-                    ) : (
-                        <RequestError error={access.error} />
-                    )}
-                </div>
-            )}
+            <ErrorToast error={access.error} message={refusal || null} />
         </li>
     );
 }

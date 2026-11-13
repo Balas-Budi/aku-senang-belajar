@@ -5,8 +5,7 @@ import {
     type MaterialDetail,
 } from './queries';
 import { fieldErrorText } from '../../components/form-field';
-import { RequestError } from '../../components/request-error';
-import { Alert } from '../../components/ui/alert';
+import { ErrorToast } from '../../components/request-error';
 import { Button } from '../../components/ui/button';
 import { Dialog } from '../../components/ui/dialog';
 
@@ -77,13 +76,10 @@ export function MaterialChangeDialog({
                 {note}
             </p>
             <div className="mt-5 space-y-4">
-                {versionError ? (
-                    <Alert tone="attention" role="alert">
-                        {versionError}
-                    </Alert>
-                ) : (
-                    <RequestError error={update.error} />
-                )}
+                <ErrorToast
+                    error={update.error}
+                    message={versionError ?? null}
+                />
                 <div className="flex flex-wrap gap-3">
                     <Button
                         ref={cancel}

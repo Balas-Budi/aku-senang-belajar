@@ -1,12 +1,12 @@
+import type { CSSProperties } from 'react';
 import { useQuery } from '@tanstack/react-query';
-import { Link } from 'react-router';
-import { CheckIcon } from '../../components/icons/check-icon';
+import { StudentNavLink } from '../../components/student-nav-link';
 import { RequestError } from '../../components/request-error';
 import { Button } from '../../components/ui/button';
-import { textLink } from '../../components/ui/text-link';
+import { cn } from '../../lib/cn';
 import { SubjectArt, subjects } from '../assignments/subject-art';
 import { ChapterSticker } from '../path/chapter-sticker';
-import { studentCardsQuery } from './queries';
+import { studentCardsQuery, type KnowledgeCards as Cards } from './queries';
 
 export function KnowledgeCards() {
     const query = useQuery(studentCardsQuery());
@@ -33,9 +33,9 @@ export function KnowledgeCards() {
     const { cards, stickers } = query.data;
     return (
         <div className="space-y-6">
-            <Link to="/student" className={textLink}>
+            <StudentNavLink back to="/student">
                 Kembali ke beranda
-            </Link>
+            </StudentNavLink>
             <header className="border-paper-edge rounded-[24px] border-2 border-b-[6px] bg-white p-5 sm:p-7">
                 <h1 className="font-display text-primary-deep text-3xl leading-tight font-semibold sm:text-4xl">
                     Kartu pengetahuanku
@@ -53,7 +53,7 @@ export function KnowledgeCards() {
                     >
                         Stiker bab
                     </h2>
-                    <ul className="flex flex-wrap gap-4">
+                    <ul className="border-paper-edge flex flex-wrap justify-center gap-4 rounded-[24px] border-2 border-dashed bg-white/70 p-4 sm:justify-start sm:p-5">
                         {stickers.map((sticker) => (
                             <li
                                 key={sticker.id}
@@ -86,43 +86,86 @@ export function KnowledgeCards() {
                         Selesaikan misi pertamamu, lalu kartunya muncul di sini.
                     </p>
                 ) : (
-                    <ul className="grid gap-4 sm:grid-cols-2">
-                        {cards.map((card) => (
-                            <li
+                    <ul className="grid gap-6 sm:grid-cols-2 sm:gap-8">
+                        {cards.map((card, index) => (
+                            <KnowledgeCard
                                 key={card.id}
-                                className="border-paper-edge space-y-3 rounded-2xl border-2 border-b-[5px] bg-white p-4"
-                            >
-                                <div className="flex items-center gap-3">
-                                    <SubjectArt
-                                        subject={card.subject}
-                                        className="size-12"
-                                    />
-                                    <div className="min-w-0">
-                                        <p className="text-muted-foreground text-base">
-                                            {subjects[card.subject].label} ·{' '}
-                                            {card.chapter}
-                                        </p>
-                                        <h3 className="font-display text-primary-deep text-lg leading-snug font-semibold break-words">
-                                            {card.title}
-                                        </h3>
-                                    </div>
-                                </div>
-                                <ul className="space-y-2">
-                                    {card.takeaways.map((takeaway) => (
-                                        <li
-                                            key={takeaway}
-                                            className="flex gap-2 text-lg leading-relaxed"
-                                        >
-                                            <CheckIcon className="text-primary mt-1.5 size-5 shrink-0" />
-                                            {takeaway}
-                                        </li>
-                                    ))}
-                                </ul>
-                            </li>
+                                card={card}
+                                number={index + 1}
+                            />
                         ))}
                     </ul>
                 )}
             </section>
         </div>
+    );
+}
+
+function StarIcon({ className }: { className?: string }) {
+    return (
+        <svg aria-hidden="true" viewBox="0 0 24 24" className={className}>
+            <path
+                d="M12 2.8l2.7 5.6 6.1.8-4.5 4.2 1.1 6.1L12 16.6l-5.4 2.9 1.1-6.1-4.5-4.2 6.1-.8z"
+                fill="var(--card)"
+                stroke="var(--color-primary-deep)"
+                strokeWidth="1.5"
+                strokeLinejoin="round"
+            />
+        </svg>
+    );
+}
+
+function KnowledgeCard({
+    card,
+    number,
+}: {
+    card: Cards['cards'][number];
+    number: number;
+}) {
+    const subject = subjects[card.subject];
+    return (
+        <li
+            style={{ '--card': subject.color } as CSSProperties}
+            className={cn(
+                'knowledge-card flex flex-col overflow-hidden rounded-[24px] border-2 border-b-[6px] bg-white',
+                number % 2 === 0 ? 'sm:rotate-[0.6deg]' : 'sm:-rotate-[0.6deg]',
+            )}
+        >
+            <div className="knowledge-card-art relative flex h-36 items-center justify-center">
+                <span className="font-display text-primary-deep absolute top-3 right-3 rounded-full bg-white px-3 py-1 text-sm font-semibold">
+                    No. {String(number).padStart(2, '0')}
+                </span>
+                <SubjectArt
+                    subject={card.subject}
+                    className="size-24 -rotate-6 rounded-[28px] bg-white shadow-[0_5px_0_var(--card-edge)]"
+                />
+            </div>
+            <div className="flex flex-1 flex-col gap-3 p-5">
+                <div>
+                    <p className="text-muted-foreground text-sm font-semibold tracking-wider uppercase">
+                        {subject.label} · {card.chapter}
+                    </p>
+                    <h3 className="font-display text-primary-deep mt-1 text-xl leading-snug font-semibold break-words">
+                        {card.title}
+                    </h3>
+                </div>
+                <div className="border-paper-edge border-t-2 border-dashed pt-3">
+                    <h4 className="font-display text-primary-deep font-semibold">
+                        Yang kuingat
+                    </h4>
+                    <ul className="mt-2 space-y-2">
+                        {card.takeaways.map((takeaway) => (
+                            <li
+                                key={takeaway}
+                                className="flex gap-2 text-lg leading-relaxed"
+                            >
+                                <StarIcon className="mt-1 size-5 shrink-0" />
+                                {takeaway}
+                            </li>
+                        ))}
+                    </ul>
+                </div>
+            </div>
+        </li>
     );
 }

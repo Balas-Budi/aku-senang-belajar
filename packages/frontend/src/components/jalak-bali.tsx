@@ -340,20 +340,39 @@ export function JalakBali({
                                 {sad ? (
                                     <>
                                         <path
+                                            d="M86 74L106 67M134 67L154 74"
+                                            strokeWidth="4"
+                                        />
+                                        <path
                                             d="M88 99q11-8 22 0M130 99q11-8 22 0"
                                             strokeWidth="4.5"
                                         />
                                         <g
-                                            fill="var(--color-primary)"
-                                            stroke="none"
+                                            fill="var(--color-jalak-tear)"
+                                            stroke="white"
+                                            strokeWidth="2"
+                                        >
+                                            <path
+                                                className="crying-stream"
+                                                d="M95 101Q93 118 92 132Q98 135 104 131Q103 116 103 101Z"
+                                            />
+                                            <path
+                                                className="crying-stream"
+                                                d="M145 101Q147 118 148 132Q142 135 136 131Q137 116 137 101Z"
+                                            />
+                                        </g>
+                                        <g
+                                            fill="var(--color-jalak-tear)"
+                                            stroke="var(--color-activity-blue)"
+                                            strokeWidth="1.5"
                                         >
                                             <path
                                                 className="crying-tear"
-                                                d="M92 108q-6 9 0 9t0-9Z"
+                                                d="M98 134q-6 9 0 11t0-11Z"
                                             />
                                             <path
                                                 className="crying-tear crying-tear-right"
-                                                d="M148 108q-6 9 0 9t0-9Z"
+                                                d="M142 134q-6 9 0 11t0-11Z"
                                             />
                                         </g>
                                     </>

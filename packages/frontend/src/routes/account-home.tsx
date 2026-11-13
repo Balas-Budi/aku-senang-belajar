@@ -1,5 +1,5 @@
 import { useQuery } from '@tanstack/react-query';
-import { Link } from 'react-router';
+import { StudentNavLink } from '../components/student-nav-link';
 import { meQuery, roleHome } from '../features/auth/queries';
 import { ChangePasswordForm } from '../features/auth/change-password-form';
 import { LogoutEverywhere } from '../features/auth/logout-everywhere';
@@ -12,12 +12,9 @@ export default function AccountHome() {
     if (user.role === 'student')
         return (
             <div className="mx-auto max-w-xl space-y-6">
-                <Link
-                    to={roleHome(user.role)}
-                    className="text-primary inline-block min-h-11 py-3 font-semibold underline"
-                >
-                    Kembali ke ruangmu
-                </Link>
+                <StudentNavLink back to={roleHome(user.role)}>
+                    Kembali ke beranda
+                </StudentNavLink>
                 <h1 className="font-display text-primary-deep text-3xl font-semibold sm:text-4xl">
                     Pengaturan akun
                 </h1>

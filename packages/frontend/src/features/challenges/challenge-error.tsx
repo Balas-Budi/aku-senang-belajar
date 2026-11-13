@@ -1,5 +1,4 @@
-import { RequestError } from '../../components/request-error';
-import { Alert } from '../../components/ui/alert';
+import { ErrorToast } from '../../components/request-error';
 import { errorCode } from './queries';
 
 const refusals: Record<string, string> = {
@@ -15,10 +14,5 @@ const refusals: Record<string, string> = {
 
 export function ChallengeError({ error }: { error: unknown }) {
     const refusal = refusals[errorCode(error) ?? ''];
-    if (!refusal) return <RequestError error={error} />;
-    return (
-        <Alert tone="attention" role="alert">
-            {refusal}
-        </Alert>
-    );
+    return <ErrorToast error={error} message={refusal ?? null} />;
 }

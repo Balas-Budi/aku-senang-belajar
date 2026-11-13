@@ -1,5 +1,4 @@
-import { Link } from 'react-router';
-import { textLink } from '../components/ui/text-link';
+import { StudentNavLink } from '../components/student-nav-link';
 import { LearningSettingsForm } from '../features/settings/learning-settings';
 export const meta = () => [
     { title: 'Pengaturan belajar | Aku Senang Belajar' },
@@ -7,9 +6,9 @@ export const meta = () => [
 export default function StudentSettings() {
     return (
         <div className="space-y-6">
-            <Link to="/student" className={textLink}>
+            <StudentNavLink back to="/student">
                 Kembali ke beranda
-            </Link>
+            </StudentNavLink>
             <section
                 aria-labelledby="settings-title"
                 className="border-paper-edge mx-auto max-w-3xl space-y-6 rounded-[28px] border-2 border-b-[6px] bg-white p-5 sm:p-8"

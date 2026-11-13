@@ -1,8 +1,7 @@
 import { useQuery } from '@tanstack/react-query';
 import { type FormEvent, useEffect, useId, useRef, useState } from 'react';
 import { fieldErrorText } from '../../components/form-field';
-import { RequestError } from '../../components/request-error';
-import { Alert } from '../../components/ui/alert';
+import { ErrorToast, RequestError } from '../../components/request-error';
 import { Button } from '../../components/ui/button';
 import { Card } from '../../components/ui/card';
 import { Dialog } from '../../components/ui/dialog';
@@ -173,12 +172,8 @@ function MembershipDialog({
                             )}
                         </div>
                     )}
-                    {refusal ? (
-                        <Alert tone="attention" role="alert">
-                            {refusal}
-                        </Alert>
-                    ) : (
-                        !fieldError && <RequestError error={change.error} />
+                    {(refusal || !fieldError) && (
+                        <ErrorToast error={change.error} message={refusal} />
                     )}
                     <div className="flex flex-wrap gap-3">
                         <Button

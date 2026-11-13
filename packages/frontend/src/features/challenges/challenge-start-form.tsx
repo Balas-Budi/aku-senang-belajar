@@ -1,7 +1,7 @@
 import { useQuery } from '@tanstack/react-query';
 import { type FormEvent, useState } from 'react';
 import { fieldErrorText, TextAreaField } from '../../components/form-field';
-import { RequestError } from '../../components/request-error';
+import { ErrorToast, RequestError } from '../../components/request-error';
 import { Button } from '../../components/ui/button';
 import { Input } from '../../components/ui/input';
 import { ApiError } from '../../lib/api';
@@ -266,11 +266,14 @@ export function StartForm({
             )}
             {challengeConflict(error) ? null : error instanceof ApiError &&
               error.status === 400 ? (
-                <p role="alert" className="text-destructive">
-                    {origin === 'missions' && !sizeError
-                        ? 'Pertanyaan ini tidak bisa dipakai apa adanya. Pilih pertanyaan lain atau tulis sendiri.'
-                        : 'Tantangan belum dimulai. Perbaiki isian yang ditandai, lalu coba lagi.'}
-                </p>
+                <ErrorToast
+                    error={error}
+                    message={
+                        origin === 'missions' && !sizeError
+                            ? 'Pertanyaan ini tidak bisa dipakai apa adanya. Pilih pertanyaan lain atau tulis sendiri.'
+                            : 'Tantangan belum dimulai. Perbaiki isian yang ditandai, lalu coba lagi.'
+                    }
+                />
             ) : (
                 <ChallengeError error={error} />
             )}

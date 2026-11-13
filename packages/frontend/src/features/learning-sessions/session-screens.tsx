@@ -1,10 +1,10 @@
 import { useQuery } from '@tanstack/react-query';
 import { Link } from 'react-router';
+import { StudentNavLink } from '../../components/student-nav-link';
 import { CheckIcon } from '../../components/icons/check-icon';
 import { LottieMoment } from '../../components/lottie-moment';
 import { requestErrorMessage } from '../../components/request-error';
 import { Button, buttonVariants } from '../../components/ui/button';
-import { textLink } from '../../components/ui/text-link';
 import { useErrorToast } from '../../components/ui/toast';
 import { cn } from '../../lib/cn';
 import { SubjectArt, subjects } from '../assignments/subject-art';
@@ -181,12 +181,13 @@ export function SessionDone({
                         ))}
                     </ul>
                     <p className="mt-3 leading-relaxed">
-                        Kartu ini tersimpan di{' '}
-                        <Link to="/student/cards" className={textLink}>
-                            Kartu pengetahuanku
-                        </Link>
-                        .
+                        Kartu ini tersimpan di Kartu pengetahuanku.
                     </p>
+                    <div className="mt-3">
+                        <StudentNavLink to="/student/cards">
+                            Lihat kartuku
+                        </StudentNavLink>
+                    </div>
                 </section>
             )}
             {done.toPractise.length > 0 && (

@@ -9,6 +9,7 @@ import {
     ScrollRestoration,
 } from 'react-router';
 import type { Route } from './+types/root';
+import { ToastProvider } from './components/ui/toast';
 import '@fontsource-variable/fredoka';
 import '@fontsource-variable/inter';
 import '@fontsource-variable/nunito';
@@ -47,7 +48,9 @@ export default function App() {
 
     return (
         <QueryClientProvider client={queryClient}>
-            <Outlet />
+            <ToastProvider>
+                <Outlet />
+            </ToastProvider>
         </QueryClientProvider>
     );
 }

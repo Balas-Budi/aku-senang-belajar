@@ -1,5 +1,4 @@
-import { RequestError } from '../../components/request-error';
-import { Alert } from '../../components/ui/alert';
+import { ErrorToast } from '../../components/request-error';
 import { ApiError } from '../../lib/api';
 
 const conflicts: Record<string, string> = {
@@ -21,6 +20,28 @@ const conflicts: Record<string, string> = {
         'Urutan layar sudah berubah sejak halaman ini dibuka. Halaman dimuat ulang; periksa urutannya, lalu coba lagi.',
 };
 
+function studioErrorText(error: ApiError, inline: string[]) {
+    const details = error.body.details ?? [];
+    if (error.status === 502 || error.status === 503)
+        return 'AI belum bisa menyusun sesi sekarang. Coba lagi sebentar lagi.';
+    if (error.status === 404 && error.body.message === 'Theme not found')
+        return 'Tema ini sudah dihapus. Halaman dimuat ulang.';
+    if (error.status === 404 && error.body.message === 'Block not found')
+        return 'Layar ini sudah dihapus. Halaman dimuat ulang.';
+    if (error.status === 409)
+        return (
+            conflicts[error.body.name] ??
+            'AI sedang menyusun sesi ini. Tunggu sampai selesai, lalu coba lagi.'
+        );
+    if (
+        error.status === 400 &&
+        details.length > 0 &&
+        details.every(({ field }) => inline.includes(field))
+    )
+        return 'Belum tersimpan. Perbaiki isian yang ditandai, lalu coba lagi.';
+    return null;
+}
+
 export function StudioError({
     error,
     inline = [],
@@ -28,42 +49,14 @@ export function StudioError({
     error: unknown;
     inline?: string[];
 }) {
-    if (!(error instanceof ApiError)) return <RequestError error={error} />;
-    const details = error.body.details ?? [];
-    if (error.status === 502 || error.status === 503)
-        return (
-            <Alert tone="attention" role="alert">
-                AI belum bisa menyusun sesi sekarang. Coba lagi sebentar lagi.
-            </Alert>
-        );
-    if (error.status === 404 && error.body.message === 'Theme not found')
-        return (
-            <Alert tone="attention" role="alert">
-                Tema ini sudah dihapus. Halaman dimuat ulang.
-            </Alert>
-        );
-    if (error.status === 404 && error.body.message === 'Block not found')
-        return (
-            <Alert tone="attention" role="alert">
-                Layar ini sudah dihapus. Halaman dimuat ulang.
-            </Alert>
-        );
-    if (error.status === 409)
-        return (
-            <Alert tone="attention" role="alert">
-                {conflicts[error.body.name] ??
-                    'AI sedang menyusun sesi ini. Tunggu sampai selesai, lalu coba lagi.'}
-            </Alert>
-        );
-    if (
-        error.status === 400 &&
-        details.length > 0 &&
-        details.every(({ field }) => inline.includes(field))
-    )
-        return (
-            <p role="alert" className="text-destructive">
-                Belum tersimpan. Perbaiki isian yang ditandai, lalu coba lagi.
-            </p>
-        );
-    return <RequestError error={error} />;
+    return (
+        <ErrorToast
+            error={error}
+            message={
+                error instanceof ApiError
+                    ? studioErrorText(error, inline)
+                    : null
+            }
+        />
+    );
 }

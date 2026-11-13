@@ -1,6 +1,7 @@
 import { useQuery } from '@tanstack/react-query';
 import { type FormEvent, useState } from 'react';
 import { Link } from 'react-router';
+import { StudentNavLink } from '../../components/student-nav-link';
 import { fieldErrorText } from '../../components/form-field';
 import {
     RequestError,
@@ -8,7 +9,6 @@ import {
 } from '../../components/request-error';
 import { Button, buttonVariants } from '../../components/ui/button';
 import { inputVariants } from '../../components/ui/input';
-import { textLink } from '../../components/ui/text-link';
 import { useErrorToast } from '../../components/ui/toast';
 import { ApiError } from '../../lib/api';
 import { cn } from '../../lib/cn';
@@ -266,9 +266,9 @@ export function ClassChallenge() {
     const query = useQuery(studentChallengeQuery());
     return (
         <div className="space-y-6">
-            <Link to="/student" className={textLink}>
+            <StudentNavLink back to="/student">
                 Kembali ke beranda
-            </Link>
+            </StudentNavLink>
             {query.data ? (
                 query.data.challenge ? (
                     <Running

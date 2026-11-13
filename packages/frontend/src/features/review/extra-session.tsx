@@ -1,9 +1,9 @@
 import { useQuery, useQueryClient } from '@tanstack/react-query';
 import { useState } from 'react';
 import { Link } from 'react-router';
+import { StudentNavLink } from '../../components/student-nav-link';
 import { RequestError } from '../../components/request-error';
 import { Button, buttonVariants } from '../../components/ui/button';
-import { textLink } from '../../components/ui/text-link';
 import type { Subject } from '../assignments/queries';
 import { subjects } from '../assignments/subject-art';
 import {
@@ -95,9 +95,9 @@ export function ExtraSession({ subject }: { subject: Subject }) {
     const [round, setRound] = useState(0);
     return (
         <div className="space-y-6">
-            <Link to={`/student/subjects/${subject}`} className={textLink}>
+            <StudentNavLink back to={`/student/subjects/${subject}`}>
                 Kembali ke {subjects[subject].label}
-            </Link>
+            </StudentNavLink>
             {query.isPending ? (
                 <p role="status" className="text-muted-foreground">
                     Sebentar, kita siapkan tantangannya…

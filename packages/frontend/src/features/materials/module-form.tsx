@@ -1,3 +1,4 @@
+import { ErrorToast } from '../../components/request-error';
 import { useState } from 'react';
 import {
     useCompetencyDrafts,
@@ -5,7 +6,6 @@ import {
     type CompetencyDraft,
 } from './queries';
 import { FormField, TextAreaField } from '../../components/form-field';
-import { Alert } from '../../components/ui/alert';
 import { Button } from '../../components/ui/button';
 import { Card } from '../../components/ui/card';
 import { ApiError } from '../../lib/api';
@@ -249,11 +249,10 @@ export function ModuleForm({
                         )}
                     </div>
                     {aiUnavailable ? (
-                        <Alert tone="attention" role="alert">
-                            AI belum bisa mengusulkan kompetensi sekarang. Coba
-                            lagi sebentar lagi, atau tulis kompetensinya
-                            sendiri.
-                        </Alert>
+                        <ErrorToast
+                            error={propose.error}
+                            message="AI belum bisa mengusulkan kompetensi sekarang. Coba lagi sebentar lagi, atau tulis kompetensinya sendiri."
+                        />
                     ) : (
                         <StudioError error={propose.error} />
                     )}

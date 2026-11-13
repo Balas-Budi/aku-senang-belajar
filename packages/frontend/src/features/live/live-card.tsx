@@ -8,7 +8,7 @@ import {
     useState,
 } from 'react';
 import { fieldErrorText } from '../../components/form-field';
-import { RequestError } from '../../components/request-error';
+import { ErrorToast, RequestError } from '../../components/request-error';
 import { Alert } from '../../components/ui/alert';
 import { Button } from '../../components/ui/button';
 import { Card } from '../../components/ui/card';
@@ -412,12 +412,15 @@ export function LiveCard({
                 >
                     Sesi langsung
                 </h2>
-                {conflict ? (
-                    <Alert tone="attention" role="alert">
-                        Sesi sudah berubah. Halaman ini memuat ulang keadaannya.
-                    </Alert>
-                ) : (
-                    !ending && <RequestError error={action.error} />
+                {(conflict || !ending) && (
+                    <ErrorToast
+                        error={action.error}
+                        message={
+                            conflict
+                                ? 'Sesi sudah berubah. Halaman ini memuat ulang keadaannya.'
+                                : null
+                        }
+                    />
                 )}
                 {data ? (
                     live ? (

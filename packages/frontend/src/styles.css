@@ -31,6 +31,7 @@
     --color-jalak-legs: #8a9bd0;
     --color-jalak-blush: #f7b394;
     --color-jalak-mouth: #f2876a;
+    --color-jalak-tear: #7cc8ff;
     --color-bali-brick: #cf6446;
     --color-bali-stone: #c9c4d9;
     --color-bali-leaf: #8fd16a;
@@ -384,7 +385,29 @@
         opacity: 1;
     }
 }
+.knowledge-card {
+    --card-edge: color-mix(in srgb, var(--card) 45%, white);
+    border-color: color-mix(in srgb, var(--card) 30%, white);
+    border-bottom-color: var(--card-edge);
+    transition:
+        rotate 150ms,
+        translate 150ms;
+}
+.knowledge-card:hover {
+    rotate: 0deg;
+    translate: 0 -4px;
+}
+.knowledge-card-art {
+    background-color: color-mix(in srgb, var(--card) 20%, white);
+    background-image: radial-gradient(
+        color-mix(in srgb, var(--card) 35%, white) 2px,
+        transparent 2.5px
+    );
+    background-size: 18px 18px;
+}
 .crying-tear {
+    transform-box: fill-box;
+    transform-origin: top;
     animation: crying-tear 1.2s ease-in infinite;
 }
 .crying-tear-right {
@@ -393,7 +416,7 @@
 @keyframes crying-tear {
     0% {
         opacity: 0;
-        transform: translateY(-2px) scaleY(0.7);
+        transform: translateY(-4px) scaleY(0.6);
     }
     20% {
         opacity: 1;
@@ -401,7 +424,20 @@
     85%,
     100% {
         opacity: 0;
-        transform: translateY(9px) scaleY(1);
+        transform: translateY(18px) scaleY(1.1);
+    }
+}
+.crying-stream {
+    transform-box: fill-box;
+    transform-origin: top;
+    animation: crying-stream 1.2s ease-in-out infinite alternate;
+}
+@keyframes crying-stream {
+    from {
+        transform: scaleY(0.85);
+    }
+    to {
+        transform: scaleY(1);
     }
 }
 .memory-card {

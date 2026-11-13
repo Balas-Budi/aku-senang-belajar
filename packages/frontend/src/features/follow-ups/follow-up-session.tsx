@@ -1,9 +1,9 @@
 import { useQuery, useQueryClient } from '@tanstack/react-query';
 import { useState } from 'react';
 import { Link } from 'react-router';
+import { StudentNavLink } from '../../components/student-nav-link';
 import { RequestError } from '../../components/request-error';
 import { Button, buttonVariants } from '../../components/ui/button';
-import { textLink } from '../../components/ui/text-link';
 import { ApiError } from '../../lib/api';
 import type { Subject } from '../assignments/queries';
 import { subjects } from '../assignments/subject-art';
@@ -106,13 +106,13 @@ export function FollowUpSession({ followUpId }: { followUpId: number }) {
     return (
         <div className="space-y-6">
             {subject ? (
-                <Link to={`/student/subjects/${subject}`} className={textLink}>
+                <StudentNavLink back to={`/student/subjects/${subject}`}>
                     Kembali ke {subjects[subject].label}
-                </Link>
+                </StudentNavLink>
             ) : (
-                <Link to="/student" className={textLink}>
+                <StudentNavLink back to="/student">
                     Kembali ke beranda
-                </Link>
+                </StudentNavLink>
             )}
             {query.data ? (
                 <FollowUpRun

@@ -1,12 +1,12 @@
 import { useQuery } from '@tanstack/react-query';
 import { useEffect, useRef } from 'react';
 import { Link } from 'react-router';
+import { StudentNavLink } from '../../components/student-nav-link';
 import { CheckIcon } from '../../components/icons/check-icon';
 import { LockIcon } from '../../components/icons/lock-icon';
 import { JalakBali } from '../../components/jalak-bali';
 import { RequestError } from '../../components/request-error';
 import { Button, buttonVariants } from '../../components/ui/button';
-import { textLink } from '../../components/ui/text-link';
 import { cn } from '../../lib/cn';
 import type { Subject } from '../assignments/queries';
 import { SubjectArt, subjects } from '../assignments/subject-art';
@@ -367,9 +367,9 @@ export function SubjectPath({ subject }: { subject: Subject }) {
     const reviewCount = review.data?.questions.length ?? 0;
     return (
         <div className="space-y-6">
-            <Link to="/student" className={textLink}>
+            <StudentNavLink back to="/student">
                 Kembali ke beranda
-            </Link>
+            </StudentNavLink>
             <header
                 className={cn(
                     'border-primary-deep/10 flex items-center gap-4 rounded-[24px] border-2 p-5 sm:gap-6 sm:p-7',

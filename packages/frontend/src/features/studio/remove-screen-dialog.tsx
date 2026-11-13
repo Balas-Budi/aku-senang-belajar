@@ -1,5 +1,5 @@
+import { ErrorToast } from '../../components/request-error';
 import { useId } from 'react';
-import { Alert } from '../../components/ui/alert';
 import { Button } from '../../components/ui/button';
 import { Dialog } from '../../components/ui/dialog';
 import { ApiError } from '../../lib/api';
@@ -79,9 +79,7 @@ export function RemoveScreenDialog({
             </p>
             <div className="mt-5 space-y-4">
                 {refusal ? (
-                    <Alert tone="attention" role="alert">
-                        {refusal}
-                    </Alert>
+                    <ErrorToast error={remove.error} message={refusal} />
                 ) : (
                     <StudioError error={remove.error} />
                 )}

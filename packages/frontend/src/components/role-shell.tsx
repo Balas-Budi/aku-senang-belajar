@@ -4,7 +4,6 @@ import { useQuery } from '@tanstack/react-query';
 import { meQuery, useLogout, type Role } from '../features/auth/queries';
 import { classesQuery } from '../features/classes/queries';
 import { Button } from './ui/button';
-import { ToastProvider } from './ui/toast';
 import { RequestError } from './request-error';
 import { WorkspaceShell, type WorkspaceLink } from './workspace-shell';
 import { StudentShell } from '../features/student/student-shell';
@@ -117,16 +116,14 @@ export function RoleShell({ role }: { role: Role }) {
         );
     if (role === 'student')
         return (
-            <ToastProvider>
-                <StudentShell
-                    name={user.name}
-                    pending={logout.isPending}
-                    error={logout.error}
-                    onLogout={leave}
-                >
-                    <Outlet />
-                </StudentShell>
-            </ToastProvider>
+            <StudentShell
+                name={user.name}
+                pending={logout.isPending}
+                error={logout.error}
+                onLogout={leave}
+            >
+                <Outlet />
+            </StudentShell>
         );
     return (
         <WorkspaceShell

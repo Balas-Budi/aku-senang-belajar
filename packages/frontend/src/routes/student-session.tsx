@@ -1,6 +1,5 @@
 import { dehydrate, HydrationBoundary } from '@tanstack/react-query';
 import { data, redirect } from 'react-router';
-import { ToastProvider } from '../components/ui/toast';
 import { studentClassQuery } from '../features/classes/queries';
 import {
     membershipInactive,
@@ -46,9 +45,7 @@ export default function StudentSession({ loaderData }: Route.ComponentProps) {
             {loaderData.inactive ? (
                 <SessionInactivePage />
             ) : (
-                <ToastProvider>
-                    <SessionPlayer assignmentId={loaderData.id} />
-                </ToastProvider>
+                <SessionPlayer assignmentId={loaderData.id} />
             )}
         </HydrationBoundary>
     );

@@ -1,12 +1,12 @@
 import { useQuery, useQueryClient } from '@tanstack/react-query';
 import { useState } from 'react';
 import { Link } from 'react-router';
+import { StudentNavLink } from '../../components/student-nav-link';
 import {
     RequestError,
     requestErrorMessage,
 } from '../../components/request-error';
 import { Button, buttonVariants } from '../../components/ui/button';
-import { textLink } from '../../components/ui/text-link';
 import { useErrorToast } from '../../components/ui/toast';
 import type { Subject } from '../assignments/queries';
 import { subjects } from '../assignments/subject-art';
@@ -285,9 +285,9 @@ export function ReviewSession({ subject }: { subject: Subject }) {
     });
     return (
         <div className="space-y-6">
-            <Link to={`/student/subjects/${subject}`} className={textLink}>
+            <StudentNavLink back to={`/student/subjects/${subject}`}>
                 Kembali ke {subjects[subject].label}
-            </Link>
+            </StudentNavLink>
             {query.isPending ? (
                 <p role="status" className="text-muted-foreground">
                     Sebentar, kita siapkan soalnya…
