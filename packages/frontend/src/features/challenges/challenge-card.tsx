@@ -5,10 +5,10 @@ import { Alert } from '../../components/ui/alert';
 import { Button } from '../../components/ui/button';
 import { Card } from '../../components/ui/card';
 import { Dialog } from '../../components/ui/dialog';
-import { focusHeading, joined } from '../studio/studio-labels';
+import { focusHeading } from '../studio/studio-labels';
 import { ChallengeError } from './challenge-error';
 import { answeredLine, ChallengeResult } from './challenge-result';
-import { StartForm } from './challenge-start-form';
+import { OptionList, StartForm } from './challenge-start-form';
 import {
     challengeConflict,
     classChallengeQuery,
@@ -40,11 +40,14 @@ function OpenChallenge({
                     Sedang berjalan ·{' '}
                     {challenge.mode === 'group' ? 'Kelompok' : 'Sendiri'}
                 </p>
-                <p className="text-lg break-words">{challenge.prompt}</p>
-                <p className="break-words">
-                    Pilihan:{' '}
-                    {joined(challenge.options.map(({ label }) => label))}
+                <p className="text-lg leading-relaxed font-semibold break-words">
+                    {challenge.prompt}
                 </p>
+                <div className="@container pt-2">
+                    <OptionList
+                        labels={challenge.options.map(({ label }) => label)}
+                    />
+                </div>
             </div>
             <p role="status" className="text-lg font-semibold tabular-nums">
                 {answeredLine(challenge)}

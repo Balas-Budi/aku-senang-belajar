@@ -13,6 +13,7 @@ import { useQuery } from '@tanstack/react-query';
 import { useRef, useState, type RefObject } from 'react';
 import { Link, useNavigate } from 'react-router';
 import { materialMeta } from './library';
+import { BookViewer } from './book-viewer';
 import { ChapterActions } from './chapter-actions';
 import { LicenceCard } from './licence-card';
 import { MaterialChangeDialog } from './material-change-dialog';
@@ -188,13 +189,59 @@ function NewSession({
     );
 }
 
+function pageRanges(pages: number[]) {
+    const sorted = [...new Set(pages)].sort((a, b) => a - b);
+    const parts: string[] = [];
+    for (let i = 0; i < sorted.length; i++) {
+        const start = sorted[i];
+        while (sorted[i + 1] === sorted[i] + 1) i++;
+        parts.push(start === sorted[i] ? `${start}` : `${start}–${sorted[i]}`);
+    }
+    return parts.join(', ');
+}
+
+function chapterStatus(module: Module) {
+    const total = module.sessions.length;
+    const ready = module.sessions.filter(
+        (session) => session.status === 'ready',
+    ).length;
+    if (total === 0)
+        return {
+            text: 'Belum ada misi',
+            tone: 'bg-muted text-muted-foreground',
+        };
+    if (ready === total)
+        return {
+            text: `${ready} misi siap`,
+            tone: 'bg-status-visible/10 text-status-visible',
+        };
+    return {
+        text: `${total - ready} misi masih draf`,
+        tone: 'bg-status-developing-soft text-status-developing',
+    };
+}
+
+function Subheading({ children }: { children: string }) {
+    return (
+        <h4 className="text-muted-foreground text-sm font-semibold tracking-wide uppercase">
+            {children}
+        </h4>
+    );
+}
+
 function ModuleItem({
+    number,
     module,
     material,
+    open,
+    onToggle,
     onChange,
 }: {
+    number: number;
     module: Module;
     material: MaterialDetail;
+    open: boolean;
+    onToggle: () => void;
     onChange: (text: string, removed?: boolean) => void;
 }) {
     const own = !material.prepared;
@@ -204,94 +251,170 @@ function ModuleItem({
     const uncovered = module.competencies
         .map(({ code }) => code)
         .filter((code) => !covered.has(code));
-    const origin = [
-        ...(module.madeBy === 'ai' ? ['Disusun AI dari buku'] : []),
+    const summary = [
         ...(module.firstPage !== null
-            ? [`Halaman ${module.firstPage} sampai ${module.lastPage}`]
+            ? [`Hal. ${module.firstPage}–${module.lastPage}`]
             : []),
+        `${module.competencies.length} kompetensi`,
+        ...(module.sessions.length > 0
+            ? [`${module.sessions.length} misi`]
+            : []),
+    ];
+    const origin = [
+        ...(module.madeBy === 'ai'
+            ? ['Disusun AI dari buku']
+            : ['Bab buatan Anda']),
         ...(module.version !== material.version
             ? [`Dari versi ${module.version}`]
             : []),
     ];
+    const status = chapterStatus(module);
+    const bodyId = `chapter-${module.id}`;
     return (
-        <li className="border-paper-edge space-y-3 rounded-2xl border p-4">
-            <div>
-                <p className="text-lg font-semibold break-words">
-                    {module.title}
+        <li className="border-paper-edge overflow-hidden rounded-2xl border bg-white">
+            <h3>
+                <button
+                    type="button"
+                    aria-expanded={open}
+                    aria-controls={bodyId}
+                    onClick={onToggle}
+                    className="hover:bg-student-surface focus-visible:outline-ring flex w-full items-center gap-3 p-4 text-left focus-visible:outline-3 focus-visible:-outline-offset-3 sm:gap-4"
+                >
+                    <span
+                        aria-hidden="true"
+                        className="bg-secondary text-primary-deep font-display flex size-8 shrink-0 items-center justify-center rounded-lg text-base font-semibold sm:size-10 sm:rounded-xl sm:text-lg"
+                    >
+                        {number}
+                    </span>
+                    <span className="min-w-0 flex-1">
+                        <span className="font-display text-primary-deep block text-lg leading-tight font-semibold break-words sm:text-xl">
+                            {module.title}
+                        </span>
+                        <span className="mt-1 flex flex-wrap items-center gap-x-3 gap-y-1">
+                            <span className="text-muted-foreground text-sm tabular-nums">
+                                {summary.join(' · ')}
+                            </span>
+                            <span
+                                className={`rounded-full px-2.5 py-0.5 text-sm font-semibold ${status.tone}`}
+                            >
+                                {status.text}
+                            </span>
+                        </span>
+                    </span>
+                    <svg
+                        aria-hidden="true"
+                        viewBox="0 0 24 24"
+                        fill="none"
+                        stroke="currentColor"
+                        strokeWidth="2.5"
+                        strokeLinecap="round"
+                        strokeLinejoin="round"
+                        className={`text-primary size-6 shrink-0 transition-transform motion-reduce:transition-none ${open ? 'rotate-180' : ''}`}
+                    >
+                        <path d="m6 9 6 6 6-6" />
+                    </svg>
+                </button>
+            </h3>
+            <div
+                id={bodyId}
+                hidden={!open}
+                className="border-paper-edge space-y-5 border-t p-4 sm:p-5"
+            >
+                <p className="text-muted-foreground text-sm">
+                    {origin.join(' · ')}
                 </p>
-                {origin.length > 0 && (
-                    <p className="text-muted-foreground text-sm tabular-nums">
-                        {origin.join(' · ')}
+                {module.competencies.length > 0 && (
+                    <div className="space-y-2">
+                        <Subheading>Yang dipelajari</Subheading>
+                        <ul className="space-y-2">
+                            {module.competencies.map((competency) => (
+                                <li
+                                    key={competency.id}
+                                    className="flex items-start gap-3"
+                                >
+                                    <span
+                                        className={`mt-0.5 w-10 shrink-0 rounded-lg py-0.5 text-center text-sm font-bold ${
+                                            covered.has(competency.code)
+                                                ? 'bg-primary text-white'
+                                                : 'bg-secondary text-primary-deep'
+                                        }`}
+                                    >
+                                        {competency.code}
+                                    </span>
+                                    <span className="min-w-0">
+                                        <span className="block leading-relaxed">
+                                            {competency.description}
+                                        </span>
+                                        {competency.pages.length > 0 && (
+                                            <span className="text-muted-foreground block text-sm tabular-nums">
+                                                Halaman{' '}
+                                                {pageRanges(competency.pages)}
+                                            </span>
+                                        )}
+                                    </span>
+                                </li>
+                            ))}
+                        </ul>
+                    </div>
+                )}
+                {module.sessions.length > 0 && (
+                    <div className="space-y-2">
+                        <Subheading>Misi</Subheading>
+                        <ul className="space-y-2">
+                            {module.sessions.map((session) => (
+                                <li
+                                    key={session.id}
+                                    className="bg-student-surface flex flex-wrap items-center gap-3 rounded-xl p-3"
+                                >
+                                    <span className="min-w-0 flex-1 basis-48">
+                                        <span className="block font-semibold break-words">
+                                            {session.title}
+                                        </span>
+                                        <span className="text-muted-foreground block text-sm">
+                                            {[
+                                                ...(session.competencies
+                                                    .length > 0
+                                                    ? [
+                                                          listOf(
+                                                              session.competencies,
+                                                          ),
+                                                      ]
+                                                    : []),
+                                                sessionState(session),
+                                            ].join(' · ')}
+                                        </span>
+                                    </span>
+                                    <Link
+                                        to={`/teacher/studio/${session.id}`}
+                                        aria-label={`Buka studio ${session.title}`}
+                                        className={buttonVariants({
+                                            variant: 'outline',
+                                            className: 'min-h-11 bg-white px-4',
+                                        })}
+                                    >
+                                        Buka studio
+                                    </Link>
+                                </li>
+                            ))}
+                        </ul>
+                    </div>
+                )}
+                {own && module.sessions.length > 0 && uncovered.length > 0 && (
+                    <p className="bg-status-developing-soft text-status-developing rounded-xl px-3 py-2 text-sm font-semibold">
+                        Belum masuk misi mana pun: {listOf(uncovered)}
                     </p>
                 )}
+                {own && !material.archived && (
+                    <div className="border-paper-edge space-y-3 border-t pt-4">
+                        <NewSession module={module} uncovered={uncovered} />
+                        <ChapterActions
+                            materialId={material.id}
+                            module={module}
+                            onDone={onChange}
+                        />
+                    </div>
+                )}
             </div>
-            {module.competencies.length > 0 && (
-                <ul className="space-y-1 text-sm">
-                    {module.competencies.map((competency) => (
-                        <li key={competency.id}>
-                            <span className="font-semibold">
-                                {competency.code}
-                            </span>{' '}
-                            {competency.description}
-                            {competency.pages.length > 0 && (
-                                <span className="text-muted-foreground tabular-nums">
-                                    {' '}
-                                    · Hal. {competency.pages.join(', ')}
-                                </span>
-                            )}
-                        </li>
-                    ))}
-                </ul>
-            )}
-            {module.sessions.length > 0 && (
-                <ul className="space-y-2">
-                    {module.sessions.map((session) => (
-                        <li
-                            key={session.id}
-                            className="bg-student-surface/70 flex flex-wrap items-center gap-3 rounded-xl p-3"
-                        >
-                            <span className="min-w-0 flex-1 basis-48">
-                                <span className="block font-semibold break-words">
-                                    {session.title}
-                                </span>
-                                <span className="text-muted-foreground block text-sm">
-                                    {[
-                                        ...(session.competencies.length > 0
-                                            ? [listOf(session.competencies)]
-                                            : []),
-                                        sessionState(session),
-                                    ].join(' · ')}
-                                </span>
-                            </span>
-                            <Link
-                                to={`/teacher/studio/${session.id}`}
-                                aria-label={`Buka studio ${session.title}`}
-                                className={buttonVariants({
-                                    variant: 'outline',
-                                    className: 'min-h-11 bg-white px-4',
-                                })}
-                            >
-                                Buka studio
-                            </Link>
-                        </li>
-                    ))}
-                </ul>
-            )}
-            {own && module.sessions.length > 0 && uncovered.length > 0 && (
-                <p className="text-muted-foreground text-sm">
-                    Belum masuk sesi mana pun: {listOf(uncovered)}
-                </p>
-            )}
-            {own && !material.archived && (
-                <ChapterActions
-                    materialId={material.id}
-                    module={module}
-                    onDone={onChange}
-                />
-            )}
-            {own && !material.archived && (
-                <NewSession module={module} uncovered={uncovered} />
-            )}
         </li>
     );
 }
@@ -459,6 +582,9 @@ export function MaterialDetailView({ id }: { id: number }) {
     const query = useQuery(materialQuery(id));
     const reactivate = useUpdateMaterial(id);
     const [asking, setAsking] = useState(false);
+    const [openChapters, setOpenChapters] = useState<Set<number>>(
+        () => new Set(),
+    );
     const [message, setMessage] = useState({ text: '', count: 0 });
     const heading = useRef<HTMLHeadingElement>(null);
     const chaptersHeading = useRef<HTMLHeadingElement>(null);
@@ -473,7 +599,7 @@ export function MaterialDetailView({ id }: { id: number }) {
         },
         {
             key: 'halaman',
-            label: 'Halaman buku',
+            label: 'Buku',
             icon: <BookIcon className="size-5" />,
             badge: query.data ? String(query.data.pageCount) : null,
         },
@@ -506,6 +632,16 @@ export function MaterialDetailView({ id }: { id: number }) {
         : material.pages
               .filter((page) => !page.readable)
               .map((page) => page.number);
+    const hasFile =
+        material.versions.find(({ version }) => version === material.version)
+            ?.hasFile ?? false;
+    const chapters = [...material.modules].sort(
+        (a, b) =>
+            (a.firstPage ?? Number.MAX_SAFE_INTEGER) -
+            (b.firstPage ?? Number.MAX_SAFE_INTEGER),
+    );
+    const allOpen =
+        chapters.length > 0 && chapters.every(({ id }) => openChapters.has(id));
     const changed = (text: string, removed?: boolean) => {
         say(text);
         if (removed)
@@ -638,26 +774,57 @@ export function MaterialDetailView({ id }: { id: number }) {
                         aria-labelledby="modules-title"
                         className="space-y-3"
                     >
-                        <h2
-                            ref={chaptersHeading}
-                            id="modules-title"
-                            tabIndex={-1}
-                            className={`font-display text-primary-deep text-xl font-semibold sm:text-2xl ${focusHeading}`}
-                        >
-                            Bab
-                        </h2>
+                        <div className="flex flex-wrap items-center justify-between gap-3">
+                            <h2
+                                ref={chaptersHeading}
+                                id="modules-title"
+                                tabIndex={-1}
+                                className={`font-display text-primary-deep text-xl font-semibold sm:text-2xl ${focusHeading}`}
+                            >
+                                Bab
+                            </h2>
+                            {chapters.length > 1 && (
+                                <Button
+                                    variant="outline"
+                                    className="min-h-11 px-4"
+                                    onClick={() =>
+                                        setOpenChapters(
+                                            allOpen
+                                                ? new Set()
+                                                : new Set(
+                                                      chapters.map(
+                                                          ({ id }) => id,
+                                                      ),
+                                                  ),
+                                        )
+                                    }
+                                >
+                                    {allOpen ? 'Tutup semua' : 'Buka semua'}
+                                </Button>
+                            )}
+                        </div>
                         {own && (
                             <p className="text-muted-foreground">
                                 Pilih bab yang akan diajarkan, lalu susun
-                                sesinya. Bab yang tidak dipakai boleh dibiarkan.
+                                misinya. Bab yang tidak dipakai boleh dibiarkan.
                             </p>
                         )}
                         <ul className="space-y-3">
-                            {material.modules.map((module) => (
+                            {chapters.map((module, index) => (
                                 <ModuleItem
                                     key={module.id}
+                                    number={index + 1}
                                     module={module}
                                     material={material}
+                                    open={openChapters.has(module.id)}
+                                    onToggle={() =>
+                                        setOpenChapters((current) => {
+                                            const next = new Set(current);
+                                            if (!next.delete(module.id))
+                                                next.add(module.id);
+                                            return next;
+                                        })
+                                    }
                                     onChange={changed}
                                 />
                             ))}
@@ -688,7 +855,27 @@ export function MaterialDetailView({ id }: { id: number }) {
                 )}
             {section === 'sumber' && <LicenceCard material={material} />}
             {section === 'sumber' && own && <VersionCard material={material} />}
-            {section === 'halaman' && material.pages.length > 0 && (
+            {section === 'halaman' && hasFile && (
+                <Card>
+                    <section aria-labelledby="book-title" className="space-y-4">
+                        <h2
+                            id="book-title"
+                            className="font-display text-primary-deep text-xl font-semibold sm:text-2xl"
+                        >
+                            Buku
+                        </h2>
+                        <BookViewer
+                            key={material.version}
+                            url={`/api/materials/${material.id}/file?version=${material.version}`}
+                            pageCount={material.pageCount}
+                            chapters={material.modules.filter(
+                                ({ version }) => version === material.version,
+                            )}
+                        />
+                    </section>
+                </Card>
+            )}
+            {section === 'halaman' && !hasFile && material.pages.length > 0 && (
                 <Card>
                     <section
                         aria-labelledby="pages-title"
@@ -703,6 +890,10 @@ export function MaterialDetailView({ id }: { id: number }) {
                                 {material.pageCount}
                             </span>
                         </h2>
+                        <p className="text-muted-foreground">
+                            PDF asli materi ini tidak tersedia, jadi yang tampil
+                            teks tiap halaman.
+                        </p>
                         <PageList key={material.version} material={material} />
                     </section>
                 </Card>

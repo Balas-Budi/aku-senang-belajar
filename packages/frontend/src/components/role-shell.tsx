@@ -13,6 +13,7 @@ import {
     TeacherIcon,
 } from './icons/workspace-icons';
 import { StudentShell } from '../features/student/student-shell';
+import { PageLoading, usePageLoading } from './page-loading';
 
 function useWorkspaceLinks(role: Role): WorkspaceLink[] {
     const location = useLocation();
@@ -98,6 +99,7 @@ export function RoleShell({ role }: { role: Role }) {
     const logout = useLogout();
     const navigate = useNavigate();
     const links = useWorkspaceLinks(role);
+    const loading = usePageLoading();
     const user = query.data;
     const leave = () =>
         logout.mutate(undefined, {
@@ -132,7 +134,7 @@ export function RoleShell({ role }: { role: Role }) {
                 error={logout.error}
                 onLogout={leave}
             >
-                <Outlet />
+                {loading ? <PageLoading /> : <Outlet />}
             </StudentShell>
         );
     return (
@@ -144,7 +146,7 @@ export function RoleShell({ role }: { role: Role }) {
             onLogout={leave}
         >
             <RequestError error={logout.error} />
-            <Outlet />
+            {loading ? <PageLoading /> : <Outlet />}
         </WorkspaceShell>
     );
 }

@@ -498,3 +498,72 @@
         display: none;
     }
 }
+
+@keyframes book-turn-next {
+    from {
+        opacity: 0;
+        transform: translateX(24px);
+    }
+}
+
+@keyframes book-turn-back {
+    from {
+        opacity: 0;
+        transform: translateX(-24px);
+    }
+}
+
+/* Page loader: si Jalak walks to and fro along a dotted path. */
+.page-walk-track {
+    position: relative;
+    height: 7.5rem;
+}
+.page-walk {
+    position: absolute;
+    bottom: 0.5rem;
+    left: 0;
+    animation: page-walk 6s ease-in-out infinite;
+}
+.page-walk-step {
+    transform-origin: 50% 100%;
+    animation: page-walk-step 0.5s ease-in-out infinite;
+}
+.page-walk-ground {
+    position: absolute;
+    inset-inline: 0;
+    bottom: 0.5rem;
+    border-bottom: 3px dashed var(--color-paper-edge);
+}
+@keyframes page-walk {
+    0%,
+    100% {
+        left: 0;
+    }
+    50% {
+        left: calc(100% - 5rem);
+    }
+}
+@keyframes page-walk-step {
+    0%,
+    100% {
+        transform: translateY(0) rotate(-4deg);
+    }
+    25% {
+        transform: translateY(-8px) rotate(0deg);
+    }
+    50% {
+        transform: translateY(0) rotate(4deg);
+    }
+    75% {
+        transform: translateY(-8px) rotate(0deg);
+    }
+}
+@media (prefers-reduced-motion: reduce) {
+    .page-walk,
+    .page-walk-step {
+        animation: none;
+    }
+    .page-walk {
+        left: calc(50% - 2.5rem);
+    }
+}

@@ -40,7 +40,7 @@ import {
     proposeCompetencies,
 } from '../../studio/competencies.ts';
 import { visibleTo as sessionVisibleTo } from '../studio/handlers.ts';
-import { checkPdf } from './pdf.ts';
+import { PDF_CONTENT_TYPE, checkPdf } from './pdf.ts';
 import type {
     MaterialBody,
     MaterialParams,
@@ -131,6 +131,7 @@ async function materialDetail(
             createdAt: materialVersions.createdAt,
             pageCount: count(materialPages.number),
             readablePages: count(pageContent),
+            hasFile: sql<boolean>`${materialVersions.file} is not null`,
         })
         .from(materialVersions)
         .leftJoin(
@@ -631,6 +632,37 @@ export async function getPage(
     }
 
     return page;
+}
+
+export async function getFile(
+    request: FastifyRequest<{ Params: MaterialParams; Querystring: PageQuery }>,
+    reply: FastifyReply,
+) {
+    const { materialId } = request.params;
+    const { version } = request.query;
+    const [row] = await request.server.db
+        .select({ file: materialVersions.file })
+        .from(materialVersions)
+        .innerJoin(materials, eq(materials.id, materialVersions.materialId))
+        .where(
+            and(
+                eq(materialVersions.materialId, materialId),
+                version === undefined
+                    ? eq(materialVersions.version, materials.version)
+                    : eq(materialVersions.version, version),
+                visibleTo(currentUser(request).id),
+            ),
+        );
+
+    if (!row?.file) {
+        throw notFound('File not found');
+    }
+
+    return reply
+        .header('content-type', PDF_CONTENT_TYPE)
+        .header('content-disposition', 'inline')
+        .header('cache-control', 'private, max-age=3600')
+        .send(row.file);
 }
 
 export async function readAgain(

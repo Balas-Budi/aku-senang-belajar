@@ -169,6 +169,39 @@ test('a file that is not a PDF or one over 300 pages is refused; a PDF without t
     assert.equal(json.json().details[0].field, 'pdf');
 });
 
+test("the owner reads the original PDF back; another teacher's upload answers 404", async (t) => {
+    const app = await testApp(t);
+    const owner = await teacher(app);
+    const other = await teacher(app);
+    const file = pdfOf(fractions);
+    const uploaded = (await upload(app, owner, file)).json();
+
+    const detail = (
+        await get(app, owner, `/api/materials/${uploaded.id}`)
+    ).json();
+    assert.equal(detail.versions[0].hasFile, true);
+
+    const response = await get(
+        app,
+        owner,
+        `/api/materials/${uploaded.id}/file`,
+    );
+    assert.equal(response.statusCode, 200);
+    assert.equal(response.headers['content-type'], 'application/pdf');
+    assert.deepEqual(response.rawPayload, file);
+
+    assert.equal(
+        (await get(app, other, `/api/materials/${uploaded.id}/file`))
+            .statusCode,
+        404,
+    );
+    assert.equal(
+        (await get(app, owner, `/api/materials/${uploaded.id}/file?version=9`))
+            .statusCode,
+        404,
+    );
+});
+
 test('a file over 200 MB is refused before it is read', async (t) => {
     const app = await testApp(t);
     const token = await teacher(app);

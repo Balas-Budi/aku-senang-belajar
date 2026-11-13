@@ -71,6 +71,7 @@ export type MaterialDetail = Material &
             createdAt: string;
             pageCount: number;
             readablePages: number;
+            hasFile: boolean;
             chapters: number;
         }[];
         pages: { number: number; readable: boolean; snippet: string | null }[];

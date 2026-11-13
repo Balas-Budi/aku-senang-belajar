@@ -5,7 +5,7 @@ import { ErrorToast, RequestError } from '../../components/request-error';
 import { Button } from '../../components/ui/button';
 import { Input } from '../../components/ui/input';
 import { ApiError } from '../../lib/api';
-import { choiceBox, choiceCard, joined } from '../studio/studio-labels';
+import { choiceBox, choiceCard } from '../studio/studio-labels';
 import { ChallengeError } from './challenge-error';
 import {
     challengeConflict,
@@ -20,6 +20,39 @@ const modes = {
     group: { label: 'Kelompok', help: 'Satu jawaban untuk satu kelompok.' },
 };
 const optionLetters = ['A', 'B', 'C', 'D'];
+
+/** Answer options as an A–D list, easier to scan than one comma sentence. */
+export function OptionList({
+    labels,
+    inline,
+}: {
+    labels: string[];
+    /** Inside a <label>, only phrasing content is valid, so spans stand in for the list. */
+    inline?: boolean;
+}) {
+    const List = inline ? 'span' : 'ol';
+    const Item = inline ? 'span' : 'li';
+    return (
+        <List className="grid gap-2 @xl:grid-cols-2">
+            {labels.map((label, index) => (
+                <Item
+                    key={index}
+                    className="border-paper-edge flex items-start gap-2.5 rounded-xl border bg-white px-3 py-2"
+                >
+                    <span
+                        aria-hidden="true"
+                        className="bg-secondary text-primary-deep flex size-7 shrink-0 items-center justify-center rounded-lg text-sm font-bold"
+                    >
+                        {optionLetters[index] ?? index + 1}
+                    </span>
+                    <span className="min-w-0 pt-0.5 leading-snug break-words">
+                        {label}
+                    </span>
+                </Item>
+            ))}
+        </List>
+    );
+}
 
 const lettered = (labels: string[]) =>
     labels.map((label, index) => ({ id: 'abcd'.charAt(index), label }));
@@ -117,31 +150,48 @@ export function StartForm({
                         pertanyaan Anda sendiri.
                     </p>
                 ) : (
-                    <div className="grid gap-2">
+                    <div className="@container grid gap-3">
                         {sources.data.sources.map((source) => (
-                            <label key={source.blockId} className={choiceCard}>
-                                <input
-                                    type="radio"
-                                    name="source"
-                                    value={source.blockId}
-                                    required
-                                    className={choiceBox}
-                                />
-                                <span className="min-w-0 break-words">
-                                    <span className="block text-sm">
+                            <label
+                                key={source.blockId}
+                                className="border-paper-edge hover:border-primary has-[:checked]:border-primary has-[:checked]:bg-student-surface has-[:focus-visible]:outline-ring flex cursor-pointer flex-col gap-3 rounded-2xl border-2 bg-white p-4 break-words has-[:focus-visible]:outline-3 has-[:focus-visible]:outline-offset-2 sm:p-5"
+                            >
+                                <span className="flex items-start gap-3">
+                                    <input
+                                        type="radio"
+                                        name="source"
+                                        value={source.blockId}
+                                        required
+                                        aria-labelledby={`source-${source.blockId}-mission source-${source.blockId}-prompt`}
+                                        aria-describedby={`source-${source.blockId}-options`}
+                                        className="accent-primary mt-0.5 size-5 shrink-0 focus-visible:outline-none"
+                                    />
+                                    <span
+                                        id={`source-${source.blockId}-mission`}
+                                        className="bg-secondary text-primary-deep min-w-0 rounded-lg px-2.5 py-0.5 text-sm font-semibold"
+                                    >
                                         Misi: {source.mission}
                                     </span>
-                                    <span className="block font-medium">
-                                        {source.prompt}
+                                </span>
+                                <span
+                                    id={`source-${source.blockId}-prompt`}
+                                    className="block text-base leading-relaxed font-semibold sm:pl-8 sm:text-lg"
+                                >
+                                    {source.prompt}
+                                </span>
+                                <span
+                                    id={`source-${source.blockId}-options`}
+                                    className="block space-y-1.5 sm:pl-8"
+                                >
+                                    <span className="text-muted-foreground block text-sm font-semibold">
+                                        Pilihan jawaban
                                     </span>
-                                    <span className="block text-sm">
-                                        Pilihan:{' '}
-                                        {joined(
-                                            source.options.map(
-                                                ({ label }) => label,
-                                            ),
+                                    <OptionList
+                                        inline
+                                        labels={source.options.map(
+                                            ({ label }) => label,
                                         )}
-                                    </span>
+                                    />
                                 </span>
                             </label>
                         ))}

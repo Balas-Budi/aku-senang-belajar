@@ -5,6 +5,7 @@ import {
     draftCompetencies,
     getMaterial,
     deleteModule,
+    getFile,
     getPage,
     listMaterials,
     readAgain,
@@ -86,6 +87,16 @@ export const materialRoutes: FastifyPluginAsyncZod = async (fastify) => {
             },
         },
         uploadVersion,
+    );
+    fastify.get(
+        '/:materialId/file',
+        {
+            schema: {
+                params: materialParams,
+                querystring: pageQuery,
+            },
+        },
+        getFile,
     );
     fastify.get(
         '/:materialId/pages/:number',

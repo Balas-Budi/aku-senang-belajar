@@ -1,3 +1,4 @@
+import { useState } from 'react';
 import { useQuery } from '@tanstack/react-query';
 import { Link } from 'react-router';
 import { ErrorToast, RequestError } from '../../components/request-error';
@@ -26,10 +27,12 @@ function ChapterRow({
     classId,
     ownBookId,
     chapter,
+    number,
 }: {
     classId: number;
     ownBookId: number | null;
     chapter: ClassBook['chapters'][number];
+    number: number;
 }) {
     const access = useChapterAccess(classId);
     const change = (method: 'PUT' | 'DELETE') =>
@@ -41,37 +44,45 @@ function ChapterRow({
     const opened = chapter.openStages > 0;
     return (
         <li className="flex flex-wrap items-center justify-between gap-x-4 gap-y-3 py-4">
-            <div className="min-w-0 flex-1 basis-64">
+            <div className="flex min-w-0 flex-1 basis-64 items-start gap-3">
                 <span
-                    className={cn(
-                        'mb-1 inline-block rounded-full px-3 py-0.5 text-sm font-semibold',
-                        opened
-                            ? 'bg-status-visible/10 text-status-visible'
-                            : chapter.waitingStages > 0
-                              ? 'bg-secondary text-ai-suggestion'
-                              : 'bg-muted text-muted-foreground',
-                    )}
+                    aria-hidden="true"
+                    className="bg-secondary text-primary-deep flex size-8 shrink-0 items-center justify-center rounded-lg text-sm font-bold"
                 >
-                    {opened
-                        ? 'Dibuka'
-                        : chapter.waitingStages > 0
-                          ? 'Siap dibuka'
-                          : 'Belum ada misi'}
+                    {number}
                 </span>
-                <h4 className="text-base font-semibold break-words">
-                    {chapter.title}
-                </h4>
-                <p className="text-muted-foreground text-sm">
-                    {opened
-                        ? `Dibuka untuk kelas · ${chapter.openStages} misi`
-                        : chapter.waitingStages > 0
-                          ? `${chapter.waitingStages} misi siap dibagikan`
-                          : 'Siapkan misinya dulu di Materi.'}
-                    {opened &&
-                        chapter.waitingStages > 0 &&
-                        ` · ${chapter.waitingStages} misi baru belum dibagikan`}
-                    {chapter.started && ' · Siswa sudah mulai'}
-                </p>
+                <div className="min-w-0">
+                    <h4 className="flex flex-wrap items-center gap-x-2 gap-y-1 text-base font-semibold break-words">
+                        {chapter.title}
+                        <span
+                            className={cn(
+                                'rounded-full px-2.5 py-0.5 text-sm font-semibold',
+                                opened
+                                    ? 'bg-status-visible/10 text-status-visible'
+                                    : chapter.waitingStages > 0
+                                      ? 'bg-secondary text-ai-suggestion'
+                                      : 'bg-muted text-muted-foreground',
+                            )}
+                        >
+                            {opened
+                                ? 'Dibuka'
+                                : chapter.waitingStages > 0
+                                  ? 'Siap dibuka'
+                                  : 'Belum ada misi'}
+                        </span>
+                    </h4>
+                    <p className="text-muted-foreground text-sm">
+                        {opened
+                            ? `Dibuka untuk kelas · ${chapter.openStages} misi`
+                            : chapter.waitingStages > 0
+                              ? `${chapter.waitingStages} misi siap dibagikan`
+                              : 'Siapkan misinya dulu di Materi.'}
+                        {opened &&
+                            chapter.waitingStages > 0 &&
+                            ` · ${chapter.waitingStages} misi baru belum dibagikan`}
+                        {chapter.started && ' · Siswa sudah mulai'}
+                    </p>
+                </div>
             </div>
             <div className="flex flex-wrap items-center gap-2">
                 {opened && (
@@ -129,15 +140,142 @@ function ChapterRow({
     );
 }
 
+function BookItem({
+    classId,
+    book,
+    open,
+    onToggle,
+}: {
+    classId: number;
+    book: ClassBook;
+    open: boolean;
+    onToggle: () => void;
+}) {
+    const opened = book.chapters.filter(
+        ({ openStages }) => openStages > 0,
+    ).length;
+    const ready = book.chapters.filter(
+        ({ openStages, waitingStages }) =>
+            openStages === 0 && waitingStages > 0,
+    ).length;
+    const bodyId = `class-book-${book.id}`;
+    return (
+        <li className="border-paper-edge overflow-hidden rounded-2xl border bg-white">
+            <h3>
+                <button
+                    type="button"
+                    aria-expanded={open}
+                    aria-controls={bodyId}
+                    onClick={onToggle}
+                    className="hover:bg-student-surface focus-visible:outline-ring flex w-full items-center gap-3 p-4 text-left focus-visible:outline-3 focus-visible:-outline-offset-3 sm:gap-4"
+                >
+                    <SubjectArt
+                        subject={book.subject}
+                        className="size-10 shrink-0 sm:size-12"
+                    />
+                    <span className="min-w-0 flex-1">
+                        <span className="font-display text-primary-deep block text-lg leading-tight font-semibold break-words sm:text-xl">
+                            {book.title}
+                        </span>
+                        <span className="mt-1 flex flex-wrap items-center gap-x-3 gap-y-1">
+                            <span className="text-muted-foreground text-sm">
+                                {subjects[book.subject].label} ·{' '}
+                                {book.chapters.length} bab
+                                {book.prepared && ' · Siap pakai'}
+                            </span>
+                            <span
+                                className={cn(
+                                    'rounded-full px-2.5 py-0.5 text-sm font-semibold',
+                                    opened > 0
+                                        ? 'bg-status-visible/10 text-status-visible'
+                                        : 'bg-muted text-muted-foreground',
+                                )}
+                            >
+                                {opened > 0
+                                    ? `${opened} bab dibuka`
+                                    : 'Belum ada bab dibuka'}
+                            </span>
+                            {ready > 0 && (
+                                <span className="bg-secondary text-ai-suggestion rounded-full px-2.5 py-0.5 text-sm font-semibold">
+                                    {ready} siap dibuka
+                                </span>
+                            )}
+                        </span>
+                    </span>
+                    <svg
+                        aria-hidden="true"
+                        viewBox="0 0 24 24"
+                        fill="none"
+                        stroke="currentColor"
+                        strokeWidth="2.5"
+                        strokeLinecap="round"
+                        strokeLinejoin="round"
+                        className={cn(
+                            'text-primary size-6 shrink-0 transition-transform motion-reduce:transition-none',
+                            open && 'rotate-180',
+                        )}
+                    >
+                        <path d="m6 9 6 6 6-6" />
+                    </svg>
+                </button>
+            </h3>
+            <ul
+                id={bodyId}
+                hidden={!open}
+                className="border-paper-edge divide-paper-edge divide-y border-t px-4"
+            >
+                {book.chapters.map((chapter, index) => (
+                    <ChapterRow
+                        key={chapter.id}
+                        number={index + 1}
+                        classId={classId}
+                        ownBookId={book.prepared ? null : book.id}
+                        chapter={chapter}
+                    />
+                ))}
+            </ul>
+        </li>
+    );
+}
+
 export function ClassChapters({ classId }: { classId: number }) {
     const books = useQuery(classChaptersQuery(classId));
+    const [open, setOpen] = useState<Set<number>>(() => new Set());
+    const ordered = (Object.keys(subjects) as Subject[]).flatMap((subject) =>
+        (books.data ?? []).filter((book) => book.subject === subject),
+    );
+    const allOpen =
+        ordered.length > 0 && ordered.every(({ id }) => open.has(id));
     return (
         <Card>
             <section aria-labelledby="chapters-title" className="space-y-3">
                 <div className="space-y-2">
-                    <SectionTitle id="chapters-title" icon={<BookIcon />}>
-                        Bab untuk kelas ini
-                    </SectionTitle>
+                    <div className="flex items-center justify-between gap-3">
+                        <SectionTitle
+                            id="chapters-title"
+                            icon={<BookIcon />}
+                            className="min-w-0"
+                        >
+                            Bab untuk kelas ini
+                        </SectionTitle>
+                        {ordered.length > 1 && (
+                            <Button
+                                variant="outline"
+                                className="min-h-11 shrink-0 px-3 sm:px-4"
+                                onClick={() =>
+                                    setOpen(
+                                        allOpen
+                                            ? new Set()
+                                            : new Set(
+                                                  ordered.map(({ id }) => id),
+                                              ),
+                                    )
+                                }
+                            >
+                                {allOpen ? 'Tutup semua' : 'Buka semua'}
+                            </Button>
+                        )}
+                    </div>
                     <p className="text-muted-foreground text-base">
                         Siswa hanya melihat bab yang Anda buka. Misi di dalam
                         bab terbuka satu per satu, sesuai urutan.
@@ -165,47 +303,26 @@ export function ClassChapters({ classId }: { classId: number }) {
                         .
                     </p>
                 ) : (
-                    (Object.keys(subjects) as Subject[]).flatMap((subject) =>
-                        books.data
-                            .filter((book) => book.subject === subject)
-                            .map((book) => (
-                                <section
+                    <>
+                        <ul className="space-y-3">
+                            {ordered.map((book) => (
+                                <BookItem
                                     key={book.id}
-                                    aria-labelledby={`class-book-${book.id}`}
-                                    className="border-paper-edge rounded-2xl border px-4 pt-4"
-                                >
-                                    <h3
-                                        id={`class-book-${book.id}`}
-                                        className="flex flex-wrap items-center gap-x-2 text-lg font-semibold"
-                                    >
-                                        <SubjectArt
-                                            subject={subject}
-                                            className="size-9"
-                                        />
-                                        {book.title}
-                                        <span className="text-muted-foreground font-normal">
-                                            {' '}
-                                            · {subjects[subject].label}
-                                            {book.prepared && ' · Siap pakai'}
-                                        </span>
-                                    </h3>
-                                    <ul className="divide-paper-edge divide-y">
-                                        {book.chapters.map((chapter) => (
-                                            <ChapterRow
-                                                key={chapter.id}
-                                                classId={classId}
-                                                ownBookId={
-                                                    book.prepared
-                                                        ? null
-                                                        : book.id
-                                                }
-                                                chapter={chapter}
-                                            />
-                                        ))}
-                                    </ul>
-                                </section>
-                            )),
-                    )
+                                    classId={classId}
+                                    book={book}
+                                    open={open.has(book.id)}
+                                    onToggle={() =>
+                                        setOpen((current) => {
+                                            const next = new Set(current);
+                                            if (!next.delete(book.id))
+                                                next.add(book.id);
+                                            return next;
+                                        })
+                                    }
+                                />
+                            ))}
+                        </ul>
+                    </>
                 )}
             </section>
         </Card>

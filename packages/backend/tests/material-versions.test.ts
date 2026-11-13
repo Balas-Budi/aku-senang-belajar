@@ -97,7 +97,13 @@ test('a material records where it comes from and by what right, and an archived 
             licence: 'school',
             licenceNote: 'Dibeli sekolah tahun 2026.',
             versions: [
-                { version: 1, pageCount: 2, readablePages: 2, chapters: 0 },
+                {
+                    version: 1,
+                    pageCount: 2,
+                    readablePages: 2,
+                    hasFile: true,
+                    chapters: 0,
+                },
             ],
         },
     );
@@ -242,8 +248,20 @@ test('a new file becomes the next version; chapters and missions keep the versio
             ({ createdAt: _, ...version }: { createdAt: string }) => version,
         ),
         [
-            { version: 1, pageCount: 4, readablePages: 3, chapters: 1 },
-            { version: 2, pageCount: 2, readablePages: 2, chapters: 0 },
+            {
+                version: 1,
+                pageCount: 4,
+                readablePages: 3,
+                hasFile: true,
+                chapters: 1,
+            },
+            {
+                version: 2,
+                pageCount: 2,
+                readablePages: 2,
+                hasFile: true,
+                chapters: 0,
+            },
         ],
     );
     assert.equal(second.modules[0].version, 1);

@@ -136,6 +136,7 @@ export const materialDetail = materialSummary.extend({
             createdAt: z.date(),
             pageCount: z.number(),
             readablePages: z.number(),
+            hasFile: z.boolean(),
             chapters: z.number(),
         }),
     ),
